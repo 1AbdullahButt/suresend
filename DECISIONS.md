@@ -408,3 +408,12 @@ On Windows/Git Bash the parent PID seen by `start` is a short-lived wrapper, so 
   and `redirectStatusCode: 308`), so links already shared keep working.
 - The live URL was updated in README, `app/layout.tsx` (metadataBase and og:url, so og:image too), PLAN.md §9 and
   `docs/VIDEO_SCRIPT.md`. The Demo menu links to GitHub, not to the live URL, so it did not change.
+
+### D-033 · Tour step 5: the visitor makes the edit (requested by Abdullah)
+- Step 5 is now "Change the policy, watch the answer change": a short intro, three numbered actions (change 1 business
+  day to 2, Save and verify, Send the 4-day reply), the outcome (still held, suggested reply says 2 days), and a tip that
+  Save and re-check gives Double-check. The "Apply the edit (2 business days)" shortcut is gone: it ran Save and re-check,
+  which now contradicts the numbered steps. `applyB7` stays in the hook but the tour no longer calls it.
+- If DOC-103 is already edited when the step opens, the card shows only "This doc was already changed. Restore it to start
+  fresh." and [Restore the doc]; the numbered steps appear once it is restored and stay while the visitor edits the doc.
+- The "Esc to close" footer hint is removed; Esc still closes the tour (D-024).

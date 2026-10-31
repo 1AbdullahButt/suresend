@@ -25,7 +25,7 @@ interface Ctx {
 interface Step {
   title: string;
   body: ReactNode;
-  target: (ag: SureSend, applied: boolean) => string[];
+  target: (ag: SureSend) => string[];
   enter?: (c: Ctx) => void;
 }
 
@@ -93,15 +93,26 @@ const STEPS: Step[] = [
     },
   },
   {
-    title: "Live proof: edit a doc",
+    title: "Change the policy, watch the answer change",
     body: (
       <>
-        Change the instant-rail exception to <b>2 business days</b> and press <b>Save and re-check</b>. Its Oct 26 verification no longer
-        covers the new text, so the answer becomes <b>Double-check</b> instead of a confident Hold. With <b>Save and verify (simulated)</b>{" "}
-        it would be Hold at 2 days. Reset demo restores every doc.
+        <p>SureSend reads your docs live. Nothing is hard-coded.</p>
+        <ol className={s.steps}>
+          <li>
+            In the doc, change <b>1 business day</b> to <b>2 business days</b>.
+          </li>
+          <li>
+            Click <b>Save and verify</b>.
+          </li>
+          <li>
+            Press <b>Send</b> on the 4-day reply.
+          </li>
+        </ol>
+        <p>It&apos;s still held, and the suggested reply now says 2 days.</p>
       </>
     ),
-    target: (_ag, applied) => (applied ? ['[data-tour="decision"]'] : ['[data-tour="doc-DOC-103"]', '[data-tour="agent"]']),
+    target: (ag) =>
+      ag.overrides["DOC-103"] && held(ag, "TCK-9001") ? ['[data-tour="decision"]'] : ['[data-tour="doc-DOC-103"]', '[data-tour="agent"]'],
     enter: ({ ag, showAgent }) => {
       // Start from the canonical Hold (a re-check, not a send). If DOC-103 is already edited here, leave it alone: the step
       // offers an explicit restore instead of changing it silently (D-024).
@@ -167,7 +178,8 @@ export function GuidedTour({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [box, setBox] = useState<Box | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 80, left: 16 });
-  const [applied, setApplied] = useState(false);
+  // Step 5 only: DOC-103 was already edited when the step opened, so it offers a restore before the numbered steps.
+  const [startEdited, setStartEdited] = useState(false);
   const [phoneTop, setPhoneTop] = useState(false);
   const scrolledFor = useRef<string>("");
   const agRef = useRef(ag);
@@ -192,10 +204,16 @@ export function GuidedTour({
 
   useEffect(() => {
     if (!isTour || !ready || !step) return;
-    if (state.step === 4) setApplied(false);
+    if (state.step === 4) setStartEdited(Boolean(agRef.current.overrides["DOC-103"]));
     step.enter?.(ctx());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTour, state.step, ready]);
+
+  // Restored (by the tour button or Reset demo): show the numbered steps, and keep them when the visitor edits the doc.
+  const doc103Edited = Boolean(ag.overrides["DOC-103"]);
+  useEffect(() => {
+    if (!doc103Edited) setStartEdited(false);
+  }, [doc103Edited]);
 
   useEffect(() => {
     const t = window.setTimeout(() => titleRef.current?.focus({ preventScroll: true }), 80);
@@ -215,9 +233,9 @@ export function GuidedTour({
   }, [onClose]);
 
   useLayoutEffect(() => {
-    const selectors = isTour && step ? step.target(agRef.current, applied) : ['[data-tour="tour-button"]', '[data-tour="demo-menu"]'];
+    const selectors = isTour && step ? step.target(agRef.current) : ['[data-tour="tour-button"]', '[data-tour="demo-menu"]'];
     const update = () => {
-      const sel = isTour && step ? step.target(agRef.current, applied) : selectors;
+      const sel = isTour && step ? step.target(agRef.current) : selectors;
       const key = sel.join(",");
       const el = findTarget(sel) ?? (isTour ? document.querySelector<HTMLElement>(sel[0] ?? "") : null);
       if (el && isTour && scrolledFor.current !== key) {
@@ -243,7 +261,7 @@ export function GuidedTour({
       window.clearInterval(id);
       window.removeEventListener("resize", update);
     };
-  }, [isTour, step, applied]);
+  }, [isTour, step]);
 
   const busy = ag.anyChecking || ag.sendState.kind === "sending";
   const titleId = "tour-title";
@@ -289,6 +307,7 @@ export function GuidedTour({
   const t2 = ag.ticket?.id === "TCK-9002";
   const sent = t1 && ag.sendState.kind === "sent";
   const hasHold = t1 && ag.stored?.result.decision === "HOLD";
+  const restoreFirst = state.step === 4 && startEdited;
 
   const sendFor = (id: string, label: string) => (
     <button
@@ -324,9 +343,9 @@ export function GuidedTour({
         <h2 ref={titleRef} id={titleId} className={s.title} tabIndex={-1}>
           {step.title}
         </h2>
-        <p id={bodyId} className={s.body}>
-          {step.body}
-        </p>
+        <div id={bodyId} className={s.body}>
+          {restoreFirst ? <p>This doc was already changed. Restore it to start fresh.</p> : step.body}
+        </div>
 
         {state.step === 0 ? (
           <div className={s.actions}>
@@ -399,30 +418,23 @@ export function GuidedTour({
 
         {state.step === 4 ? (
           <div className={s.actions}>
-            {applied && !busy ? (
-              <span className={s.done}>
-                <CircleCheck aria-hidden="true" />
-                Saved and re-checked: Double-check, because the doc changed after it was verified.
-              </span>
-            ) : ag.overrides["DOC-103"] ? (
-              <>
-                <span className={s.note}>This doc is already edited in this demo, so the before and after won&apos;t show.</span>
-                <button type="button" className={cx(s.tbtn, s.tout)} disabled={busy} onClick={() => ag.actions.restoreSource("DOC-103")}>
-                  Restore the doc to its seed version
-                </button>
-              </>
-            ) : (
+            {restoreFirst ? (
               <button
                 type="button"
                 className={s.tbtn}
                 disabled={busy}
                 onClick={() => {
-                  if (ag.actions.applyB7()) setApplied(true);
-                  if (overlay) ag.actions.setPanelOpen(true);
+                  setStartEdited(false);
+                  ag.actions.restoreSource("DOC-103");
+                  ag.actions.openDoc("DOC-103");
                 }}
               >
-                Apply the edit (2 business days)
+                Restore the doc
               </button>
+            ) : (
+              <p className={s.note}>
+                Tip: Save and re-check (without verifying) gives Double-check, because SureSend trusts unapproved edits less.
+              </p>
             )}
           </div>
         ) : null}
@@ -438,7 +450,6 @@ export function GuidedTour({
           <button type="button" className={cx(s.tbtn, s.tghost)} onClick={onClose}>
             Skip tour
           </button>
-          <span className={s.hint}>Esc to close</span>
           <span className={s.spacer} />
           {n > 1 ? (
             <button type="button" className={cx(s.tbtn, s.tout)} onClick={() => onStep(state.step - 1)}>

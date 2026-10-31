@@ -92,12 +92,26 @@
   color: var(--ink);
   font-weight: 600;
 }
+.body > p,
+.steps {
+  margin: 0;
+}
+.body > :is(p, ol) + :is(p, ol) {
+  margin-top: 6px;
+}
+.steps {
+  padding-left: 20px;
+}
+.steps li + li {
+  margin-top: 2px;
+}
 .actions {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 .note {
+  margin: 0;
   font-size: 13px;
   color: var(--muted);
 }
@@ -177,10 +191,6 @@
 .spacer {
   flex: 1;
 }
-.hint {
-  font-size: 12px;
-  color: var(--muted);
-}
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -200,8 +210,5 @@
   .cardTop {
     top: 66px !important;
     bottom: auto;
-  }
-  .hint {
-    display: none;
   }
 }
