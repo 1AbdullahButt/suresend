@@ -135,12 +135,16 @@ function nextStep(result: CheckResult, suggestionCheck: string | null): string {
       return suggestionCheck === "Good to send"
         ? "Don't send this reply. Send suggested_reply instead (it passed the same check), or ask a human."
         : `Don't send this reply. suggested_reply has the governing value, but its own check says "${suggestionCheck}", so show it to a human before sending.`;
-    case "ESCALATE":
+    case "ESCALATE": {
+      // Name what not to state from the claim that decided it (D-041): "the reversal timeline", "whether the transfer fee is refunded".
+      const lead = result.claims.find((c) => c.reasonCode === result.reasonCode);
+      const what = lead && isCovered(lead.draftClaim.topic) ? topicDef(lead.draftClaim.topic).subject : "this";
       return result.reasonCode === "SCOPE_UNKNOWN"
-        ? `Don't promise a timeline: it depends on the payment rail, which isn't known. Send suggested_reply (a holding reply with no timeline), or ask a human to confirm the rail.${holding}`
-        : `Don't promise a timeline: the docs disagree and no rule can pick one. Send suggested_reply (a holding reply with no timeline), or ask a human to settle the docs.${holding}`;
+        ? `Don't state ${what} yet: it depends on the payment rail, which isn't known. Send suggested_reply (a holding reply that doesn't state it), or ask a human to confirm the rail.${holding}`
+        : `Don't state ${what} yet: the docs disagree and no rule can pick one. Send suggested_reply (a holding reply that doesn't state it), or ask a human to settle the docs.${holding}`;
+    }
     case "AI_UNAVAILABLE":
-      return "The check couldn't run, so don't send a timeline yet. Retry, or ask a human.";
+      return "The check couldn't run, so don't send the reply yet. Retry, or ask a human.";
   }
 }
 
@@ -170,7 +174,8 @@ function suggestionCheck(s: Suggestion): string {
 }
 
 function governingOf(result: CheckResult): CheckReplyResult["governing"] {
-  const lead = result.claims.find((c) => c.reasonCode === result.reasonCode && c.governing) ?? result.claims.find((c) => c.governing);
+  // Only the claim that decided the result; each claim's own governing value is in claims[].docs_say (D-041).
+  const lead = result.claims.find((c) => c.reasonCode === result.reasonCode && c.governing);
   const g = lead?.governing;
   if (!lead || !g) return null;
   const title = lead.evidence.find((e) => e.source.id === g.sourceId)?.source.title ?? g.sourceId;

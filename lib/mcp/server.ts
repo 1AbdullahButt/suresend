@@ -28,7 +28,7 @@ export const SERVER_VERSION = "0.8.0";
 const topicList = TOPICS.map((t) => t.coverage);
 const COVERAGE = `This demo covers ${topicList.length === 1 ? "one topic" : `${topicList.length} topics`}: ${topicList.join("; and ")}. Other values (fee amounts, limits, other deadlines) come back Double-check, and Good to send means no doc contradicts the reply, not that every statement in it was verified.`;
 
-const INSTRUCTIONS = `SureSend checks a customer-support reply against the team's docs before it's sent. Before you send any customer reply that states a timeline, especially when a failed transfer's money will come back, call check_reply and follow its next_step: on Hold or Ask first, send the suggested_reply (when its own check is Good to send) or ask a human; never send the original. ${COVERAGE} ${DEMO_NOTE}`;
+const INSTRUCTIONS = `SureSend checks a customer-support reply against the team's docs before it's sent. Before you send any customer reply that states a policy (${topicList.join(", or ")}), call check_reply and follow its next_step: on Hold or Ask first, send the suggested_reply (when its own check is Good to send) or ask a human; never send the original. ${COVERAGE} ${DEMO_NOTE}`;
 
 const READ_ONLY = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false } as const;
 
@@ -55,14 +55,14 @@ export function createSureSendMcpServer(depsFor: () => CheckDeps & FixDeps): Mcp
     "check_reply",
     {
       title: "Check a reply before sending",
-      description: `Check a customer-support reply against the team's docs BEFORE you send it. Call this before sending any customer reply that promises a timeline, above all when a failed transfer's money will come back, and send nothing until it returns.
+      description: `Check a customer-support reply against the team's docs BEFORE you send it. Call this before sending any customer reply that states a policy (${topicList.join(", or ")}), and send nothing until it returns.
 
 It returns a decision and a next_step; follow the next_step:
 - Good to send: no doc contradicts the reply.
 - Double-check: show the reason to a human; send only if they confirm.
 - Hold: the reply contradicts the governing doc. Don't send it. Send suggested_reply instead when its check is Good to send; if its check says Double-check, show a human first. Or ask a human.
-- Ask first: the answer depends on something unknown (the payment rail) or the docs disagree. Don't promise a timeline. Send suggested_reply (a holding reply) or ask a human.
-- Couldn't check: the check didn't run. Don't send a timeline; retry or ask a human.
+- Ask first: the answer depends on something unknown (the payment rail) or the docs disagree. Don't state what depends on it. Send suggested_reply (a holding reply) or ask a human.
+- Couldn't check: the check didn't run. Don't send the reply yet; retry or ask a human.
 
 ${COVERAGE}
 

@@ -81,7 +81,7 @@ describe("check_reply", () => {
     const out = await checkReply({ reply: CANONICAL_DRAFT, ticket_id: "TCK-9001" }, deps);
     if (!out.ok) throw new Error(out.error);
     expect(out.value.decision).toBe("Couldn't check");
-    expect(out.value.next_step).toMatch(/don't send a timeline/);
+    expect(out.value.next_step).toMatch(/don't send the reply yet/);
   });
 });
 

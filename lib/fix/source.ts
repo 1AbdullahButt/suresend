@@ -1,6 +1,6 @@
 // "Fix the doc" (D-037), part 1: which visible doc taught the agent the wrong value. Pure: reads a CheckResult only, so the
 // browser (to show the link) and the server (to draft the fix) agree. Never decides anything; the engine already has.
-import { sameValue } from "@/lib/engine/values";
+import { isDuration, sameValue } from "@/lib/engine/values";
 import type { CheckResult, Evidence, Value } from "@/lib/engine/types";
 
 type DefinedValue = NonNullable<Value>;
@@ -42,7 +42,8 @@ export function findFixSource(result: CheckResult): FixSource | null {
         ? result.claims.find((c) => c.decision === "ESCALATE" && c.reasonCode === "SCOPE_UNKNOWN")
         : undefined;
   const draftValue = lead?.draftClaim.value;
-  if (!lead || !draftValue) return null;
+  // The fix pipeline (validation, template) is written for timelines; a yes/no or amount claim gets no proposal (D-041).
+  if (!lead || !draftValue || !isDuration(draftValue)) return null;
 
   const src = lead.evidence.find(
     (e) =>

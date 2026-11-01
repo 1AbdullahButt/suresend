@@ -309,8 +309,8 @@ function escalateSuggestion(claims: ClaimResult[], extractions: Extractions, sou
   if (hasTimelineWords(sentence) || detectPolicyPatterns(sentence).length > 0) {
     throw new Error("ESCALATE template contains a timeline; refusing to suggest it");
   }
-  // Claims the reply got right stay in it, stated as the docs state them (D-041).
-  const kept = templateParts(governedClaims(claims).filter((f) => f.claim.decision === "ALLOW"));
+  // Claims the reply got right stay in it and claims it got wrong are corrected, each stated as the docs state it (D-041).
+  const kept = templateParts(governedClaims(claims).filter((f) => f.claim.decision === "ALLOW" || f.wrong));
   const text = kept.text ? `${sentence} ${kept.text}` : sentence;
   const re = recheck(text, kept.claims, extractions, sources, ticket, now);
   return checked(text, "template", re, sources);

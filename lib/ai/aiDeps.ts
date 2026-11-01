@@ -138,7 +138,7 @@ async function callLive<W, T>(
   wire: z.ZodType<W>,
   map: (w: W) => T,
 ): Promise<{ value: T; info: AiRunInfo }> {
-  const base = { model: slot.model, provider: slot.name, promptVersion: PROMPT_VERSION };
+  const base = { model: slot.model, provider: slot.name, promptVersion: identity.promptVersion };
   const started = Date.now();
   let lastIssue = "";
   for (let attempt = 1; attempt <= 2; attempt++) {
@@ -190,7 +190,8 @@ async function runTask<W, T>(
   map: (w: W) => T,
 ): Promise<{ value: T; info: AiRunInfo }> {
   const primary = rt.chain[0]!;
-  const base = { model: primary.model, provider: primary.name, promptVersion: PROMPT_VERSION };
+  const promptVersion = extra.promptVersion ?? PROMPT_VERSION;
+  const base = { model: primary.model, provider: primary.name, promptVersion };
 
   if (!rt.bypassCache) {
     for (const slot of [...rt.chain, ...rt.savedLookup]) {
@@ -199,7 +200,7 @@ async function runTask<W, T>(
       const live = isLiveEntry(hit);
       const parsed = wire.safeParse(live ? hit.output : hit);
       if (parsed.success) {
-        const info: AiRunInfo = { model: slot.model, provider: slot.name, promptVersion: PROMPT_VERSION, mode: live ? "live" : "saved", latencyMs: 0 };
+        const info: AiRunInfo = { model: slot.model, provider: slot.name, promptVersion, mode: live ? "live" : "saved", latencyMs: 0 };
         return { value: map(parsed.data), info };
       }
     }

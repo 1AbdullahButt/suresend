@@ -39,7 +39,14 @@ export function PresetMenu({ ticketId, current, onPick }: { ticketId: string; cu
 
   if (presets.length === 0) return null;
   return (
-    <div ref={wrapRef} className={s.presets}>
+    <div
+      ref={wrapRef}
+      className={s.presets}
+      // Tabbing past the list closes it, like a click outside.
+      onBlur={(e) => {
+        if (open && !wrapRef.current?.contains(e.relatedTarget as Node | null)) setOpen(false);
+      }}
+    >
       <button
         ref={btnRef}
         type="button"

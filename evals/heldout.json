@@ -1,5 +1,5 @@
 {
-  "about": "Held-out cases (D-035): written after the prompts were frozen at 2026-10-30.2 and never used to tune them. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. H11–H16 (fee_refund, Phase 10, D-041) were written on 2026-11-02 before any fee_refund prompt text or examples existed, and are never used to tune them.",
+  "about": "Held-out cases (D-035): written after the prompts were frozen at 2026-10-30.2 and never used to tune them. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. H11–H16 (fee_refund, Phase 10, D-041) were written on 2026-11-02 before any fee_refund prompt text or examples existed. Their wording later leaked into prompt examples (H11, H14, H15) and one golden draft (H16); QA caught it and the wording was replaced (prompt 2026-11-02.4) before the published run.",
   "decisionTime": "2026-10-30T12:00:00Z",
   "saveTime": "2026-10-29T09:00:00Z",
   "cases": [

@@ -20,7 +20,7 @@
     { "id": "fee-hedged", "ticketId": "TCK-9003", "rail": "standard", "draft": "The transfer fee probably isn't refunded.", "variant": null, "expect": { "decision": "CAUTION", "reasonCode": "HEDGED_CONTRADICTION" } },
     { "id": "fee-two-claims", "ticketId": "TCK-9001", "rail": "instant", "draft": "Your money will be back within 1 business day, but the transfer fee isn't refundable.", "variant": null, "expect": { "decision": "HOLD", "reasonCode": "CONTRADICTS_GOVERNING", "suggestionIncludes": "1 business day" } },
     { "id": "fee-unknown-rail", "ticketId": "TCK-9002", "rail": "unknown", "draft": "Your transfer fee will be refunded with the money.", "variant": null, "expect": { "decision": "ALLOW", "reasonCode": "SUPPORTED" } },
-    { "id": "fee-scoped-F1", "ticketId": "TCK-9001", "rail": "instant", "draft": "Your transfer fee will be refunded too.", "variant": "F1", "expect": { "decision": "HOLD", "reasonCode": "CONTRADICTS_GOVERNING" } },
+    { "id": "fee-scoped-F1", "ticketId": "TCK-9001", "rail": "instant", "draft": "The transfer fee is refunded as well.", "variant": "F1", "expect": { "decision": "HOLD", "reasonCode": "CONTRADICTS_GOVERNING" } },
     { "id": "fee-amount", "ticketId": "TCK-9003", "rail": "standard", "draft": "There's a PKR 25 fee on every transfer.", "variant": null, "expect": { "decision": "CAUTION", "reasonCode": "OUTSIDE_COVERAGE" } }
   ]
 }

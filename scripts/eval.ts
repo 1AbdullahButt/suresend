@@ -350,10 +350,14 @@ function writeHeldOut() {
     .map((p) => JSON.parse(readFileSync(path.join(dir, `heldout-${p}.json`), "utf8")) as ProviderReport);
   const md = `# Held-out eval results
 
-${suite.cases.length} held-out cases (\`evals/heldout.json\`), written after the prompts were frozen at \`${PROMPT_VERSION}\` and never used
-to tune them: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a calendar-day reply, a hedge, an
-unknown rail, an injection inside the draft and a no-claim reply. Each runs ${runs}× per provider, live. Report only: no gate,
-not used for the provider selection, never recorded into \`data/ai-cache\`. Failures are reported as they are.
+${suite.cases.length} held-out cases (\`evals/heldout.json\`), run with prompt \`${PROMPT_VERSION}\`. H1–H10 were written after the prompts
+were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a calendar-day
+reply, a hedge, an unknown rail, an injection inside the draft and a no-claim reply. H11–H16 (the fee topic) were written
+before any fee prompt text existed: two claims, reworded refunds, the unknown rail, a hedge, a limit amount and a
+rail-scoped doc edit. During Phase 10, wording from H11, H14, H15 and H16 leaked into prompt examples, the amount example
+and one golden case. QA caught it, and that wording was replaced before this run (D-041). Each case runs ${runs}× per
+provider, live. Report only: no gate, not used for the provider selection, never recorded into \`data/ai-cache\`.
+Failures are reported as they are.
 
 ${reports.map((r) => r.markdown).join("\n")}`;
   writeFileSync(path.join(dir, "heldout.md"), md, "utf8");

@@ -4,10 +4,11 @@
 import { z } from "zod";
 import type { DraftClaim, SourceClaim, SourceForExtraction, Topic, Value } from "@/lib/engine/types";
 import type { ValueKind } from "@/lib/engine/values";
-import { topicIds } from "@/lib/topics";
+import { kindOf } from "@/lib/engine/values";
+import { isCovered, topicDef, topicIds } from "@/lib/topics";
 
 /** Bump whenever a zod schema or the topic taxonomy changes (SPEC §10 cache identity). */
-export const SCHEMA_VERSION = "2026-11-02.2";
+export const SCHEMA_VERSION = "2026-11-02.3";
 
 const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -66,7 +67,7 @@ const WIRE: Record<ValueKind, WireKind> = {
     json: {
       type: "object",
       properties: {
-        quantity: { type: "number", description: "The amount, e.g. 500000 for 'PKR 500,000', 3 for '3 transfers a day'." },
+        quantity: { type: "number", description: "The amount, e.g. 25 for 'a PKR 25 fee', 3 for '3 transfers a day'." },
         of: { type: "string", description: "What it counts, as written: 'PKR', 'USD', 'transfers a day'." },
       },
       required: ["quantity", "of"],
@@ -140,13 +141,24 @@ function toValue(v: unknown): Value {
   return kind.toValue(v as Record<string, unknown>);
 }
 
+/**
+ * A value only counts when its kind fits the claim's topic: a covered topic's own kind, or for "other" any kind but a
+ * yes/no (a bare "yes" can't be checked or shown). Otherwise the claim keeps its words and carries no value (D-041).
+ */
+function fitValue(topic: Topic, v: Value): Value {
+  if (!v) return v;
+  const kind = kindOf(v);
+  if (isCovered(topic)) return kind === topicDef(topic).valueKind ? v : null;
+  return kind === "boolean" ? null : v;
+}
+
 export function toSourceClaims(wire: SourceExtractionWireT, source: SourceForExtraction): SourceClaim[] {
   return wire.claims.map((c, i) => ({
     claimId: `${source.id}#${i + 1}`,
     sourceId: source.id,
     sourceVersion: source.version,
     topic: c.topic,
-    value: toValue(c.value),
+    value: fitValue(c.topic, toValue(c.value)),
     valueText: c.valueText,
     scope: { rail: c.rail },
     effectiveFrom: c.effectiveFrom,
@@ -160,7 +172,7 @@ export function toDraftClaims(wire: DraftExtractionWireT): DraftClaim[] {
   return wire.claims.map((c, i) => ({
     claimId: `draft#${i + 1}`,
     topic: c.topic,
-    value: toValue(c.value),
+    value: fitValue(c.topic, toValue(c.value)),
     valueText: c.valueText,
     span: c.span,
     definitive: c.definitive,

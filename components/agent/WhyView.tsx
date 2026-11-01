@@ -21,17 +21,21 @@ function QuoteMark({ quote, highlight }: { quote: string; highlight: string }) {
   );
 }
 
-/** "Your reply says / Your docs say / So" for one claim. `anchor` keeps the tour's target on the first claim only. */
-function WhyBody({ m, tone, anchor }: { m: WhyModel; tone: OutcomeTone; anchor: boolean }) {
+/**
+ * "Your reply says / Your docs say / So" for one claim. `anchor` keeps the tour's target on the first claim only; inside a
+ * claim card (whose title is the h4) the section labels are h5.
+ */
+function WhyBody({ m, tone, anchor, nested = false }: { m: WhyModel; tone: OutcomeTone; anchor: boolean; nested?: boolean }) {
+  const H = nested ? "h5" : "h4";
   return (
     <>
       <div className={s.section}>
-        <h4 className={ui.sectionLabel}>1 · Your reply says</h4>
+        <H className={ui.sectionLabel}>1 · Your reply says</H>
         <span className={cx(s.replyPill, PILL[tone])}>{m.replySays}</span>
       </div>
 
       <div className={s.section} style={{ gap: 10 }} data-tour={anchor ? "why-docs" : undefined}>
-        <h4 className={ui.sectionLabel}>2 · Your docs say</h4>
+        <H className={ui.sectionLabel}>2 · Your docs say</H>
         {m.governing ? (
           <div className={s.govDoc}>
             <div className={s.docRow}>
@@ -77,7 +81,7 @@ function WhyBody({ m, tone, anchor }: { m: WhyModel; tone: OutcomeTone; anchor: 
       </div>
 
       <div className={s.section}>
-        <h4 className={ui.sectionLabel}>3 · So</h4>
+        <H className={ui.sectionLabel}>3 · So</H>
         <p className={s.so}>{m.so}</p>
       </div>
     </>
@@ -113,7 +117,7 @@ export function WhyView({ result, onBack, onTrace }: { result: CheckResult; onBa
               </h4>
               <span className={cx(s.replyPill, PILL[c.tone])}>{c.name}</span>
             </div>
-            <WhyBody m={c.model} tone={c.tone} anchor={i === 0} />
+            <WhyBody m={c.model} tone={c.tone} anchor={i === 0} nested />
           </section>
         ))
       ) : (

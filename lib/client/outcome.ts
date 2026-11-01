@@ -86,7 +86,7 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
       return {
         ...base,
         headline: "Not sent, nothing was lost",
-        sentence: "The AI didn't answer, so this reply can't be checked yet. Try again, or remove the timeline from your reply.",
+        sentence: "The AI didn't answer, so this reply can't be checked yet. Try again, or rewrite the reply without the policy claim.",
         strong: null,
       };
     case "HOLD": {
@@ -254,7 +254,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
   const replySays = claim
     ? claim.draftClaim.value
       ? wordsFor(claim.draftClaim.topic, claim.draftClaim.value)
-      : claim.draftClaim.valueText || "No timeline"
+      : claim.draftClaim.valueText || "No value"
     : "No policy promise";
 
   let governing: WhyDoc | null = null;
@@ -413,7 +413,10 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
   const others = (pred: (e: Evidence) => boolean) => [...new Set(c.evidence.filter(pred).map((e) => ctx.name(e.source.id)))].join(" and ");
   switch (`${row.rule}:${row.outcome}`) {
     case "D0:pass":
-      return `Your reply promises ${c.draftClaim.valueText}${c.draftClaim.definitive ? "" : ", hedged"}.`;
+      // A yes/no value reads "Your reply says “the transfer fee isn't refundable”"; an amount reads "Your reply promises 4 business days".
+      return c.draftClaim.value && unitLabel(c.draftClaim.value) === null
+        ? `Your reply says “${c.draftClaim.span}”${c.draftClaim.definitive ? "" : ", hedged"}.`
+        : `Your reply promises ${c.draftClaim.valueText}${c.draftClaim.definitive ? "" : ", hedged"}.`;
     case "D1:pass": {
       const rail = /for the (instant|standard) rail/.exec(row.detail)?.[1];
       return rail ? `The rail is known (${rail}), so there's no scope gap.` : "The rail doesn't change the answer here.";
@@ -454,7 +457,7 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
     case "D9:pass":
       return unitless ? `Your reply says ${draft}, as ${govName} does.` : `Your reply's ${draft} is within the governing ${V}.`;
     case "D10:fired":
-      return `Your reply's ${draft} matches ${govName} (${V}).`;
+      return unitless ? `Your reply says ${draft}, as ${govName} does.` : `Your reply's ${draft} matches ${govName} (${V}).`;
     case "D11a:fired": {
       const gov = c.evidence.find((e) => e.source.id === g?.sourceId);
       const why = gov?.weakeners.map((w) => WEAKENER_WORDS[w].toLowerCase()).join(", ");
