@@ -44,13 +44,13 @@ function TraceItem({ row }: { row: TraceRow & { id: string } }) {
   const detailId = `trace-detail-${row.id}`;
   const hasMore = row.detail.trim() !== row.summary.trim();
   return (
-    <li className={cx(row.outcome === "fired" && s.fired, row.outcome === "fail" && s.failed)}>
+    <li className={cx(row.rule === "Claim" ? s.claimHead : row.outcome === "fired" && s.fired, row.outcome === "fail" && s.failed)}>
       <span className={s.rid} title={row.rule === row.label ? undefined : `Engine rule: ${row.rule}`}>
         {row.label}
       </span>
       <span className={s.rdetail}>
         <span>
-          {row.outcome === "fired" ? <strong>Fired. </strong> : row.outcome === "fail" ? <strong>Failed. </strong> : null}
+          {row.rule === "Claim" ? null : row.outcome === "fired" ? <strong>Fired. </strong> : row.outcome === "fail" ? <strong>Failed. </strong> : null}
           {row.summary}
         </span>
         {hasMore ? (

@@ -219,8 +219,36 @@ function railShort(rail: "instant" | "standard" | "any"): string {
   return rail === "any" ? "all transfers" : `${rail} transfers`;
 }
 
-export function whyModel(result: CheckResult): WhyModel {
-  const claim = mostSevereClaim(result);
+/** One claim of a reply that makes several (D-041): what it says and its own verdict. */
+export interface ClaimLine {
+  key: string;
+  /** "Claim 1 of 2". */
+  label: string;
+  /** The words of the reply that make the claim. */
+  says: string;
+  name: string;
+  tone: OutcomeTone;
+}
+
+/** The reply's claims in the order it makes them, each with its own verdict; empty for a reply with one claim or none. */
+export function claimLines(result: CheckResult): ClaimLine[] {
+  if (result.claims.length < 2) return [];
+  return result.claims.map((c, i) => ({
+    key: c.draftClaim.claimId || String(i),
+    label: `Claim ${i + 1} of ${result.claims.length}`,
+    says: c.draftClaim.span,
+    name: OUTCOME[c.decision].name,
+    tone: OUTCOME[c.decision].tone,
+  }));
+}
+
+/** "Why?" for a reply with several claims: one model per claim (D-041). */
+export function claimCards(result: CheckResult): Array<ClaimLine & { model: WhyModel }> {
+  return claimLines(result).map((line, i) => ({ ...line, model: whyModel(result, result.claims[i]!) }));
+}
+
+export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
+  const claim = only ?? mostSevereClaim(result);
   const gov = claim?.governing ?? null;
   const govEv = governingEvidence(claim);
   const replySays = claim ? (claim.draftClaim.value ? valueWords(claim.draftClaim.value) : claim.draftClaim.valueText || "No timeline") : "No policy promise";
@@ -278,11 +306,13 @@ export function whyModel(result: CheckResult): WhyModel {
     }
   }
 
-  return { title: WHY_TITLE[result.decision], replySays, governing, others, didntCount, so: soSentence(result, claim, govEv) };
+  return { title: WHY_TITLE[result.decision], replySays, governing, others, didntCount, so: soSentence(result, claim, govEv, only !== undefined) };
 }
 
-function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evidence | undefined): string {
+function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evidence | undefined, perClaim = false): string {
   const gov = claim?.governing ?? null;
+  // A card for one claim of several speaks about that claim's own verdict.
+  const decision = perClaim && claim ? claim.decision : result.decision;
   let first = "";
   if (gov && govEv) {
     if (gov.via === "EXPLICIT_SUPERSESSION") first = `${govEv.source.title} says it replaces the older doc for ${railShort(govEv.claim.scope.rail)}.`;
@@ -291,12 +321,16 @@ function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evide
   }
   const code = claim?.reasonCode ?? result.reasonCode;
   let second: string;
-  switch (result.decision) {
+  switch (decision) {
     case "HOLD":
-      second = "Your reply contradicts it, so it's held.";
+      second = perClaim ? "This claim contradicts it, so the reply is held." : "Your reply contradicts it, so it's held.";
       break;
     case "ALLOW":
-      second = claim ? "Your reply matches it, so it's good to send." : "Your reply makes no policy promise, so it's good to send.";
+      second = perClaim
+        ? "This claim matches it."
+        : claim
+          ? "Your reply matches it, so it's good to send."
+          : "Your reply makes no policy promise, so it's good to send.";
       break;
     case "ESCALATE":
       second =
@@ -477,7 +511,7 @@ export function traceRows(result: CheckResult): TraceRow[] {
   const rows: TraceRow[] = [];
   const push = (r: TraceEntryLike, summary: string, key: boolean) => {
     if (r.outcome === "skipped") return;
-    rows.push({ rule: r.rule, label: r.rule === "Overall" ? "Result" : r.rule, outcome: r.outcome, summary, detail: r.detail, key });
+    rows.push({ rule: r.rule, label: r.rule === "Overall" ? "Result" : r.rule === "Claim" ? "Claim" : r.rule, outcome: r.outcome, summary, detail: r.detail, key });
   };
   const mattered = (r: TraceEntryLike) => r.outcome === "fired" || r.outcome === "fail";
 
@@ -494,7 +528,16 @@ export function traceRows(result: CheckResult): TraceRow[] {
     push({ rule: "S", outcome: "pass", detail: [...seen.values()].map((e) => `${e.source.id}: ${e.standingRule}`).join(" ") }, summary, ruledOut.length > 0);
   }
 
-  for (const c of result.claims) {
+  const several = result.claims.length > 1;
+  result.claims.forEach((c, i) => {
+    // A reply with several claims gets a header row per claim, so each claim's rules read as their own group (D-041).
+    if (several) {
+      push(
+        { rule: "Claim", outcome: c.decision === "ALLOW" ? "pass" : "fired", detail: `${c.decision} (${c.reasonCode}) for "${c.draftClaim.span}"` },
+        `Claim ${i + 1} of ${result.claims.length}: “${c.draftClaim.span}” · ${OUTCOME[c.decision].name}`,
+        true,
+      );
+    }
     const fired = (rule: string) => c.trace.some((t) => t.rule === rule && t.outcome === "fired");
     for (const t of c.trace) {
       let key = mattered(t);
@@ -510,7 +553,7 @@ export function traceRows(result: CheckResult): TraceRow[] {
       }
       push(t, claimSummary(t, c, ctx), key);
     }
-  }
+  });
 
   for (const t of result.trace.filter((x) => x.rule === "Overall")) push(t, topSummary(t, ctx), true);
   return rows;

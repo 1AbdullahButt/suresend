@@ -235,6 +235,11 @@ export interface SafeReplyRequest {
   draft: string;
   decision: Decision;
   governing: Governing;
+  /**
+   * D-041: every claim in the reply that a doc governs, right or wrong, so the rewrite fixes only the wrong ones and
+   * keeps the right ones. `correct` is the governing value as the engine words it ("1 business day").
+   */
+  claims: Array<{ span: string; topic: Topic; correct: string; quote: string; sourceId: string; wrong: boolean }>;
 }
 
 /**

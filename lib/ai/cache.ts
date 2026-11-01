@@ -17,6 +17,8 @@ export interface CacheIdentity {
   sourceKind?: string;
   /** safe_reply only */
   governing?: { value: Value; quote: string; decision: Decision };
+  /** safe_reply only (D-041): the reply's governed claims, each marked right or wrong, as the prompt gives them. */
+  claims?: Array<{ span: string; topic: string; correct: string; quote: string; sourceId: string; wrong: boolean }>;
   /** doc_fix only (D-037): the claim sentence agents copy, the exception it misses, and how to tell the rail. */
   fix?: {
     sourceId: string;

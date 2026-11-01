@@ -12,9 +12,10 @@ import type {
   CheckInput,
   CheckResult,
   Decision,
+  ClaimResult,
   DraftClaim,
-  Governing,
   RejectedExtraction,
+  ReasonCode,
   Source,
   SourceClaim,
   Suggestion,
@@ -23,7 +24,8 @@ import { recheckNote, type CheckedSuggestion } from "@/lib/check/recheckNote";
 import { MAX_SOURCES_PER_CHECK, mergeOverrides } from "@/lib/workspace/merge";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
-import { ESCALATE_TEMPLATE, holdTemplate } from "@/lib/replies/templates";
+import { escalateTemplate, holdTemplate } from "@/lib/replies/templates";
+import { isCovered } from "@/lib/topics";
 
 export class CheckInputError extends Error {
   constructor(
@@ -173,10 +175,10 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   let suggestion: CheckedSuggestion | null = null;
   if (out.decision === "HOLD") {
-    const held = out.claims.find((c) => c.decision === "HOLD" && c.governing);
-    if (held?.governing) suggestion = await holdSuggestion(input.draft, held.draftClaim.topic, held.governing, extractions, sources, ticket, now, deps, infos);
+    const facts = governedClaims(out.claims);
+    if (facts.some((f) => f.wrong)) suggestion = await holdSuggestion(input.draft, facts, extractions, sources, ticket, now, deps, infos);
   } else if (out.decision === "ESCALATE") {
-    suggestion = escalateSuggestion(extractions, sources, ticket, now);
+    suggestion = escalateSuggestion(out.claims, extractions, sources, ticket, now);
   }
 
   return {
@@ -220,10 +222,42 @@ const ACCEPTED_CAUTION = new Set(["WEAK_BASIS", "CHANGE_SIGNALLED", "SOURCE_UNRE
 const isAcceptable = (r: { decision: string; reasonCode: string }) =>
   r.decision === "ALLOW" || (r.decision === "CAUTION" && ACCEPTED_CAUTION.has(r.reasonCode));
 
+/** A claim a doc governs, and whether the reply gets it wrong (D-041). Only these are stated in a suggested reply. */
+interface GovernedClaim {
+  claim: ClaimResult & { governing: NonNullable<ClaimResult["governing"]> };
+  wrong: boolean;
+}
+
+/** Contradicts the governing value: Hold, a hedged contradiction, or other units. These are the claims a reply fixes. */
+const WRONG = new Set<ReasonCode>(["CONTRADICTS_GOVERNING", "HEDGED_CONTRADICTION", "UNIT_MISMATCH"]);
+
+function governedClaims(claims: ClaimResult[]): GovernedClaim[] {
+  return claims
+    .filter((c): c is GovernedClaim["claim"] => c.governing !== null && isCovered(c.draftClaim.topic))
+    .map((c) => ({ claim: c, wrong: WRONG.has(c.reasonCode) }));
+}
+
+/** One deterministic draft claim per sentence we author (D-005): we wrote the span, so no AI call is needed to recheck. */
+function templateParts(facts: GovernedClaim[]): { text: string; claims: DraftClaim[] } {
+  const seen = new Set<string>();
+  const parts = facts
+    .map((f) => ({ topic: f.claim.draftClaim.topic, value: f.claim.governing.value }))
+    .filter((p) => {
+      const key = `${p.topic}|${formatValue(p.value)}`;
+      return seen.has(key) ? false : (seen.add(key), true);
+    });
+  return {
+    text: parts.map((p) => holdTemplate(p.topic, p.value)).join(" "),
+    claims: parts.map((p, i) => {
+      const valueText = formatValue(p.value);
+      return { claimId: `template#${i + 1}`, topic: p.topic, value: p.value, valueText, span: valueText, definitive: true };
+    }),
+  };
+}
+
 async function holdSuggestion(
   draft: string,
-  topic: DraftClaim["topic"],
-  governing: Governing,
+  facts: GovernedClaim[],
   extractions: Extractions,
   sources: Source[],
   ticket: DecideTicket,
@@ -231,10 +265,24 @@ async function holdSuggestion(
   deps: CheckDeps,
   infos: AiRunInfo[],
 ): Promise<CheckedSuggestion> {
-  // AI rewrite first (SPEC §6.7): it gets only V, its quote and the draft. The server rechecks it.
+  const lead = facts.find((f) => f.claim.decision === "HOLD") ?? facts.find((f) => f.wrong)!;
+  // AI rewrite first (SPEC §6.7): it gets the draft and, for each governed claim, V and its quote, marked right or wrong,
+  // so it fixes only the wrong claims (D-041). The server rechecks it.
   if (deps.suggestReply) {
     try {
-      const reply = await deps.suggestReply({ draft, decision: "HOLD", governing });
+      const reply = await deps.suggestReply({
+        draft,
+        decision: "HOLD",
+        governing: lead.claim.governing,
+        claims: facts.map((f) => ({
+          span: f.claim.draftClaim.span,
+          topic: f.claim.draftClaim.topic,
+          correct: f.claim.governing.valueText,
+          quote: f.claim.governing.quote,
+          sourceId: f.claim.governing.sourceId,
+          wrong: f.wrong,
+        })),
+      });
       infos.push(reply.info);
       const text = reply.text.trim();
       if (text.length > 0 && text.length <= 1000) {
@@ -248,26 +296,23 @@ async function holdSuggestion(
       // fall through to the template
     }
   }
-  // Template, rechecked with a deterministic draft claim: we authored the span, so no AI call is needed (D-005).
-  const text = holdTemplate(topic, governing.value);
-  const valueText = formatValue(governing.value);
-  const re = recheck(
-    text,
-    [{ claimId: "template#1", topic, value: governing.value, valueText, span: valueText, definitive: true }],
-    extractions,
-    sources,
-    ticket,
-    now,
-  );
-  return checked(text, "template", re, sources);
+  // Template: one sentence per governed claim, wrong or right, each stating the governing value (D-041). With one claim
+  // this is exactly the SPEC §6.7 template.
+  const t = templateParts(facts);
+  const re = recheck(t.text, t.claims, extractions, sources, ticket, now);
+  return checked(t.text, "template", re, sources);
 }
 
-function escalateSuggestion(extractions: Extractions, sources: Source[], ticket: DecideTicket, now: Date): CheckedSuggestion {
-  const text = ESCALATE_TEMPLATE;
+function escalateSuggestion(claims: ClaimResult[], extractions: Extractions, sources: Source[], ticket: DecideTicket, now: Date): CheckedSuggestion {
+  const asked = claims.filter((c) => c.decision === "ESCALATE" && isCovered(c.draftClaim.topic)).map((c) => c.draftClaim.topic);
+  const sentence = escalateTemplate(asked);
   // SPEC §6.7: no digits, no day/hour words, and the policy-pattern detector must not fire.
-  if (hasTimelineWords(text) || detectPolicyPatterns(text).length > 0) {
+  if (hasTimelineWords(sentence) || detectPolicyPatterns(sentence).length > 0) {
     throw new Error("ESCALATE template contains a timeline; refusing to suggest it");
   }
-  const re = recheck(text, [], extractions, sources, ticket, now);
+  // Claims the reply got right stay in it, stated as the docs state them (D-041).
+  const kept = templateParts(governedClaims(claims).filter((f) => f.claim.decision === "ALLOW"));
+  const text = kept.text ? `${sentence} ${kept.text}` : sentence;
+  const re = recheck(text, kept.claims, extractions, sources, ticket, now);
   return checked(text, "template", re, sources);
 }

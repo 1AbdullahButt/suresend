@@ -3,7 +3,7 @@ import { Check, CircleCheck, RefreshCw } from "lucide-react";
 import type { Rail, Suggestion } from "@/lib/engine/types";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
-import { summarize } from "@/lib/client/outcome";
+import { claimLines, summarize } from "@/lib/client/outcome";
 import { findFixSource } from "@/lib/fix/source";
 import { cx, OutcomeTag, Tag, ui } from "@/components/ui/atoms";
 import { TraceView } from "./TraceView";
@@ -11,6 +11,7 @@ import { WhyView } from "./WhyView";
 import s from "./agent.module.css";
 
 const OUT_CLS = { good: s.oGood, check: s.oCheck, hold: s.oHold, ask: s.oAsk, off: s.oOff };
+const DOT = { good: s.dGood, check: s.dCheck, hold: s.dHold, ask: s.dAsk, off: s.dOff };
 
 const STALE_TEXT: Record<Exclude<StaleReason, null>, string> = {
   draft: "You changed the reply. Press Send to check it.",
@@ -168,6 +169,8 @@ export function CheckView({
   if (view === "trace") return <TraceView result={result} onBack={() => onView("why")} onOpenDoc={onOpenDoc} />;
 
   const sum = summarize(result, rail);
+  // A reply with several claims lists each with its own verdict, so a Hold names the claim it's for (D-041).
+  const lines = claimLines(result);
   const stale = staleReason !== null;
   const off = result.decision === "AI_UNAVAILABLE";
   const needsAck = !stale && (result.decision === "CAUTION" || sendState.kind === "ack_required");
@@ -190,6 +193,19 @@ export function CheckView({
         <OutcomeTag decision={result.decision} />
         <h3 className={s.headline}>{sum.headline}</h3>
         <Sentence text={sum.sentence} strong={sum.strong} />
+        {lines.length ? (
+          <ul className={s.claimList} aria-label="Claims in this reply">
+            {lines.map((l) => (
+              <li key={l.key}>
+                <span className={s.claimSays}>“{l.says}”</span>
+                <span className={s.claimTag}>
+                  <span className={cx(s.claimDot, DOT[l.tone])} aria-hidden="true" />
+                  {l.name}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : null}
       </section>
 
       {off ? (

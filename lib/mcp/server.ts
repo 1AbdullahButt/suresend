@@ -4,6 +4,7 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { CheckDeps } from "@/lib/engine/types";
 import type { FixDeps } from "@/lib/fix/propose";
+import { TOPICS } from "@/lib/topics";
 import {
   CheckReplyInput,
   CheckReplyOutput,
@@ -23,8 +24,9 @@ import {
 
 export const SERVER_VERSION = "0.8.0";
 
-const COVERAGE =
-  "This demo covers one topic: when the money from a failed transfer comes back. Other values (fees, amounts, other deadlines) come back Double-check, and Good to send means no doc contradicts the reply, not that every statement in it was verified.";
+// The covered topics come from the taxonomy registry (D-041).
+const topicList = TOPICS.map((t) => t.coverage);
+const COVERAGE = `This demo covers ${topicList.length === 1 ? "one topic" : `${topicList.length} topics`}: ${topicList.join("; and ")}. Other values (fee amounts, limits, other deadlines) come back Double-check, and Good to send means no doc contradicts the reply, not that every statement in it was verified.`;
 
 const INSTRUCTIONS = `SureSend checks a customer-support reply against the team's docs before it's sent. Before you send any customer reply that states a timeline, especially when a failed transfer's money will come back, call check_reply and follow its next_step: on Hold or Ask first, send the suggested_reply (when its own check is Good to send) or ask a human; never send the original. ${COVERAGE} ${DEMO_NOTE}`;
 

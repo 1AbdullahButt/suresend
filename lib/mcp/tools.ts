@@ -5,6 +5,7 @@ import { z } from "zod";
 import { handleCheck, handleFix } from "@/lib/check/handlers";
 import type { FixDeps, FixResult } from "@/lib/fix/propose";
 import { OUTCOME, summarize, traceRows } from "@/lib/client/outcome";
+import { isCovered, topicDef } from "@/lib/topics";
 import type { CheckDeps, CheckResult, Rail, Suggestion } from "@/lib/engine/types";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
@@ -34,6 +35,15 @@ export const CheckReplyOutput = {
   next_step: z.string(),
   suggested_reply: z.object({ text: z.string(), check: z.string() }).nullable(),
   governing: z.object({ doc_id: z.string(), doc_title: z.string(), value: z.string(), quote: z.string() }).nullable(),
+  /** Each claim the reply makes, with its own verdict; the overall decision is the most severe (D-041). */
+  claims: z.array(
+    z.object({
+      says: z.string(),
+      topic: z.string(),
+      decision: z.enum(["Good to send", "Double-check", "Hold", "Ask first", "Couldn't check"]),
+      docs_say: z.string().nullable(),
+    }),
+  ),
   rules_that_mattered: z.array(z.string()),
   /** id is null when the caller passed no ticket_id: only the rail feeds the check then. */
   ticket: z.object({ id: z.string().nullable(), rail: z.enum(RAILS) }),
@@ -179,6 +189,12 @@ export function present(result: CheckResult, ticket: { id: string | null; rail: 
     next_step: nextStep(result, check) + (paused ? " Live AI is paused (rate limit); saved responses cover the demo's canonical replies." : ""),
     suggested_reply: result.suggestion && check ? { text: result.suggestion.text, check } : null,
     governing: governingOf(result),
+    claims: result.claims.map((c) => ({
+      says: c.draftClaim.span,
+      topic: isCovered(c.draftClaim.topic) ? topicDef(c.draftClaim.topic).label.replace(/-/g, " ") : "outside coverage",
+      decision: OUTCOME[c.decision].name as CheckReplyResult["decision"],
+      docs_say: c.governing?.valueText ?? null,
+    })),
     rules_that_mattered: traceRows(result)
       .filter((r) => r.key)
       .map((r) => `${r.label} (${r.outcome}): ${r.summary}`),

@@ -14,6 +14,10 @@ export interface TopicDef {
   label: string;
   /** For headlines: "the reversal timeline depends on the payment rail". */
   subject: string;
+  /** For coverage notes (MCP): "when the money from a failed transfer comes back". */
+  coverage: string;
+  /** For the Ask-first template: "I'm confirming the exact reversal timeline for your transfer". No detector words. */
+  confirming: string;
   /** Extraction prompt lines (lib/ai/prompts.ts). */
   prompt: {
     /** The taxonomy line: `- "reversal_window": …`. */

@@ -1,5 +1,4 @@
 // Prompts (SPEC §10, brief §5). Bump PROMPT_VERSION on any change: it is part of the cache identity.
-import { formatValue } from "@/lib/engine/values";
 import type { SafeReplyRequest, SourceForExtraction } from "@/lib/engine/types";
 import { TOPICS } from "@/lib/topics";
 
@@ -88,17 +87,26 @@ ${escapeEnvelope(draft)}
 Extract the claims as JSON.`;
 }
 
-export const REPLY_SYSTEM = `You rewrite a support agent's draft reply so that it states the correct reversal timeline.
+// ---- safe reply (D-041) -------------------------------------------------------------------------
+// Versioned on its own, like doc_fix: changing it never invalidates the saved extractions under PROMPT_VERSION.
+export const REPLY_PROMPT_VERSION = "2026-11-02.1";
+
+export const REPLY_SYSTEM = `You rewrite a support agent's draft reply so that every claim marked WRONG says what the docs say.
 ${DATA_RULE}
 Rules:
-- Use ONLY the governing value and quote you are given. State the timeline exactly as the governing value (e.g. "1 business day").
+- Fix only the claims marked WRONG, using ONLY the value and quote given for each. State each value exactly as given (e.g. "1 business day").
+- Keep every claim marked RIGHT, and the rest of the reply, as the agent wrote it.
 - Keep it short, warm and plain (1–3 sentences). Keep the agent's tone.
 - Never say or imply that a reversal has already started or finished. Say what the policy gives, not what has happened.
-- Do not add other numbers, dates, fees or promises.`;
+- Don't add anything the claims don't state: no other numbers, dates, fees or promises.`;
 
 export function replyUserPrompt(req: SafeReplyRequest): string {
-  return `Governing value: ${formatValue(req.governing.value)}
-Governing quote (from ${req.governing.sourceId}): "${escapeEnvelope(req.governing.quote)}"
+  const claims = req.claims.map(
+    (c, i) =>
+      `${i + 1}. "${escapeEnvelope(c.span)}" is ${c.wrong ? "WRONG" : "RIGHT"}. The docs say (${c.topic.replace(/_/g, " ")}): ${c.correct} (from ${c.sourceId}: "${escapeEnvelope(c.quote)}")`,
+  );
+  return `Claims in the reply, checked against the docs:
+${claims.join("\n")}
 <reply>
 ${escapeEnvelope(req.draft)}
 </reply>

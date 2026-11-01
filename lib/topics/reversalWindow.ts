@@ -22,6 +22,8 @@ export const reversalWindow = {
   valueKind: "duration",
   label: "reversal-window",
   subject: "the reversal timeline",
+  confirming: "the exact reversal timeline",
+  coverage: "when the money from a failed transfer comes back",
   prompt: {
     taxonomy: `- "reversal_window": how long it takes for a FAILED transfer's money to be reversed/refunded/returned to the customer.`,
     about: "the reversal window",
