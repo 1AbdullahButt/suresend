@@ -1,8 +1,8 @@
 {
-  "key": "f611a894abdb78b59ba53e437bfde60ae131a40c575836c229b0edea966f8437",
+  "key": "2e9bec060d63c746f1979273b59102247e1d9de6c609a94c536ae36f640d5a1c",
   "identity": {
     "task": "safe_reply",
-    "promptVersion": "2026-11-02.1",
+    "promptVersion": "2026-11-02.2",
     "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
@@ -26,7 +26,7 @@
     ]
   },
   "output": {
-    "reply": "The transfer fee is not refunded."
+    "reply": "For instant-rail transfers, the transfer fee is not refunded."
   },
-  "recordedAt": "2026-11-01T21:25:27.417Z"
+  "recordedAt": "2026-11-01T21:36:22.138Z"
 }

@@ -22,5 +22,5 @@
     "target": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.",
     "text": "Instant-rail transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check \"Rail\" on the transaction in the admin panel."
   },
-  "recordedAt": "2026-11-01T21:27:51.736Z"
+  "recordedAt": "2026-11-01T21:38:46.385Z"
 }

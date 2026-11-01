@@ -1,12 +1,12 @@
 {
-  "key": "9abafd152eec20d4ceb5a77c6629c9fa75385f2939d270f8e658a3cead9e102b",
+  "key": "dbfc2188650d3684687f56ccbcb86b97741eb091d260cd65bc725ce41fc220e7",
   "identity": {
     "task": "safe_reply",
-    "promptVersion": "2026-11-02.1",
+    "promptVersion": "2026-11-02.2",
     "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "inputText": "Your money will be back within 1 business day, but the transfer fee isn't refundable.",
+    "inputText": "Your money will be back within 4 business days, but the transfer fee isn't refundable.",
     "governing": {
       "value": {
         "flag": true
@@ -16,11 +16,11 @@
     },
     "claims": [
       {
-        "span": "Your money will be back within 1 business day",
+        "span": "Your money will be back within 4 business days",
         "topic": "reversal_window",
-        "correct": "1 business day",
-        "quote": "For instant-rail transfers only, failed transfers are reversed within 1 business day.",
-        "sourceId": "DOC-103",
+        "correct": "4 business days",
+        "quote": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.",
+        "sourceId": "DOC-101",
         "wrong": false
       },
       {
@@ -34,7 +34,7 @@
     ]
   },
   "output": {
-    "reply": "Your money will be back within 1 business day, but the transfer fee is refunded."
+    "reply": "Your money will be back within 4 business days, and the transfer fee is refunded with the principal."
   },
-  "recordedAt": "2026-11-01T21:24:27.176Z"
+  "recordedAt": "2026-11-01T21:37:58.132Z"
 }

@@ -1,8 +1,8 @@
 {
-  "key": "d44499240cc523b4e419962dd72243013a4f9512c4daae512899c5910054c764",
+  "key": "c63d73f36ceaebf283d71b7279c891af0324729f2b58b6ce00f8636a38432871",
   "identity": {
     "task": "safe_reply",
-    "promptVersion": "2026-11-02.1",
+    "promptVersion": "2026-11-02.2",
     "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
@@ -29,5 +29,5 @@
   "output": {
     "reply": "Failed transfers are reversed within 1 business day."
   },
-  "recordedAt": "2026-11-01T21:21:15.202Z"
+  "recordedAt": "2026-11-01T21:32:09.757Z"
 }

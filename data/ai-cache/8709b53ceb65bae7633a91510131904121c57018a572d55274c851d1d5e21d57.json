@@ -21,7 +21,7 @@
         "valueText": "4 business days",
         "rail": "any",
         "effectiveFrom": null,
-        "statusWording": "in_force",
+        "statusWording": "unstated",
         "supersedes": null,
         "quote": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days."
       },
@@ -33,11 +33,11 @@
         "valueText": "refunded with the principal",
         "rail": "any",
         "effectiveFrom": null,
-        "statusWording": "in_force",
+        "statusWording": "unstated",
         "supersedes": null,
         "quote": "Transfer fee is refunded with the principal."
       }
     ]
   },
-  "recordedAt": "2026-11-01T21:20:27.935Z"
+  "recordedAt": "2026-11-01T21:31:22.588Z"
 }

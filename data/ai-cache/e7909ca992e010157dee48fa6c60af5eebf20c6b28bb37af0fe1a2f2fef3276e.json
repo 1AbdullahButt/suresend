@@ -1,8 +1,8 @@
 {
-  "key": "70addf10fb004c232cea5b09faa10130d51750f3b1188067c51739bf41b0201f",
+  "key": "e7909ca992e010157dee48fa6c60af5eebf20c6b28bb37af0fe1a2f2fef3276e",
   "identity": {
     "task": "safe_reply",
-    "promptVersion": "2026-11-02.1",
+    "promptVersion": "2026-11-02.2",
     "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
@@ -28,5 +28,5 @@
   "output": {
     "reply": "The transfer fee is refunded with the principal."
   },
-  "recordedAt": "2026-11-01T21:23:39.203Z"
+  "recordedAt": "2026-11-01T21:34:33.825Z"
 }

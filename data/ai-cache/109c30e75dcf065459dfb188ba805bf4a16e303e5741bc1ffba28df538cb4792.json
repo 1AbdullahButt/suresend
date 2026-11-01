@@ -1,12 +1,12 @@
 {
-  "key": "9f5acc3d0135c6703fff99fb61055aadefa4f68fc995588d740f86074515a6fa",
+  "key": "109c30e75dcf065459dfb188ba805bf4a16e303e5741bc1ffba28df538cb4792",
   "identity": {
     "task": "draft_extraction",
     "promptVersion": "2026-11-02.3",
     "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "inputText": "Your money will be back within 1 business day, but the transfer fee is refunded."
+    "inputText": "Your money will be back within 1 business day, and the transfer fee is refunded."
   },
   "output": {
     "claims": [
@@ -32,5 +32,5 @@
       }
     ]
   },
-  "recordedAt": "2026-11-01T21:24:39.556Z"
+  "recordedAt": "2026-11-01T21:35:34.584Z"
 }

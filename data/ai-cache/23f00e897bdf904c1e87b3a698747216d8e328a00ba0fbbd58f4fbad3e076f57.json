@@ -23,7 +23,7 @@
         "effectiveFrom": null,
         "statusWording": "unstated",
         "supersedes": null,
-        "quote": "Failed transfers are refunded in 5-7 days, nothing needed from your side."
+        "quote": "Failed transfers are refunded in 5-7 days"
       },
       {
         "topic": "other",
@@ -41,5 +41,5 @@
       }
     ]
   },
-  "recordedAt": "2026-11-01T21:21:05.344Z"
+  "recordedAt": "2026-11-01T21:31:58.695Z"
 }
