@@ -75,6 +75,20 @@ async function main() {
   const good = await call(client, "check_reply", { reply: ONE_DAY, ticket_id: "TCK-9001" });
   check(good.s.decision === "Good to send" && good.s.checked_with?.ai_mode === "saved", `check_reply 1 day on TCK-9001: ${good.s.decision} (ai_mode ${good.s.checked_with?.ai_mode})`);
 
+  // D-041: a reply with two claims (the timeline right, the fee wrong) gets a verdict per claim; the Hold is on the fee.
+  const two = await call(client, "check_reply", {
+    reply: "Your money will be back within 1 business day, but the transfer fee isn't refundable.",
+    ticket_id: "TCK-9001",
+  });
+  const claims = (two.s.claims ?? []) as Array<{ topic: string; decision: string }>;
+  check(
+    two.s.decision === "Hold" &&
+      claims.map((c) => `${c.topic}:${c.decision}`).join(", ") === "reversal window:Good to send, fee refund:Hold" &&
+      (two.s.suggested_reply?.text ?? "").includes("1 business day") &&
+      two.s.checked_with?.ai_mode === "saved",
+    `check_reply two claims on TCK-9001: ${two.s.decision} [${claims.map((c) => `${c.topic}: ${c.decision}`).join("; ")}], suggestion keeps "1 business day" (ai_mode ${two.s.checked_with?.ai_mode})`,
+  );
+
   const fix = await call(client, "propose_doc_fix", { reply: FOUR_DAYS, ticket_id: "TCK-9001" });
   const proposal = fix.s.proposal as { doc_id: string; drafted_by: string; changed_lines: Array<{ after: string }> } | null;
   check(

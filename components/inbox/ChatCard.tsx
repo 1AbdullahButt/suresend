@@ -6,6 +6,7 @@ import type { SendState, SentMessage } from "@/lib/client/useSureSend";
 import type { StoredResult } from "@/lib/client/types";
 import { OUTCOME } from "@/lib/client/outcome";
 import { cx, OutcomeTag, ui } from "@/components/ui/atoms";
+import { PresetMenu } from "./PresetMenu";
 import { RailSelect } from "./RailSelect";
 import { ticketMeta } from "./ticketMeta";
 import s from "./inbox.module.css";
@@ -162,11 +163,23 @@ export function ChatCard({
             {busy ? <span className={s.spin} aria-hidden="true" /> : <ArrowUp aria-hidden="true" strokeWidth={2.2} />}
           </button>
         </div>
-        {hint ? (
-          <p id="reply-hint" className={s.draftHint}>
-            {hint}
-          </p>
-        ) : null}
+        <div className={s.composeFoot}>
+          {hint ? (
+            <p id="reply-hint" className={s.draftHint}>
+              {hint}
+            </p>
+          ) : (
+            <span />
+          )}
+          <PresetMenu
+            ticketId={ticket.id}
+            current={draft}
+            onPick={(text) => {
+              onDraft(text);
+              inputRef.current?.focus();
+            }}
+          />
+        </div>
       </div>
     </main>
   );

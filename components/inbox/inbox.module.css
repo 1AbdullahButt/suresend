@@ -538,3 +538,88 @@
     height: 52px;
   }
 }
+
+/* ---------- "Try another reply" presets (D-041) ---------- */
+.composeFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: -2px;
+}
+.composeFoot .draftHint {
+  margin: 0;
+  padding: 6px 0 0 22px;
+}
+.presets {
+  position: relative;
+  flex: none;
+}
+.presetBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: 0;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+.presetBtn:hover {
+  background: var(--soft);
+}
+.presetChevron {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.15s var(--ease);
+}
+.presetChevronOpen {
+  transform: rotate(180deg);
+}
+.presetList {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 6px);
+  z-index: 40;
+  width: min(380px, calc(100vw - 32px));
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--card);
+  border-radius: 18px;
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.presetItem {
+  width: 100%;
+  border: 0;
+  background: none;
+  text-align: left;
+  border-radius: 12px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: inherit;
+  cursor: pointer;
+}
+.presetItem:hover,
+.presetItem[aria-current="true"] {
+  background: var(--soft);
+}
+.presetLabel {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.presetDraft {
+  font-size: 13px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}

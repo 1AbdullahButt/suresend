@@ -4,7 +4,10 @@ import type { SourceOverride } from "@/lib/engine/types";
 import { seedSources } from "./seed";
 import { doc103Variant } from "./variantBodies";
 
-export type VariantId = "B1" | "B2" | "B3" | "B4" | "B5" | "B6" | "B7";
+export type VariantId = "B1" | "B2" | "B3" | "B4" | "B5" | "B6" | "B7" | "F1";
+
+/** D-041, golden only: the instant-rail exception also keeps the transfer fee on instant transfers. */
+export const F1_FEE_LINE = "For instant-rail transfers, the transfer fee is not refunded.";
 
 export function seedBody(id: string): string {
   const s = seedSources().find((x) => x.id === id);
@@ -45,5 +48,10 @@ export function variantOverrides(v: VariantId, at: string): SourceOverride[] {
       return [draftSave("DOC-101", seedBody("DOC-101"), at)];
     case "B7":
       return [draftSave("DOC-103", DOC103_BODIES.B1(), at)];
+    case "F1":
+      return [verifiedSave("DOC-103", `${seedBody("DOC-103").trimEnd()}
+
+${F1_FEE_LINE}
+`, at)];
   }
 }
