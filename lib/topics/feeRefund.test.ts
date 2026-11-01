@@ -186,6 +186,32 @@ describe("fee_refund through the unchanged rules", () => {
   });
 });
 
+describe("the nothing-found net works per topic (QA, D-041)", () => {
+  it("a fee claim doesn't vouch for a timeline the AI missed: Double-check, not Good to send", async () => {
+    const draft = "The transfer fee is refunded with your money, and it will be back in 4 business days.";
+    const r = await check("TCK-9001", "instant", draft, [fee(true, "The transfer fee is refunded with your money")]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+    expect(r.claims.map((c) => `${c.draftClaim.topic}:${c.decision}/${c.reasonCode}`)).toEqual([
+      "fee_refund:ALLOW/SUPPORTED",
+      "reversal_window:CAUTION/EXTRACTION_GAP",
+    ]);
+    expect(r.claims[1]?.draftClaim.valueText).toBe("4 business days");
+  });
+
+  it("a timeline word inside the fee claim's own words isn't a gap", async () => {
+    const draft = "The transfer fee is refunded within the same transfer.";
+    const r = await check("TCK-9003", "standard", draft, [fee(true, "The transfer fee is refunded within the same transfer")]);
+    expect([r.decision, r.reasonCode]).toEqual(["ALLOW", "SUPPORTED"]);
+  });
+
+  it("a timeline claim doesn't vouch for a fee statement the AI missed", async () => {
+    const draft = "Your money will be back within 4 business days, and the transfer fee isn't refundable.";
+    const r = await check("TCK-9003", "standard", draft, [timeline(4, "within 4 business days")]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+    expect(r.claims.at(-1)?.draftClaim.topic).toBe("fee_refund");
+  });
+});
+
 describe("a reply with both claims", () => {
   const AYESHA = "Your money will be back within 1 business day, but the transfer fee isn't refundable.";
   const both = [timeline(1, "within 1 business day"), fee(false, "the transfer fee isn't refundable")];

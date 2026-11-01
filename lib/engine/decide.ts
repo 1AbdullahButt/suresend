@@ -2,7 +2,7 @@
 // decide(extractions, sources, ticket, now) applies rules S, A and D0a–D11, writing every step to the trace.
 import { RAIL_LABEL, applicability } from "./applicability";
 import { formatDate, normalizeText } from "./normalize";
-import { detectPolicyPatterns, patternNoun } from "./patterns";
+import { detectPolicyPatterns, patternNoun, patternTopic } from "./patterns";
 import { resolve, skip } from "./resolve";
 import { mostSevere } from "./severity";
 import { claimStanding, weakeners } from "./standing";
@@ -119,14 +119,22 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   let decision: OverallDecision;
   let reasonCode: ReasonCode;
 
+  // D0b per topic: "nothing found" is never proof of safety (SPEC §6.6.2). A topic's detector hit counts when no claim on
+  // that topic was extracted and no extracted claim's span accounts for the hit; a hit with no topic (a currency amount)
+  // counts only when no claim on any covered topic was extracted. With one topic this is SPEC D0b exactly (D-041).
+  const claimed = new Set<string>(covered.map((c) => c.topic));
+  const spans = [...covered, ...outside].map((c) => normalizeText(c.span).toLowerCase());
+  const uncovered = patternMatches.filter((m) => {
+    const topic = patternTopic(m.kind);
+    const open = topic === null ? covered.length === 0 : !claimed.has(topic);
+    return open && !spans.some((s) => s.includes(normalizeText(m.text).toLowerCase()));
+  });
+  const quoted = (ms: PatternMatch[]) => ms.map((m) => `"${m.text}"`).join(", ");
+
   let gapNoun = "";
   if (covered.length === 0) {
-    // D0b / D0c / D0d: "nothing found" is never proof of safety (SPEC §6.6.2)
-    const uncovered = patternMatches.filter(
-      (m) => !outside.some((o) => normalizeText(o.span).toLowerCase().includes(normalizeText(m.text).toLowerCase())),
-    );
+    // D0b / D0c / D0d
     claims = outsideResults;
-    const quoted = (ms: PatternMatch[]) => ms.map((m) => `"${m.text}"`).join(", ");
     if (uncovered.length > 0) {
       decision = "CAUTION";
       reasonCode = "EXTRACTION_GAP";
@@ -149,6 +157,18 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     }
   } else {
     claims = [...covered.map((dc) => decideClaim(dc, pool, ticket, draftText)), ...outsideResults];
+    // Another topic's claim doesn't vouch for this one: a topic with a hit but no claim is its own Double-check entry.
+    if (uncovered.length > 0) {
+      gapNoun = patternNoun(uncovered);
+      claims.push(...extractionGaps(uncovered));
+      trace.push({
+        rule: "D0b",
+        outcome: "fired",
+        detail: `The policy-pattern detector found ${quoted(uncovered)}, which no extracted claim covers, and no claim on that topic was extracted. SureSend couldn't confirm ${gapNoun}; check it manually.`,
+      });
+    } else {
+      trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted claim on its topic." });
+    }
     const worst = mostSevere(claims)!;
     decision = worst.decision;
     reasonCode = worst.reasonCode;
@@ -219,6 +239,32 @@ function outsideCoverage(dc: DraftClaim): ClaimResult {
     ],
     governing: null,
   };
+}
+
+/** One CAUTION entry per topic whose detector hits no extracted claim covers (D0b, D-041). */
+function extractionGaps(hits: PatternMatch[]): ClaimResult[] {
+  const byTopic = new Map<string, PatternMatch[]>();
+  for (const m of hits) {
+    const t = patternTopic(m.kind);
+    if (t) byTopic.set(t, [...(byTopic.get(t) ?? []), m]);
+  }
+  return [...byTopic].map(([topic, ms], i) => {
+    const text = ms.map((m) => m.text).join(", ");
+    return {
+      draftClaim: { claimId: `gap#${i + 1}`, topic: topic as DraftClaim["topic"], value: null, valueText: text, span: ms[0]!.text, definitive: true },
+      decision: "CAUTION",
+      reasonCode: "EXTRACTION_GAP",
+      evidence: [],
+      trace: [
+        {
+          rule: "D0b",
+          outcome: "fired",
+          detail: `"${text}" looks like a ${topicDef(topic).label} claim, but none was extracted. SureSend couldn't confirm it; check it manually.`,
+        },
+      ],
+      governing: null,
+    };
+  });
 }
 
 function relationTo(dc: DraftClaim, claim: SourceClaim): Relation {

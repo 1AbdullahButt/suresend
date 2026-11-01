@@ -4,9 +4,11 @@
 import { TOPICS } from "@/lib/topics";
 import type { PatternMatch } from "./types";
 
-const DETECTORS: ReadonlyArray<{ kind: string; re: RegExp; noun: string }> = [
-  ...TOPICS.flatMap((t) => t.patterns),
+/** Each detector belongs to the topic that brought it; the currency amount belongs to none (topic null). */
+const DETECTORS: ReadonlyArray<{ kind: string; re: RegExp; noun: string; topic: string | null }> = [
+  ...TOPICS.flatMap((t) => t.patterns.map((p) => ({ ...p, topic: t.id as string | null }))),
   {
+    topic: null,
     kind: "currency",
     re: /(?:[$€£₹]\s?\d[\d,]*(?:\.\d+)?|\b(?:usd|eur|gbp|pkr|rs\.?)\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:usd|eur|gbp|pkr|dollars?|euros?|pounds?|rupees?)\b)/gi,
     noun: "an amount",
@@ -22,6 +24,11 @@ export function detectPolicyPatterns(text: string): PatternMatch[] {
     }
   }
   return out.sort((a, b) => a.index - b.index || b.text.length - a.text.length);
+}
+
+/** The topic a detector hit belongs to, or null for one every draft is checked for (a currency amount). */
+export function patternTopic(kind: string): string | null {
+  return DETECTORS.find((d) => d.kind === kind)?.topic ?? null;
 }
 
 /** What the hits are about, for "couldn't confirm the timing": one noun when they agree, else "a policy claim". */
