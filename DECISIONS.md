@@ -690,10 +690,40 @@ An independent-style review before sharing with Slite (security, correctness, UX
   - Why shows one card per claim, Trace a header per claim, and the decision card lists each claim's verdict.
 - **Safe-reply prompt version.** The safe-reply prompt has its own version (`REPLY_PROMPT_VERSION`), like `doc_fix`, so
   changing it never invalidates saved extractions. Its cache identity includes the claims it is given.
-- **Detector.** `fee_refund` brings a fee pattern, so a fee statement the AI misses is EXTRACTION_GAP, not "no claims". The
-  net is per reply: it fires only when no covered claim was extracted (already true for two timelines in one reply).
+- **Detector.** `fee_refund` brings a fee pattern, so a fee statement the AI misses is EXTRACTION_GAP, not "no claims".
+  D0b works per topic (after QA, below).
 - **Demo.** "Try another reply" presets in the composer (3 per ticket), recorded and replay-tested. No new tickets, and the
   tour is unchanged.
 - **Re-record.** Schema and prompt versions are bumped, so `pnpm record` re-records every saved response: golden, presets,
   tour and Fix the doc, in one run. `scripts/snapshot-results.ts` compares every saved path's decision and reason code
   before and after.
+- **QA round 1: CHANGES_REQUIRED, two majors.** Both fixed.
+  1. *The "nothing found" net got weaker across topics.*
+     - The refactor generalised SPEC D0b ("zero reversal_window claims and the detector fires") as "zero claims on any
+       covered topic". With two topics, one fee claim switched the net off for the timeline.
+     - Repro: "The transfer fee is refunded with your money, and it will be back in 4 business days" on the instant rail,
+       with only the fee claim extracted. It came back Good to send; on main it was Double-check.
+     - Fixed in `decide.ts` (576a6b3), the one rule-file change after the refactor. D0b now follows the spec per topic: a
+       topic's detector hit counts when no claim on that topic was extracted and no extracted claim's span covers it. A
+       currency amount counts only when no covered claim exists, as before.
+     - With one topic this is SPEC D0b exactly, and the snapshot stayed 68/68 identical. When covered claims exist, the
+       gap is its own Double-check entry.
+     - It names no topic, so a third topic needs no rule change. The fee_refund commit itself still touches no rule file.
+  2. *Held-out wording leaked into the prompt and the golden set.*
+     - H11–H16 were written before any fee prompt text (0d8eb28). Writing the prompt afterwards, I reused their wording:
+       - H11's "the transfer charge stays with us" as a fee example;
+       - H14's "I don't think …" as a hedge example (caught and removed earlier, in 5a62b4f);
+       - H15's "PKR 500,000" as the amount example, in the prompt and the schema description;
+       - H16's draft as golden fee-scoped-F1.
+     - All replaced with golden or seed wording (prompt 2026-11-02.4, schema 2026-11-02.3) before the published runs.
+     - The held-out report header and `heldout.json` say when H11–H16 were written and that the leak was found and
+       removed. The earlier header ("written after the prompts were frozen … never used to tune them") was false for them.
+  - *Minors fixed:*
+    - The MCP next steps and tool text cover both topics, and `governing` comes only from the deciding claim.
+    - Ask first corrects a wrong fee claim in the holding reply.
+    - A value whose kind doesn't fit its topic carries no value, so there's no bare "yes".
+    - Fix the doc is offered only for timeline holds.
+    - Yes/no traces read naturally.
+    - The presets close on focus leaving; Why uses h5 inside claim cards.
+    - AI run info shows the reply prompt's version.
+    - The guard test catches more ways of reading a value.

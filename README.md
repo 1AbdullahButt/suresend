@@ -102,7 +102,8 @@ fix to it, and a person approves it, like fixes reviewed in Slite's Triage: noth
    and after, and "Approve fix (simulated)" or "Dismiss". Approving saves the edit as an ordinary doc edit, verified
    (simulated). The Demo menu lists **Docs causing held replies** with a hold count per doc, simulated in your browser.
 
-The canonical path replays saved responses (the AI's fix included), so it never needs live AI. Agents can ask for the same
+It covers timeline holds; a fee Hold gets no proposal. The canonical path replays saved responses (the AI's fix
+included), so it never needs live AI. Agents can ask for the same
 proposal over MCP with `propose_doc_fix`, which applies nothing.
 
 ## AI vs rules
@@ -134,7 +135,7 @@ refunded when a transfer fails?", yes or no, scoped by rail like the timeline) w
 | File | What changed |
 |---|---|
 | `lib/topics/feeRefund.ts` | New: the taxonomy entry. Its value kind, wording, extraction examples, detector pattern, headline, reply template |
-| `lib/topics/index.ts` | One line to register it |
+| `lib/topics/index.ts` | Two lines to register it (the import and the list) |
 | `lib/engine/values.ts` | A boolean comparator, the first yes/no value kind |
 | `lib/ai/schemas.ts` | The yes/no value's JSON shape, and the schema version bumped |
 | `lib/ai/prompts.ts` | The prompt version bumped (the prompt text comes from the topic file) |
@@ -144,11 +145,18 @@ The rule files (`decide.ts`, `resolve.ts`, `standing.ts`, `applicability.ts`, `s
 amounts or units itself.
 
 The groundwork came first. A [refactor](https://github.com/1AbdullahButt/suresend/commit/4a411e55963564e740c8703e1d745fa45b2633ad) moved the duration comparison into the registry unchanged and
-made the rules ask the registries; every saved decision stayed the same. Then replies got a verdict per claim, amounts on
-other topics got a value (so they're outside coverage, not missed), and values got their topic's wording.
+made the rules ask the registries; every saved decision stayed the same. Then suggested replies and the UI learned to
+handle several claims (the engine already decided per claim), amounts on other topics got a value (so they're outside
+coverage, not missed), and values got their topic's wording.
 
-So the next topic needs a file in `lib/topics` with its examples, and a comparator only if its values are a new kind (not
-a duration, an amount or a yes/no). Its tests, golden cases and saved responses come on top.
+QA then found that the refactor had generalised the "nothing found" net too coarsely: one claim on any topic switched it
+off for the others, so a fee claim could let a missed 4-day promise through as Good to send.
+[The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3) makes the net per topic, as the spec states it for one topic. That was a one-time correction to how
+the rules were generalised, in `decide.ts`, and nothing in it names a topic. With one topic it's the old rule exactly.
+
+So the next topic needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
+versions bumped. Only a new kind of value (not a duration, an amount or a yes/no) also needs a comparator in `values.ts`
+and its JSON shape in `schemas.ts`. Its tests, golden cases and saved responses come on top.
 
 ## Architecture
 
@@ -278,8 +286,10 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - Two topics (`reversal_window`, `fee_refund`) plus `other`: any other factual claim, such as a fee amount or a limit, is
   "outside coverage" (Caution). The rules are topic-agnostic; the next topic needs a file in `lib/topics` with its
   examples, and a comparator only for a new kind of value (see Adding a topic).
-- The "nothing found" detector works per reply: it fires only when no claim on a checked topic was extracted. In a reply
-  that has one, a second claim the AI missed isn't flagged. This was already true for two timelines in one reply.
+- The "nothing found" detector works per topic: it flags a topic's pattern that no extracted claim covers when no claim on
+  that topic was extracted. If a reply makes two claims on the same topic and the AI catches only one, the other isn't
+  flagged.
+- Fix the doc covers timeline holds. A fee Hold gets no doc fix proposal.
 - Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
   could submit edited docs; in a real deployment the docs would come from Slite, not the browser.
 - Personas are simulated: anyone can switch. DOC-105 is synthetic. Never use this design with real restricted data.
