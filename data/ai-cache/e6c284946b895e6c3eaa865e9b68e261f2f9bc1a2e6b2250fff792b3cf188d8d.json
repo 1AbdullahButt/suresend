@@ -1,12 +1,12 @@
 {
-  "key": "e520c516c6634df6f1888315fc20168d953af963e6bcaa5204218bb943f5effb",
+  "key": "e6c284946b895e6c3eaa865e9b68e261f2f9bc1a2e6b2250fff792b3cf188d8d",
   "identity": {
     "task": "source_extraction",
-    "promptVersion": "2026-10-30.2",
-    "schemaVersion": "2026-10-30.1",
+    "promptVersion": "2026-11-02.3",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "inputText": "# Instant Rail – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n",
+    "inputText": "# Instant Rail – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n",
     "sourceKind": "policy"
   },
   "output": {
@@ -20,8 +20,8 @@
         },
         "valueText": "1 business day",
         "rail": "instant",
-        "effectiveFrom": null,
-        "statusWording": "pending_approval",
+        "effectiveFrom": "2026-10-27",
+        "statusWording": "in_force",
         "supersedes": {
           "targetText": "section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers",
           "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers."
@@ -30,5 +30,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-30T17:29:08.522Z"
+  "recordedAt": "2026-11-01T21:20:40.750Z"
 }

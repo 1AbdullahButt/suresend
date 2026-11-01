@@ -1,9 +1,9 @@
 {
-  "key": "a6b79e7875eb39fb05ede6785b9b5f9d4419e4b052fec4c70c188b82c35069a2",
+  "key": "fd250e2d3900a21c106c9b6b2154bbe172bc31bd8b7ed7b3b262a6d1daa649de",
   "identity": {
     "task": "source_extraction",
-    "promptVersion": "2026-10-30.2",
-    "schemaVersion": "2026-10-30.1",
+    "promptVersion": "2026-11-02.3",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "inputText": "# Reversal Timeline Update\nEffective 27 Oct 2026. Approved by Head of Ops. Failed transfers are reversed within 1 business day.\n",
@@ -27,5 +27,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-30T17:29:19.591Z"
+  "recordedAt": "2026-11-01T21:22:39.594Z"
 }

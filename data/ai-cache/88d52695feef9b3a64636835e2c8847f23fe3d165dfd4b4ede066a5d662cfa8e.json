@@ -1,9 +1,9 @@
 {
-  "key": "7ebce3bd0429621f6fbe422a46a0a7c78034a62827900f8cd54eedd6efe95733",
+  "key": "88d52695feef9b3a64636835e2c8847f23fe3d165dfd4b4ede066a5d662cfa8e",
   "identity": {
     "task": "source_extraction",
-    "promptVersion": "2026-10-30.2",
-    "schemaVersion": "2026-10-30.1",
+    "promptVersion": "2026-11-02.3",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "inputText": "Hamza (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Bilal posts the policy 🙏\n",
@@ -27,5 +27,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-30T17:27:32.245Z"
+  "recordedAt": "2026-11-01T21:20:51.813Z"
 }

@@ -1,9 +1,9 @@
 {
-  "key": "e85c7d94c3a7819c2a3e6504939f82b67bba96020f3a955e43705d23ac9ea90c",
+  "key": "669fd8874cc9bb343c11b15066fd2d68d272bb1b1cf9e0b90a7305052778df7f",
   "identity": {
     "task": "doc_fix",
     "promptVersion": "2026-11-01.1",
-    "schemaVersion": "2026-10-30.1",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "inputText": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.\n\n## 1. Scope\nCovers outgoing transfers from wallet to other banks (all rails).\n\n## 2. Common failure reasons\n- beneficiary account closed / title mismatch\n- bank side timeout (rare, mostly month-end)\n\n## 3. Reversal timeline\nWhen an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days. Do NOT promise same day. If it's been longer than that, raise a Jira ticket to Settlement with the TxID.\n\n## 4. Fees\nTransfer fee is refunded with the principal. No separate request needed.\n",
@@ -20,7 +20,7 @@
   "output": {
     "action": "add_after",
     "target": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.",
-    "text": "For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check \"Rail\" on the transaction in the admin panel."
+    "text": "Instant-rail transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check \"Rail\" on the transaction in the admin panel."
   },
-  "recordedAt": "2026-11-01T12:29:27.249Z"
+  "recordedAt": "2026-11-01T21:27:51.736Z"
 }

@@ -1,9 +1,9 @@
 {
-  "key": "a75d574baf6380340bf74a4ddc3c288ed05f7c89bc3d231411413fc42b1aefa2",
+  "key": "570afc88f79d7dc0f234d4e134428b8b5be08333115f0ffce222ffac5bf7772d",
   "identity": {
     "task": "source_extraction",
-    "promptVersion": "2026-10-30.2",
-    "schemaVersion": "2026-10-30.1",
+    "promptVersion": "2026-11-02.3",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "inputText": "# Instant Rail – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.\n\nFor instant-rail transfers only, failed transfers are reversed within 2 business days.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n",
@@ -30,5 +30,5 @@
       }
     ]
   },
-  "recordedAt": "2026-10-30T17:28:31.949Z"
+  "recordedAt": "2026-11-01T21:21:52.716Z"
 }

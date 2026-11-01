@@ -1,9 +1,9 @@
 {
-  "key": "360bc80e4f8d5b126a534520ff73c17f2315fbd7c18dbbafcb6881e747affbbe",
+  "key": "1b7a3697292a912512f18585f05e1f4912fc886cd800d84a68afe692cd903109",
   "identity": {
     "task": "source_extraction",
-    "promptVersion": "2026-10-30.2",
-    "schemaVersion": "2026-10-30.1",
+    "promptVersion": "2026-11-02.3",
+    "schemaVersion": "2026-11-02.2",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
     "inputText": "# Fraud Hold Procedure (Restricted)\nIf a failed transfer is under fraud review (flag FR-HOLD), do not share any reversal timeline with the customer. Escalate to Compliance queue CMP-7.\n",
@@ -12,5 +12,5 @@
   "output": {
     "claims": []
   },
-  "recordedAt": "2026-10-30T17:30:06.973Z"
+  "recordedAt": "2026-11-01T21:26:03.039Z"
 }
