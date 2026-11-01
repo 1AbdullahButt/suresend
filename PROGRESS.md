@@ -1073,3 +1073,33 @@ Serious/critical axe violations: 0. Horizontal page scroll: none. States that fa
 ```
 
 GATE: PASSED
+
+### Phase 9 addendum: tour card on phones (D-038)
+At 390px tour step 6's card covered the doc text and "Save and verify" (QA's pre-existing finding). On phones the card now
+shrinks to a one-line bar: with "Hide steps", or automatically when the visitor taps into the doc in step 6. Desktop is
+unchanged.
+```
+ Test Files  21 passed (21)
+      Tests  164 passed (164)
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.7s)
+  1 passed (3.1s)
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+$ step6-phone-fix.cjs https://suresend-demo.vercel.app
+PASS phone: the full card offers "Hide steps"
+  bar: y=744 h=52 · Save and re-check y=521..571 · Save and verify y=579..629
+PASS tapping into the doc shrinks the card to a bar (52px tall)
+PASS the bar covers neither save button
+PASS focus stays in the doc (the collapse didn't steal it)
+PASS axe on the bar: 0 serious/critical
+PASS tapping "Save and verify" works on the phone (no card in the way)
+PASS Send on the 4-day reply is held on the phone, completing step 6
+PASS "Show steps" restores the card and focuses its title
+PASS "Hide steps" shrinks it and focuses "Show steps"
+PASS going back opens step 5 as the full card
+PASS desktop: no Hide steps toggle
+PASS desktop: the card stays full while editing
+ALL PASS
+step-6 doc edit (live): ALL PASS
+tour (live): ALL PASS
+```

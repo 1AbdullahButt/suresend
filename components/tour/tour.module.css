@@ -212,3 +212,32 @@
     bottom: auto;
   }
 }
+
+/* Phones: the card can shrink to a one-line bar so the page under it stays usable (step 6's doc edit, especially). */
+.cardMini {
+  padding: 10px 10px 10px 14px;
+  gap: 0;
+}
+.miniTitle {
+  margin: 0;
+  flex: 1;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  outline: none;
+}
+.toggle {
+  flex: none;
+  border: 1.5px solid var(--ink);
+  background: var(--card);
+  color: var(--ink);
+  border-radius: 999px;
+  padding: 4px 12px;
+  min-height: 32px;
+  font-size: 13px;
+  font-weight: 600;
+}

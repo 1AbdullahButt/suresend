@@ -204,6 +204,18 @@ export function GuidedTour({
   // Step 6 only: DOC-103 was already edited when the step opened, so it offers a restore before the numbered steps.
   const [startEdited, setStartEdited] = useState(false);
   const [phoneTop, setPhoneTop] = useState(false);
+  // Phones: the card covers half the screen, so it can shrink to a one-line bar ("Show steps" brings it back).
+  const [narrow, setNarrow] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const showBtnRef = useRef<HTMLButtonElement>(null);
+  // Set only by the Hide/Show buttons, so an automatic collapse never pulls focus out of the doc being edited.
+  const focusAfterToggle = useRef<"show" | "title" | null>(null);
+  useEffect(() => {
+    const target = focusAfterToggle.current;
+    focusAfterToggle.current = null;
+    if (target === "show") showBtnRef.current?.focus();
+    if (target === "title") titleRef.current?.focus();
+  }, [collapsed]);
   const scrolledFor = useRef<string>("");
   const agRef = useRef(ag);
   agRef.current = ag;
@@ -227,10 +239,22 @@ export function GuidedTour({
 
   useEffect(() => {
     if (!isTour || !ready || !step) return;
+    setCollapsed(false);
     if (state.step === EDIT_STEP) setStartEdited(Boolean(agRef.current.overrides["DOC-103"]));
     step.enter?.(ctx());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTour, state.step, ready]);
+
+  // Step 6 on a phone: tapping into the doc to edit it shrinks the card, so the text and the save buttons stay reachable.
+  useEffect(() => {
+    if (!isTour || state.step !== EDIT_STEP || !narrow) return;
+    const onFocus = (e: FocusEvent) => {
+      const t = e.target;
+      if (t instanceof HTMLTextAreaElement && !cardRef.current?.contains(t)) setCollapsed(true);
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => document.removeEventListener("focusin", onFocus);
+  }, [isTour, state.step, narrow]);
 
   // Restored (by the tour button or Reset demo): show the numbered steps, and keep them when the visitor edits the doc.
   const doc103Edited = Boolean(ag.overrides["DOC-103"]);
@@ -273,6 +297,7 @@ export function GuidedTour({
           : next,
       );
       setPhoneTop(Boolean(r && r.top + r.height / 2 > window.innerHeight / 2 && window.innerWidth < 700));
+      setNarrow(window.innerWidth < 700);
       const h = cardRef.current?.offsetHeight ?? 240;
       const p = placeCard(next, h);
       setPos((o) => (Math.abs(o.top - p.top) < 1 && Math.abs(o.left - p.left) < 1 ? o : p));
@@ -348,6 +373,39 @@ export function GuidedTour({
     </button>
   );
 
+  if (narrow && collapsed) {
+    return (
+      <>
+        {box ? <div className={s.ring} style={box} aria-hidden="true" /> : null}
+        <div ref={cardRef} className={cx(s.card, s.cardMini, phoneTop && s.cardTop)} style={pos} role="dialog" aria-labelledby={titleId}>
+          <div className={s.top}>
+            <span className={s.counter}>
+              {n}/{TOUR_STEPS}
+            </span>
+            <h2 ref={titleRef} id={titleId} className={s.miniTitle} tabIndex={-1}>
+              {step.title}
+            </h2>
+            <button
+              ref={showBtnRef}
+              type="button"
+              className={s.toggle}
+              aria-expanded={false}
+              onClick={() => {
+                focusAfterToggle.current = "title";
+                setCollapsed(false);
+              }}
+            >
+              Show steps
+            </button>
+            <button type="button" className={s.close} aria-label="Close tour" onClick={onClose}>
+              <X aria-hidden="true" />
+            </button>
+          </div>
+        </div>
+      </>
+    );
+  }
+
   return (
     <>
       {box ? <div className={s.ring} style={box} aria-hidden="true" /> : null}
@@ -361,6 +419,20 @@ export function GuidedTour({
               <span key={i} className={cx(s.dot, i <= state.step && s.dotOn)} />
             ))}
           </span>
+          {narrow ? (
+            <button
+              type="button"
+              className={s.toggle}
+              aria-expanded={true}
+              aria-controls={bodyId}
+              onClick={() => {
+                focusAfterToggle.current = "show";
+                setCollapsed(true);
+              }}
+            >
+              Hide steps
+            </button>
+          ) : null}
           <button type="button" className={s.close} aria-label="Close tour" onClick={onClose}>
             <X aria-hidden="true" />
           </button>

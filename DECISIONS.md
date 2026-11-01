@@ -588,3 +588,15 @@ An independent-style review before sharing with Slite (security, correctness, UX
   - `lib/fix/fix.test.ts`: matching, validation, an unsafe fix dropped, AI vs template, DOC-105, the post-approval guard.
   - `lib/fix/fixReplay.test.ts`: the canonical path on saved responses only.
   - `lib/mcp/server.test.ts`: `propose_doc_fix` applies nothing.
+
+### D-038 · Tour card on phones: shrink to a bar (follow-up to D-037)
+- At 390px, tour step 6's card (about 430px tall) covered both the doc text and the "Save and verify" button, so the tap
+  landed on the card. QA noted this in Phase 9; it predates Phase 9 (the same card was step 5 before).
+- Wherever it sat, a card that size covered half the screen. So on phones (under 700px) the card has a "Hide steps"
+  toggle that shrinks it to a one-line bar ("6/6 Change the policy… · Show steps"), docked where the card was.
+- In step 6, tapping into the doc to edit it shrinks the card automatically, without moving focus out of the doc. A step
+  change always reopens the full card.
+- Focus follows the toggle: "Hide steps" focuses "Show steps", and "Show steps" focuses the step title. Desktop is
+  unchanged.
+- Checked at 390×844: the bar is 52px tall and clear of both save buttons. A real tap on "Save and verify" works and the
+  4-day reply is held. axe finds 0 serious or critical issues.
