@@ -1,31 +1,61 @@
 # SureSend
 
-> SureSend was called AnswerGuard in SPEC v2.2 and the brief.
+> Slite keeps the docs true. SureSend checks what people and agents say from those docs, at the moment they say it.
 
 **An independent product concept for Slite Agent. Not affiliated with Slite. Synthetic data only.**
 
-> Slite's drift detection keeps the docs current. SureSend checks the reply before it reaches the customer.
-
-A support agent writes a reply. Before it's sent, SureSend:
-
-1. pulls the factual claims out of the draft (live AI),
-2. finds the matching claims in the team's messy docs and Slack (live AI, every quote validated as verbatim),
-3. weighs those sources with transparent, deterministic rules, and
-4. returns **Allow, Caution, Hold or Escalate**, plus a rechecked safe reply and the full reasoning.
-
-**Live demo:** https://suresend-demo.vercel.app (the old https://answerguard.vercel.app redirects here) · **Source:** https://github.com/1AbdullahButt/suresend · works with no setup; the canonical path and the guided tour replay saved AI responses, so they work even when live AI is
-unavailable or rate-limited.
+**Live demo:** https://suresend-demo.vercel.app · **Source:** https://github.com/1AbdullahButt/suresend
 
 ![SureSend demo: a 4-day draft is held because the instant-rail exception says 1 business day; the safe reply is used and sent; an unknown-rail ticket escalates with a holding reply.](docs/demo.gif)
 
-## Use it from Claude
+## The problem
+
+Docs go stale, and between a policy change and the doc fix, an agent can still type the old answer into a customer
+conversation. In Slite's own survey of 143 people, 41% said wrong information from an outdated doc reached a customer
+([source](https://slite.com/learn/dangers-of-stale-documentation)). Slite detects drift in docs and routes the fixes
+through Triage, but the doc that's verified isn't always the one that governs: a newer, more specific exception can
+override it, an informal Slack proposal can look authoritative, and an outdated macro can still be the first thing an
+agent copies.
+
+## What it does
+
+A support agent writes a reply. When they press Send, SureSend checks it first:
+
+1. It pulls the factual claims out of the draft (live AI).
+2. It finds the matching claims in the team's messy docs and Slack (live AI, every quote validated as verbatim).
+3. It weighs those sources with transparent, deterministic rules.
+4. It returns **Good to send** (Allow), **Double-check** (Caution), **Hold** or **Ask first** (Escalate), plus a rechecked
+   suggested reply and the full reasoning.
+
+**The hypothesis.** Slite already has cited, permission-aware answers; drift detection with fixes reviewed in Triage; Ask
+Insights; a Slack bot; MCP; and a Chrome extension. This concept tests something narrower, and it is presented as a
+hypothesis (Slite may have something similar internally):
+
+- check the **agent's own draft reply** at the moment of sending, not just answer a question;
+- weigh conflicting sources with **explicit, inspectable rules**, where verification is one signal among several;
+- measure **customer exposure**: unsafe sends intercepted, and the false-alarm rate.
+
+## Try it in 60 seconds
+
+No setup needed: the canonical path and the guided tour replay saved AI responses, so they work even when live AI is
+unavailable or rate-limited.
+
+- **Ayesha → Send → Hold.** Open Ayesha's ticket (instant rail) and press Send on the 4-day reply. It's held, because the
+  instant-rail exception says 1 business day. Use the suggested reply and send it.
+- **Fix the doc.** On the Hold, click "Fix the doc that caused this" to see the one line SureSend would add to the SOP,
+  then approve or dismiss it.
+- **Guided tour.** Press "Guided tour" in the header (on phones: Demo menu → Start guided tour) for the 6-step walkthrough.
+
+<a name="use-it-from-claude"></a>
+
+## Use it from Claude (MCP)
 
 SureSend is also an MCP server, so any agent can check a reply against the docs before it sends it: Claude, a help-desk
 bot, or an agent like Slite's.
 
-**Connector URL:** `https://suresend-demo.vercel.app/api/mcp` (Streamable HTTP, stateless). **No auth:** it only reads the
-public, synthetic demo workspace, so don't send real customer data to it. In the app, the Demo menu's "Use it from Claude
-(MCP)" section has this URL with a Copy button.
+**Connector URL:** `https://suresend-demo.vercel.app/api/mcp`. **No auth:** it only reads the public, synthetic demo
+workspace, so don't send real customer data to it. In the app, the Demo menu's "Use it from Claude (MCP)" section has
+this URL with a Copy button.
 
 - **claude.ai:** add it as a custom connector (in Settings → Connectors at the time of writing; menus move). Step-by-step,
   with a demo prompt: [docs/MCP_DEMO.md](docs/MCP_DEMO.md).
@@ -35,16 +65,10 @@ public, synthetic demo workspace, so don't send real customer data to it. In the
 
 | Tool | What it does |
 |---|---|
-| `check_reply` | `{ reply, ticket_id?, rail? }` → the decision (Good to send, Double-check, Hold, Ask first, or Couldn't check when the reply can't be read), headline, a one-line reason, the next step, a checked suggested reply, the governing quote and its doc, and the rules that mattered. It runs the same validation, caps, persona filter and engine as the web app, and covers the same one topic: when a failed transfer's money comes back. Other values come back Double-check. |
-| `list_tickets` | The 3 demo tickets: customer, payment rail, the customer's message. |
-| `get_doc` | One doc the support agent can see: title, verification signals and text. The restricted DOC-105 is never returned. |
-| `propose_doc_fix` | Same inputs as `check_reply`. For a Hold or Ask first, the doc the wrong value was copied from and a minimal fix to it: the reason and only the changed lines, before and after. Read-only: it applies nothing (see below). |
-
-The tool descriptions tell the agent to call `check_reply` before sending any reply that states a timeline, and to send
-the suggested reply or ask a human on Hold or Ask first. Everything is read-only: nothing over MCP edits a doc. Live AI
-over MCP has its own budget on the shared limiter (`MCP_RATE_LIMIT_PER_10MIN`, `MCP_LIVE_CHECKS_PER_DAY`; defaults 10
-and 200), asked once per check; the endpoint takes one JSON-RPC message per request (no batches) and answers GET with
-405, since it's stateless. The demo's canonical replies replay saved responses; new wording uses live AI.
+| `check_reply` | Checks a reply against the docs: the decision, why, the next step and a checked suggested reply. |
+| `list_tickets` | Lists the 3 demo tickets. |
+| `get_doc` | Returns one doc the support agent can see. |
+| `propose_doc_fix` | For a Hold or Ask first, the doc to fix and a minimal fix to it. Applies nothing. |
 
 Try these prompts:
 
@@ -52,6 +76,8 @@ Try these prompts:
 2. "Usman doesn't know which payment rail his transfer used. Draft a reply about when his money comes back, and check it
    with SureSend first."
 3. "Is 'Your refund will arrive within 4 business days' right for Hina's standard transfer? Show me the doc SureSend relied on."
+
+How the MCP server works (inputs, limits, transport) is under [Architecture](#architecture).
 
 ## From held replies to doc fixes
 
@@ -61,12 +87,9 @@ fix to it, and a person approves it, like fixes reviewed in Slite's Triage: noth
 1. **Find the doc.** The held reply's value is matched against the claims in the visible docs. In the demo, "4 business
    days" comes from the SOP, which covers all rails but never mentions the instant-rail exception. If no general doc taught
    the value, or the doc already covers the exception, there's no proposal and nothing is shown.
-2. **Draft a minimal fix.** The AI drafts one added sentence from the exception's own quote. The rules then validate it:
-   it's added right after the claim sentence, which must be quoted exactly and appear once in the doc, so nothing else can
-   change. It must state the exception's value exactly ("1 business day") and name that rail and no other. It may contain
-   no other digits, no other detected timeline (including number words, months and "immediately"), and no negation, promise
-   or fee wording. A rewrite counts only if it keeps the claim sentence word for word. If the AI's draft fails, a template
-   built from the exception's sentence is used instead.
+2. **Draft a minimal fix.** The AI drafts one added sentence from the exception's own quote, and the rules validate it so
+   nothing else in the doc can change (the full rules are under [Architecture](#architecture)). If the AI's draft fails,
+   a template built from the exception's sentence is used instead.
 3. **Recheck before offering it.** The demo's canonical replies are rechecked with the fix applied. If any decision would
    change, the fix isn't offered.
 4. **A person approves it.** On the Hold or Ask first card, "Fix the doc that caused this" opens a Triage-style review in
@@ -76,23 +99,6 @@ fix to it, and a person approves it, like fixes reviewed in Slite's Triage: noth
 
 The canonical path replays saved responses (the AI's fix included), so it never needs live AI. Agents can ask for the same
 proposal over MCP with `propose_doc_fix`, which applies nothing.
-
-## The problem
-
-Slite detects drift in docs and routes the fixes through Triage. But between a policy change and the doc fix, an agent
-can still type the old answer into a customer conversation. The doc that's verified isn't always the one that governs: a newer, more specific
-exception can override it, an informal Slack proposal can look authoritative, and an outdated macro can still be the
-first thing an agent copies.
-
-## The hypothesis
-
-Slite already has cited, permission-aware answers; drift detection with fixes reviewed in Triage; Ask Insights; a Slack
-bot; MCP; and a Chrome extension. This concept tests something narrower, and it is presented as a hypothesis (Slite may
-have something similar internally):
-
-- check the **agent's own draft reply** at the moment of sending, not just answer a question;
-- weigh conflicting sources with **explicit, inspectable rules**, where verification is one signal among several;
-- measure **customer exposure**: unsafe sends intercepted, and the false-alarm rate.
 
 ## AI vs rules
 
@@ -151,6 +157,24 @@ flowchart TD
   shared limiter. Without the Upstash vars the code falls back to an in-memory per-instance limiter. Input caps
   (4,000 chars per doc, 1,000 per draft, 6 sources) and free cache hits apply either way. The canonical path and the guided
   tour, including both ways of typing step 6's doc edit and the step-5 doc fix, replay saved responses, so they never spend live AI.
+- **MCP server** (`/api/mcp`, Streamable HTTP, stateless):
+  - `check_reply` takes `{ reply, ticket_id?, rail? }` and returns the decision (Good to send, Double-check, Hold, Ask
+    first, or Couldn't check when the reply can't be read), headline, a one-line reason, the next step, a checked suggested
+    reply, the governing quote and its doc, and the rules that mattered. It runs the same validation, caps, persona filter
+    and engine as the web app, and covers the same one topic: when a failed transfer's money comes back. Other values come
+    back Double-check.
+  - `list_tickets` returns each demo ticket's customer, payment rail and message. `get_doc` returns one visible doc's
+    title, verification signals and text; the restricted DOC-105 is never returned. `propose_doc_fix` takes the same inputs
+    as `check_reply` and returns the reason and only the changed lines, before and after.
+  - The tool descriptions tell the agent to call `check_reply` before sending any reply that states a timeline, and to
+    send the suggested reply or ask a human on Hold or Ask first. Everything is read-only: nothing over MCP edits a doc.
+  - Live AI over MCP has its own budget on the shared limiter (`MCP_RATE_LIMIT_PER_10MIN`, `MCP_LIVE_CHECKS_PER_DAY`;
+    defaults 10 and 200), asked once per check. The endpoint takes one JSON-RPC message per request (no batches) and
+    answers GET with 405, since it's stateless. The demo's canonical replies replay saved responses; new wording uses live AI.
+- **Doc-fix validation:** the added sentence goes right after the claim sentence, which must be quoted exactly and appear
+  once in the doc, so nothing else can change. It must state the exception's value exactly ("1 business day") and name
+  that rail and no other. It may contain no other digits, no other detected timeline (including number words, months and
+  "immediately"), and no negation, promise or fee wording. A rewrite counts only if it keeps the claim sentence word for word.
 - **Hardening:** security headers (`frame-ancestors 'none'`, `nosniff`, referrer and permissions policies), generic 500
   bodies with the detail logged server-side only, zod on every request body, and a read-only CI token with SHA-pinned actions.
 
@@ -239,3 +263,8 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - That intercepted sends equal prevented customer harm.
 - That the AI decides policy. The rules do, and they escalate when unsure.
 - That it's production-ready. It still needs real permissions, integrations, security and legal review.
+
+---
+
+Name: SureSend was called AnswerGuard in SPEC v2.2 and the brief. The old https://answerguard.vercel.app redirects to the
+live demo.
