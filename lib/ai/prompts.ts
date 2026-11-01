@@ -90,13 +90,14 @@ Extract the claims as JSON.`;
 
 // ---- safe reply (D-041) -------------------------------------------------------------------------
 // Versioned on its own, like doc_fix: changing it never invalidates the saved extractions under PROMPT_VERSION.
-export const REPLY_PROMPT_VERSION = "2026-11-02.1";
+export const REPLY_PROMPT_VERSION = "2026-11-02.2";
 
 export const REPLY_SYSTEM = `You rewrite a support agent's draft reply so that every claim marked WRONG says what the docs say.
 ${DATA_RULE}
 Rules:
 - Fix only the claims marked WRONG, using ONLY the value and quote given for each. State each value exactly as given (e.g. "1 business day").
 - Keep every claim marked RIGHT, and the rest of the reply, as the agent wrote it.
+- Then reread each sentence you changed: a linking word that set up the wrong claim may no longer fit (a "but" before a fixed claim usually becomes "and").
 - Keep it short, warm and plain (1–3 sentences). Keep the agent's tone.
 - Never say or imply that a reversal has already started or finished. Say what the policy gives, not what has happened.
 - Don't add anything the claims don't state: no other numbers, dates, fees or promises.`;
