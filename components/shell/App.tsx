@@ -196,6 +196,7 @@ export function App() {
             }}
             onReset={() => setConfirmReset(true)}
             onClose={closeMenu}
+            aboveTourBar={tour?.mode === "tour"}
           />
         ) : null}
       </Header>
@@ -298,9 +299,11 @@ export function App() {
           state={tour}
           ag={ag}
           overlay={overlay}
+          paused={menuOpen}
           onStep={(step) => setTour({ mode: "tour", step })}
           onStart={startTour}
           onClose={closeTour}
+          onResume={() => setMenuOpen(false)}
         />
       ) : null}
       {confirmReset ? (

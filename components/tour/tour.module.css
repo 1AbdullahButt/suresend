@@ -205,6 +205,15 @@
   }
 }
 
+/* Paused while the Demo menu is open (D-040): a one-line bar docked bottom-left, away from the menu (top right). On
+   phones the bottom dock below applies; the menu sits above it. */
+.cardPaused {
+  left: 24px;
+  bottom: calc(var(--footer-h, 40px) + 12px);
+  width: 420px;
+  max-width: calc(100vw - 48px);
+}
+
 /* Phones: a bottom card above the footer, flipped to the top when the anchor sits in the lower half. */
 @media (max-width: 699px) {
   .card {

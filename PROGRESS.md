@@ -1210,3 +1210,92 @@ step5-ayesha.cjs (live): 43 PASS, 0 FAIL · ALL PASS
 step6-phone-fix.cjs (live): 12 PASS, 0 FAIL · ALL PASS
 tour-step6.cjs (live): 29 PASS, 0 FAIL · ALL PASS
 ```
+
+### Phase 9 addendum 3: the tour pauses under the Demo menu (D-040)
+Opening the Demo menu during the tour no longer lets the tour's ring draw over the menu. The tour pauses (no ring; the
+card waits as a "Resume tour" bar), the menu is above every tour layer, and closing the menu brings back the same step.
+The ring is clipped to the visible part of its target and hidden when an overlay covers it. The connector URL wraps only
+after "https://" or before "/api/mcp". Checked on every tour step at 1440 and 390, locally and live.
+```
+$ pnpm typecheck  (exit 0)
+$ pnpm test
+ Test Files  21 passed (21)
+      Tests  164 passed (164)
+$ pnpm e2e
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.2s)
+  1 passed (2.1s)
+$ ui-audit.ts http://127.0.0.1:3100  (AI_MODE=saved)
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+$ tour-menu.cjs http://127.0.0.1:3100   231 PASS, 0 FAIL · ALL PASS
+step5-ayesha.cjs (local): 43 PASS, 0 FAIL · ALL PASS
+mcp-menu.cjs (local): 31 PASS, 0 FAIL · ALL PASS
+step6-phone-fix.cjs (local): 12 PASS, 0 FAIL · ALL PASS
+tour-step6.cjs (local): 29 PASS, 0 FAIL · ALL PASS
+$ tour-menu.cjs https://suresend-demo.vercel.app   (selected lines; every line is PASS)
+PASS 1440: the URL is in three parts
+PASS 1440: the URL fits its box and reads as one URL
+PASS 1440 step 1: the menu is fully on screen
+PASS 1440 step 1: the menu is topmost (centre, corners, left edge: menu menu menu menu menu menu)
+PASS 1440 step 1: no tour ring while the menu is open
+PASS 1440 step 1: the tour waits as a bar with "Resume tour"
+PASS 1440 step 1: the bar (52px) is clear of the menu
+PASS 1440 step 1: the bar keeps the step (1/6)
+PASS 1440 step 1: "Resume tour" can be tapped
+PASS 1440 step 1: closing the menu (esc) keeps the tour
+PASS 1440 step 1: same step after closing (1: Send runs the check)
+PASS 1440 step 1: same card state (full)
+PASS 1440 step 1: the ring is as before (shown)
+PASS 1440 step 1: focus goes to the Demo menu button
+PASS 1440 step 5 review: the ring stays inside the agent panel (ring y=150..836, panel y=80..844)
+PASS 1440 step 5 review: the menu is fully on screen
+PASS 1440 step 5 review: the menu is topmost (centre, corners, left edge: menu menu menu menu menu menu)
+PASS 1440 step 5 review: no tour ring while the menu is open
+PASS 1440 step 5 review: the tour waits as a bar with "Resume tour"
+PASS 1440 step 5 review: the bar (52px) is clear of the menu
+PASS 1440 step 5 review: the bar keeps the step (5/6)
+PASS 1440 step 5 review: "Resume tour" can be tapped
+PASS 1440 step 5 review: closing the menu (resume) keeps the tour
+PASS 1440 step 5 review: same step after closing (5: Fix the doc that caused this)
+PASS 1440 step 5 review: same card state (full)
+PASS 1440 step 5 review: the ring is as before (shown)
+PASS 1440 step 5 review: focus goes to the tour title
+PASS 1440: axe with the menu over the paused tour: 0 serious/critical
+PASS 390: the URL is in three parts
+PASS 390: the URL fits its box and reads as one URL
+PASS 390 step 1: the menu is fully on screen
+PASS 390 step 1: the menu is topmost (centre, corners, left edge: menu menu menu menu menu menu)
+PASS 390 step 1: no tour ring while the menu is open
+PASS 390 step 1: the tour waits as a bar with "Resume tour"
+PASS 390 step 1: the bar (52px) is clear of the menu
+PASS 390 step 1: the bar keeps the step (1/6)
+PASS 390 step 1: "Resume tour" can be tapped
+PASS 390 step 1: closing the menu (esc) keeps the tour
+PASS 390 step 1: same step after closing (1: Send runs the check)
+PASS 390 step 1: same card state (full)
+PASS 390 step 1: the ring is as before (shown)
+PASS 390 step 1: focus goes to the Demo menu button
+PASS 390 step 1: the ring shows around Send with the sheet closed
+PASS 390 step 1: with the sheet open over Send, no ring draws on the sheet (ring hidden)
+PASS 390 step 1: sheet closed, the ring is back
+PASS 390 step 5 review: the menu is fully on screen
+PASS 390 step 5 review: the menu is topmost (centre, corners, left edge: menu menu menu menu menu menu)
+PASS 390 step 5 review: no tour ring while the menu is open
+PASS 390 step 5 review: the tour waits as a bar with "Resume tour"
+PASS 390 step 5 review: the bar (52px) is clear of the menu
+PASS 390 step 5 review: the bar keeps the step (5/6)
+PASS 390 step 5 review: "Resume tour" can be tapped
+PASS 390 step 5 review: closing the menu (resume) keeps the tour
+PASS 390 step 5 review: same step after closing (5: Fix the doc that caused this)
+PASS 390 step 5 review: same card state (bar)
+PASS 390 step 5 review: the ring is as before (hidden)
+PASS 390 step 5 review: focus goes to the tour title
+PASS 390 step 5 review: with the review back, the card is still the bar
+PASS 390: axe with the menu over the paused tour: 0 serious/critical
+ALL PASS
+tour-menu.cjs (live): 231 PASS, 0 FAIL · ALL PASS
+step5-ayesha.cjs (live): 43 PASS, 0 FAIL · ALL PASS
+mcp-menu.cjs (live): 31 PASS, 0 FAIL · ALL PASS
+step6-phone-fix.cjs (live): 12 PASS, 0 FAIL · ALL PASS
+tour-step6.cjs (live): 29 PASS, 0 FAIL · ALL PASS
+```

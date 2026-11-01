@@ -166,6 +166,44 @@ interface Box {
   height: number;
 }
 
+/**
+ * The ring for `el` (D-040): only around the part that's on screen, clipped by every scrolling or clipping ancestor and
+ * the viewport. Unclipped sides get the usual 4px gap; clipped sides sit 8px inside, so neither the line nor its halo
+ * spills over a panel's edge. Null when nothing is visible, or when something other than the target or the tour card
+ * covers the visible part's centre (the phone sheet or its scrim over a chat target, the Demo menu, a dialog).
+ */
+function ringFor(el: HTMLElement, card: HTMLElement | null): Box | null {
+  const r = el.getBoundingClientRect();
+  let top = r.top;
+  let left = r.left;
+  let right = r.right;
+  let bottom = r.bottom;
+  const clip = (c: { top: number; left: number; right: number; bottom: number }) => {
+    top = Math.max(top, c.top);
+    left = Math.max(left, c.left);
+    right = Math.min(right, c.right);
+    bottom = Math.min(bottom, c.bottom);
+  };
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    const cs = getComputedStyle(p);
+    if (cs.overflowX !== "visible" || cs.overflowY !== "visible") clip(p.getBoundingClientRect());
+  }
+  clip({ top: 0, left: 0, right: window.innerWidth, bottom: window.innerHeight });
+  if (right - left < 1 || bottom - top < 1) return null;
+
+  const cx0 = (left + right) / 2;
+  const cy0 = (top + bottom) / 2;
+  const front = document.elementsFromPoint(cx0, cy0).find((n) => !card?.contains(n));
+  if (front && !el.contains(front) && !front.contains(el)) return null;
+
+  const gap = (cut: boolean) => (cut ? -8 : 4);
+  const t = top - gap(top > r.top + 0.5);
+  const l = left - gap(left > r.left + 0.5);
+  const b = bottom + gap(bottom < r.bottom - 0.5);
+  const rt = right + gap(right < r.right - 0.5);
+  return rt - l > 0 && b - t > 0 ? { top: t, left: l, width: rt - l, height: b - t } : null;
+}
+
 const CARD_W = 340;
 
 /** Prefer the left of the target (the agent card is on the right), then right, below, above. */
@@ -187,16 +225,22 @@ export function GuidedTour({
   state,
   ag,
   overlay,
+  paused,
   onStep,
   onStart,
   onClose,
+  onResume,
 }: {
   state: TourState;
   ag: SureSend;
   overlay: boolean;
+  /** The Demo menu is open: no ring, and the card waits as a one-line bar (D-040). */
+  paused: boolean;
   onStep: (step: number) => void;
   onStart: () => void;
   onClose: () => void;
+  /** "Resume tour" on the paused bar: closes the Demo menu. */
+  onResume: () => void;
 }) {
   const cardRef = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -221,6 +265,16 @@ export function GuidedTour({
   const scrolledClear = useRef<string>("");
   const agRef = useRef(ag);
   agRef.current = ag;
+  // Paused under the Demo menu: the layout loop stops (no scrolling, no moving), and nothing about the step changes, so
+  // closing the menu brings back the same step, card and ring. "Resume tour" also moves focus back to the step title.
+  const pausedRef = useRef(paused);
+  pausedRef.current = paused;
+  const focusAfterResume = useRef(false);
+  useEffect(() => {
+    if (paused || !focusAfterResume.current) return;
+    focusAfterResume.current = false;
+    titleRef.current?.focus();
+  }, [paused]);
 
   const ctx = useCallback(
     (): Ctx => ({
@@ -295,6 +349,7 @@ export function GuidedTour({
   useLayoutEffect(() => {
     const selectors = isTour && step ? step.target(agRef.current) : ['[data-tour="tour-button"]', '[data-tour="demo-menu"]'];
     const update = () => {
+      if (pausedRef.current) return;
       const sel = isTour && step ? step.target(agRef.current) : selectors;
       const key = sel.join(",");
       const el = findTarget(sel) ?? (isTour ? document.querySelector<HTMLElement>(sel[0] ?? "") : null);
@@ -310,11 +365,13 @@ export function GuidedTour({
         clearEl.scrollIntoView({ block: "nearest" });
       }
       const r = el?.getBoundingClientRect();
+      // `next` (the whole target) places the card; the ring shows only what's visible and uncovered.
       const next = r && r.width > 0 ? { top: r.top - 4, left: r.left - 4, width: r.width + 8, height: r.height + 8 } : null;
+      const ring = el && next ? ringFor(el, cardRef.current) : null;
       setBox((b) =>
-        b && next && Math.abs(b.top - next.top) < 1 && Math.abs(b.left - next.left) < 1 && Math.abs(b.width - next.width) < 1 && Math.abs(b.height - next.height) < 1
+        b && ring && Math.abs(b.top - ring.top) < 1 && Math.abs(b.left - ring.left) < 1 && Math.abs(b.width - ring.width) < 1 && Math.abs(b.height - ring.height) < 1
           ? b
-          : next,
+          : ring,
       );
       // Phones: the card docks at the bottom, or at the top when the anchor (or the element to keep clear) is in the lower half.
       const a = clearEl?.getBoundingClientRect() ?? r;
@@ -338,6 +395,8 @@ export function GuidedTour({
   const bodyId = "tour-body";
 
   if (!isTour) {
+    // The first-visit offer steps aside while the Demo menu is open, and comes back when it closes.
+    if (paused) return null;
     return (
       <>
         {box ? <div className={s.ring} style={box} aria-hidden="true" /> : null}
@@ -405,6 +464,34 @@ export function GuidedTour({
       {label}
     </button>
   );
+
+  if (paused) {
+    return (
+      <div ref={cardRef} className={cx(s.card, s.cardMini, s.cardPaused)} role="dialog" aria-labelledby={titleId}>
+        <div className={s.top}>
+          <span className={s.counter}>
+            {n}/{TOUR_STEPS}
+          </span>
+          <h2 ref={titleRef} id={titleId} className={s.miniTitle} tabIndex={-1}>
+            {step.title}
+          </h2>
+          <button
+            type="button"
+            className={s.toggle}
+            onClick={() => {
+              focusAfterResume.current = true;
+              onResume();
+            }}
+          >
+            Resume tour
+          </button>
+          <button type="button" className={s.close} aria-label="Close tour" onClick={onClose}>
+            <X aria-hidden="true" />
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (narrow && collapsed) {
     return (

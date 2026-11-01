@@ -82,11 +82,12 @@
 }
 
 /* ---------- Demo menu popover ---------- */
+/* Above every tour layer (ring 70, card 75) and toasts (80); only the reset dialog (90) goes over it (D-040). */
 .menu {
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  z-index: 70;
+  z-index: 85;
   width: min(420px, calc(100vw - 24px));
   max-height: calc(100dvh - 90px);
   overflow: auto;
@@ -97,6 +98,10 @@
   flex-direction: column;
   gap: 18px;
   box-shadow: var(--shadow-pop);
+}
+/* During a tour the paused bar waits above the footer; the menu ends above it (and scrolls), so both stay usable. */
+.menuAboveBar {
+  max-height: calc(100dvh - 190px);
 }
 .menuTitle {
   font-size: 20px;
@@ -430,13 +435,22 @@
   border-radius: 14px;
   padding: 8px 8px 8px 12px;
 }
+/* The URL wraps only between its parts (after "https://", before "/api/mcp"), never inside a word; on a box too narrow
+   for one part, it scrolls sideways instead (D-040). */
 .mcpUrl {
   flex: 1;
   min-width: 0;
+  font-family: var(--mono);
+  font-variant-ligatures: none; /* no "://" ligature: the URL reads exactly as typed */
   font-size: 13px;
+  line-height: 1.45;
   color: var(--ink);
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
+  overflow-x: auto;
   user-select: all;
+}
+.urlPart {
+  white-space: nowrap;
 }
 .copyBtn {
   flex: none;

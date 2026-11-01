@@ -626,3 +626,33 @@ An independent-style review before sharing with Slite (security, correctness, UX
   tapped to start editing. With the tip hidden the card is 437px, about what it was before.
 - UI copy and layout only: no engine, rule, locked-test, seed or saved-response changes. README: the Demo menu entry is
   mentioned, and the test count is corrected to 164.
+
+### D-040 · The tour pauses under the Demo menu; the ring never draws over an overlay; the URL wraps cleanly
+- **Bug:** opening the Demo menu during the tour drew the tour's ring on top of the menu and through its left edge, and
+  the tour card stayed open beside it. Cause: the menu and the ring were both z-index 70, and the ring comes later in
+  the page. At step 5 the ring around the fix review (taller than the agent panel) ran above the panel and through the
+  menu.
+- **The tour pauses while the Demo menu is open.**
+  - The ring is hidden and the card becomes a one-line bar: "n/6", the step title, "Resume tour" and close. The bar
+    sits bottom-left on desktop and above the footer on phones.
+  - During a tour the menu stops above the bar (`max-height: calc(100dvh - 190px)`; it scrolls), so "Resume tour" stays
+    tappable at every width.
+  - Nothing about the step changes while paused: the layout loop stops (no scrolling or moving), and no step re-runs.
+    Closing the menu any way (Esc, an outside click, the Demo button, "Resume tour") brings back the same step, the
+    same card state (full, or the phone bar) and the ring.
+  - Focus: "Resume tour" moves it to the step title; the other ways return it to the Demo button, as before. The
+    first-visit offer steps aside while the menu is open.
+- **Layers:** the menu is z-index 85, above every tour layer (ring 70, card 75) and toasts (80). Only the reset dialog
+  (90) goes over it.
+- **Ring rules, for every step:**
+  - The ring shows only the part of the target that's on screen: it's clipped by each scrolling or clipping ancestor
+    and the viewport. A clipped side sits 8px inside, so neither the line nor its halo spills over a panel edge.
+  - It's hidden when something else covers the centre of that visible part (checked with `elementsFromPoint`,
+    ignoring the tour card). Examples: the phone sheet or its scrim over a chat target, the menu, a dialog.
+  - The card is still placed from the whole target, as before.
+- **Connector URL:** split into "https://", "suresend-demo.vercel.app" and "/api/mcp", each unbreakable, with `<wbr>`
+  between them. It wraps only after "https://" or before "/api/mcp": 2 lines at 1440, 3 at 390. It's monospace, with
+  no "://" ligature; a box too narrow for one part scrolls sideways. Copy still copies the full URL.
+- **Not changed:** on phones an open agent sheet is modal (its scrim covers the header), so the Demo button is reached
+  after closing the sheet, as before.
+- UI only: no engine, rule, locked-test, seed or saved-response changes.

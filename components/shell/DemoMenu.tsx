@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
+import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { AiRunInfo, Role } from "@/lib/engine/types";
 import { falseAlarmStats, type Metrics, type Review } from "@/lib/client/metrics";
 import { aiModeLabel } from "@/lib/client/format";
@@ -31,8 +31,10 @@ function Tile({ label, value }: { label: string; value: string }) {
 
 /** The public source repo (README: problem, architecture, AI vs rules, tests, eval). */
 const REPO_URL = "https://github.com/1AbdullahButt/suresend";
-/** The remote MCP endpoint (D-036) and the README section that explains how to add it. */
-export const MCP_URL = "https://suresend-demo.vercel.app/api/mcp";
+/** The remote MCP endpoint (D-036), in the pieces it may wrap between: after "https://" and before "/api/mcp" (D-040). */
+const MCP_URL_PARTS = ["https://", "suresend-demo.vercel.app", "/api/mcp"] as const;
+export const MCP_URL = MCP_URL_PARTS.join("");
+/** The README section that explains how to add it. */
 const MCP_HELP_URL = `${REPO_URL}#use-it-from-claude`;
 
 /** "Use it from Claude (MCP)": the connector URL with a Copy button and a short spoken and visible confirmation. */
@@ -72,7 +74,12 @@ function McpSection() {
       <p className={s.small}>Any AI agent can call SureSend before it replies.</p>
       <div className={s.mcpRow} role="group" aria-labelledby="mcp-label">
         <code ref={urlRef} className={s.mcpUrl}>
-          {MCP_URL}
+          {MCP_URL_PARTS.map((part, i) => (
+            <Fragment key={part}>
+              {i > 0 ? <wbr /> : null}
+              <span className={s.urlPart}>{part}</span>
+            </Fragment>
+          ))}
         </code>
         <button type="button" className={cx(s.copyBtn, status === "copied" && s.copied)} onClick={() => void copy()}>
           {status === "copied" ? "Copied" : "Copy"}
@@ -110,6 +117,7 @@ export function DemoMenu({
   onTour,
   onReset,
   onClose,
+  aboveTourBar = false,
 }: {
   role: Role;
   onRole: (r: Role) => void;
@@ -121,6 +129,8 @@ export function DemoMenu({
   onTour: () => void;
   onReset: () => void;
   onClose: () => void;
+  /** A tour is running: it waits as a bar at the bottom while the menu is open, so the menu stops above it (D-040). */
+  aboveTourBar?: boolean;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -167,7 +177,7 @@ export function DemoMenu({
   const heldDocs = Object.entries(metrics.heldByDoc).sort((a, b) => b[1].count - a[1].count);
 
   return (
-    <div ref={ref} className={s.menu} role="dialog" aria-label="Demo menu" onKeyDown={onKey}>
+    <div ref={ref} className={cx(s.menu, aboveTourBar && s.menuAboveBar)} role="dialog" aria-label="Demo menu" onKeyDown={onKey}>
       <h2 ref={titleRef} className={s.menuTitle} tabIndex={-1}>
         Demo
       </h2>
