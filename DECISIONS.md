@@ -656,3 +656,44 @@ An independent-style review before sharing with Slite (security, correctness, UX
 - **Not changed:** on phones an open agent sheet is modal (its scrim covers the header), so the Demo button is reached
   after closing the sheet, as before.
 - UI only: no engine, rule, locked-test, seed or saved-response changes.
+
+### D-041 · A second topic (fee_refund), the comparator registry, and the re-record (Phase 10)
+- **Goal.** Show that adding a topic is a taxonomy entry, extraction examples and a comparator, with no change to the
+  decision rules S, A, D0–D11. Topic: is the transfer fee refunded when a transfer fails (yes/no, scoped by rail like the
+  timeline). The seed already states it (DOC-101 §4), so `data/seed`, `SPEC.md`, the brief and the locked tests are untouched.
+- **Comparator registry** (`lib/engine/values.ts`), keyed by value kind. The duration comparison (`sameValue`,
+  `amountWithin`, `formatValue`) moved in unchanged. The rules call `sameValue`, `valueWithin`, `unitsMatch` and
+  `unitLabel` instead of reading amounts and units. Values of different kinds never match; for D8 that's a unit mismatch.
+- **Topic taxonomy** (`lib/topics`): one `TopicDef` per topic holds its value kind, wording, prompt lines, detector patterns,
+  hold headline, reply template, card sentence, and Ask-first and coverage phrases. The rules ask the registry whether a
+  claim's topic is covered (D0b now counts claims on any covered topic) and never name a topic.
+  `lib/engine/topicAgnostic.test.ts` fails if a rule file names a topic or reads amounts or units.
+- **Order of commits** (branch `phase-10`, fast-forwarded to main):
+  1. Held-out fee cases and the before snapshot.
+  2. The registry refactor. Prompts and schemas are byte-identical, and the snapshot is 68/68 identical.
+  3. Replies with several claims.
+  4. Amounts on other topics.
+  5. Topic wording for values.
+  6. The fee_refund topic, which touches no rule file.
+  7. Tests, presets and evals.
+- **SPEC amendments** (the spec can't be edited):
+  - `Topic` is `reversal_window | fee_refund | other`.
+  - `Value` is a duration, a quantity `{quantity, of}` (amounts on topic "other", so D0c can fire for a fee amount or a
+    limit), or a boolean `{flag}` (fee_refund).
+  - Non-duration kinds declare the duration fields as absent, so code written against SPEC §6.2 (including the locked
+    tests' `governing.value.amount`) still compiles.
+- **Replies with several claims.** The engine already decided per claim and rolled up the most severe. The suggested reply
+  now fixes only the wrong claims:
+  - The AI rewrite gets every governed claim marked RIGHT or WRONG.
+  - The template states one sentence per governed claim (with one claim it's exactly SPEC §6.7's).
+  - Ask first keeps the claims the reply got right.
+  - Why shows one card per claim, Trace a header per claim, and the decision card lists each claim's verdict.
+- **Safe-reply prompt version.** The safe-reply prompt has its own version (`REPLY_PROMPT_VERSION`), like `doc_fix`, so
+  changing it never invalidates saved extractions. Its cache identity includes the claims it is given.
+- **Detector.** `fee_refund` brings a fee pattern, so a fee statement the AI misses is EXTRACTION_GAP, not "no claims". The
+  net is per reply: it fires only when no covered claim was extracted (already true for two timelines in one reply).
+- **Demo.** "Try another reply" presets in the composer (3 per ticket), recorded and replay-tested. No new tickets, and the
+  tour is unchanged.
+- **Re-record.** Schema and prompt versions are bumped, so `pnpm record` re-records every saved response: golden, presets,
+  tour and Fix the doc, in one run. `scripts/snapshot-results.ts` compares every saved path's decision and reason code
+  before and after.

@@ -27,6 +27,9 @@ A support agent writes a reply. When they press Send, SureSend checks it first:
 4. It returns **Good to send** (Allow), **Double-check** (Caution), **Hold** or **Ask first** (Escalate), plus a rechecked
    suggested reply and the full reasoning.
 
+It checks two topics: when a failed transfer's money comes back, and whether the transfer fee is refunded. A reply that
+makes both claims gets a verdict per claim, and the most severe one decides.
+
 **The hypothesis.** Slite already has cited, permission-aware answers; drift detection with fixes reviewed in Triage; Ask
 Insights; a Slack bot; MCP; and a Chrome extension. This concept tests something narrower, and it is presented as a
 hypothesis (Slite may have something similar internally):
@@ -45,6 +48,8 @@ unavailable or rate-limited.
 - **Fix the doc.** On the Hold, click "Fix the doc that caused this" to see the one line SureSend would add to the SOP,
   then approve or dismiss it.
 - **Guided tour.** Press "Guided tour" in the header (on phones: Demo menu → Start guided tour) for the 6-step walkthrough.
+- **The second topic.** Under the reply, "Try another reply" has presets. For Ayesha, "Right timeline, wrong fee" is held
+  on the fee claim only, and the suggested reply keeps the right timeline.
 
 <a name="use-it-from-claude"></a>
 
@@ -65,7 +70,7 @@ this URL with a Copy button.
 
 | Tool | What it does |
 |---|---|
-| `check_reply` | Checks a reply against the docs: the decision, why, the next step and a checked suggested reply. |
+| `check_reply` | Checks a reply against the docs: the decision, why, the next step, a verdict per claim and a checked suggested reply. |
 | `list_tickets` | Lists the 3 demo tickets. |
 | `get_doc` | Returns one doc the support agent can see. |
 | `propose_doc_fix` | For a Hold or Ask first, the doc to fix and a minimal fix to it. Applies nothing. |
@@ -119,6 +124,32 @@ Key rules (full table in [SPEC.md §6](SPEC.md)):
 - **Recency never breaks a tie.** Two general policies that disagree escalate.
 - **Proposals never govern.** A Slack proposal or a future-effective change can only downgrade an Allow to Caution.
 
+## Adding a topic
+
+The rules don't know which topics exist. A topic is one file in [`lib/topics`](lib/topics), and its values are compared by
+a comparator chosen by value kind ([`lib/engine/values.ts`](lib/engine/values.ts)). `fee_refund` ("is the transfer fee
+refunded when a transfer fails?", yes or no, scoped by rail like the timeline) was added in
+[one commit](https://github.com/1AbdullahButt/suresend/commit/43f1bbf4970f649a4da6a1271e388e4bc88dc2a6) that changes no decision rule:
+
+| File | What changed |
+|---|---|
+| `lib/topics/feeRefund.ts` | New: the taxonomy entry. Its value kind, wording, extraction examples, detector pattern, headline, reply template |
+| `lib/topics/index.ts` | One line to register it |
+| `lib/engine/values.ts` | A boolean comparator, the first yes/no value kind |
+| `lib/ai/schemas.ts` | The yes/no value's JSON shape, and the schema version bumped |
+| `lib/ai/prompts.ts` | The prompt version bumped (the prompt text comes from the topic file) |
+
+The rule files (`decide.ts`, `resolve.ts`, `standing.ts`, `applicability.ts`, `severity.ts`) are not in that commit.
+[`lib/engine/topicAgnostic.test.ts`](lib/engine/topicAgnostic.test.ts) fails if a rule file names a topic or compares
+amounts or units itself.
+
+The groundwork came first. A [refactor](https://github.com/1AbdullahButt/suresend/commit/4a411e55963564e740c8703e1d745fa45b2633ad) moved the duration comparison into the registry unchanged and
+made the rules ask the registries; every saved decision stayed the same. Then replies got a verdict per claim, amounts on
+other topics got a value (so they're outside coverage, not missed), and values got their topic's wording.
+
+So the next topic needs a file in `lib/topics` with its examples, and a comparator only if its values are a new kind (not
+a duration, an amount or a yes/no). Its tests, golden cases and saved responses come on top.
+
 ## Architecture
 
 ```mermaid
@@ -160,9 +191,9 @@ flowchart TD
 - **MCP server** (`/api/mcp`, Streamable HTTP, stateless):
   - `check_reply` takes `{ reply, ticket_id?, rail? }` and returns the decision (Good to send, Double-check, Hold, Ask
     first, or Couldn't check when the reply can't be read), headline, a one-line reason, the next step, a checked suggested
-    reply, the governing quote and its doc, and the rules that mattered. It runs the same validation, caps, persona filter
-    and engine as the web app, and covers the same one topic: when a failed transfer's money comes back. Other values come
-    back Double-check.
+    reply, the governing quote and its doc, each claim with its own verdict, and the rules that mattered. It runs the same
+    validation, caps, persona filter and engine as the web app, and covers the same two topics: when a failed transfer's
+    money comes back, and whether the transfer fee is refunded. Other values come back Double-check.
   - `list_tickets` returns each demo ticket's customer, payment rail and message. `get_doc` returns one visible doc's
     title, verification signals and text; the restricted DOC-105 is never returned. `propose_doc_fix` takes the same inputs
     as `check_reply` and returns the reason and only the changed lines, before and after.
@@ -229,10 +260,12 @@ pnpm dev
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
-| `pnpm record` | Re-records `data/ai-cache/` with the primary provider |
+| `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc |
 | `pnpm record --tour-edits` | Adds only what the tour's step-6 doc edit needs; never clears existing saved responses |
 | `pnpm mcp:e2e [url]` | Checks an MCP endpoint end to end (default `http://127.0.0.1:3100/api/mcp`) |
 | `pnpm record --fix-edits` | Adds only what Fix the doc needs on the canonical path; never clears existing saved responses |
+| `pnpm record --presets` | Adds only the composer's "Try another reply" presets; never clears existing saved responses |
+| `pnpm tsx scripts/snapshot-results.ts <out.json> [--compare <before.json>]` | Every saved path's decision and reason code (golden, tour, Fix the doc) on saved responses only, compared with an earlier run |
 
 ## How it was built
 
@@ -242,9 +275,11 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 
 ## Limitations
 
-- Fixed topic taxonomy (`reversal_window | other`) for the demo: any other factual claim is "outside coverage" (Caution).
-  The rules are topic-agnostic; a new topic needs a taxonomy entry, prompt examples and, for non-time values such as fees,
-  a comparator.
+- Two topics (`reversal_window`, `fee_refund`) plus `other`: any other factual claim, such as a fee amount or a limit, is
+  "outside coverage" (Caution). The rules are topic-agnostic; the next topic needs a file in `lib/topics` with its
+  examples, and a comparator only for a new kind of value (see Adding a topic).
+- The "nothing found" detector works per reply: it fires only when no claim on a checked topic was extracted. In a reply
+  that has one, a second claim the AI missed isn't flagged. This was already true for two timelines in one reply.
 - Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
   could submit edited docs; in a real deployment the docs would come from Slite, not the browser.
 - Personas are simulated: anyone can switch. DOC-105 is synthetic. Never use this design with real restricted data.
