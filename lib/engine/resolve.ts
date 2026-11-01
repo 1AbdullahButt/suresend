@@ -2,7 +2,8 @@
 // Recency and verification are never used to break a tie.
 import { RAIL_LABEL } from "./applicability";
 import { isVerbatim, namesSource, parseTime } from "./normalize";
-import { formatValue, sameValue } from "./values";
+import { sameValue } from "./values";
+import { describeValue } from "@/lib/topics";
 import type { EvaluatedClaim } from "./decide";
 import type { Governing, Rail, TraceEntry } from "./types";
 
@@ -16,10 +17,12 @@ interface Ctx {
 }
 
 const valueOf = (e: EvaluatedClaim) => e.claim.value!; // C only holds claims with a value
+/** The claim's value in the words of its topic (D-041). */
+const formatValue = (v: ReturnType<typeof valueOf>, e: EvaluatedClaim) => describeValue(e.claim.topic, v);
 
 function governingFrom(e: EvaluatedClaim, via: Governing["via"]): Governing {
   const value = valueOf(e);
-  return { sourceId: e.source.id, value, valueText: formatValue(value), quote: e.claim.quote, via };
+  return { sourceId: e.source.id, value, valueText: formatValue(value, e), quote: e.claim.quote, via };
 }
 
 export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Resolution {
@@ -29,11 +32,11 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
   if (allAgree) {
     const preferred = C.find((e) => e.weakeners.length === 0) ?? first;
     const ids = [...new Set(C.map((e) => e.source.id))].join(", ");
-    trace.push({ rule: "D4", outcome: "fired", detail: `All ${C.length} candidate claim(s) agree (${ids}): V = ${formatValue(valueOf(first))}.` });
+    trace.push({ rule: "D4", outcome: "fired", detail: `All ${C.length} candidate claim(s) agree (${ids}): V = ${formatValue(valueOf(first), first)}.` });
     skip(trace, ["D5", "D6", "D7"], "V settled by consensus.");
     return { kind: "governed", governing: governingFrom(preferred, "CONSENSUS"), basis: C };
   }
-  const summary = C.map((e) => `${e.source.id} ${formatValue(valueOf(e))}`).join(" vs ");
+  const summary = C.map((e) => `${e.source.id} ${formatValue(valueOf(e), e)}`).join(" vs ");
   trace.push({ rule: "D4", outcome: "pass", detail: `Candidates disagree: ${summary}.` });
 
   // D5: exactly one candidate explicitly supersedes every other disagreeing candidate
@@ -59,7 +62,7 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
     for (const t of targets) {
       // A document that contradicts itself can't resolve that by superseding its own claim.
       if (t.source.id === s.source.id) {
-        failures.push(`condition 3 fails: ${s.source.id} also states ${formatValue(valueOf(t))}, and a source can't supersede its own claim`);
+        failures.push(`condition 3 fails: ${s.source.id} also states ${formatValue(valueOf(t), t)}, and a source can't supersede its own claim`);
         continue;
       }
       // Condition 3: each disagreeing candidate's source is named by targetText.
@@ -91,7 +94,7 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
           `2) Its supersedes sentence is quoted verbatim: "${sup.quote.trim().replace(/[.\s]+$/, "")}". ` +
           `3) "${sup.targetText}" names ${named.join(", ")}. ` +
           `4) ${dated.join("; ")}. ` +
-          `V = ${formatValue(valueOf(s))}.`,
+          `V = ${formatValue(valueOf(s), s)}.`,
       });
     } else if (failures.length > 0) {
       d5Notes.push(`${s.source.id}: ${failures.join("; ")}.`);
@@ -124,7 +127,7 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
       trace.push({
         rule: "D6",
         outcome: "fired",
-        detail: `${s.source.id} is the only candidate scoped to the ${RAIL_LABEL[ctx.rail]}, has no weakeners, and every other disagreeing candidate covers all rails. V = ${formatValue(valueOf(s))}.`,
+        detail: `${s.source.id} is the only candidate scoped to the ${RAIL_LABEL[ctx.rail]}, has no weakeners, and every other disagreeing candidate covers all rails. V = ${formatValue(valueOf(s), s)}.`,
       });
       skip(trace, ["D7"], "V settled by specificity.");
       return { kind: "governed", governing: governingFrom(s, "SPECIFIC_EXCEPTION"), basis: [s] };

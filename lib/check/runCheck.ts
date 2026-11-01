@@ -4,7 +4,6 @@
 import { createHash } from "node:crypto";
 import { decide, type DecideTicket, type Extractions } from "@/lib/engine/decide";
 import { isVerbatim } from "@/lib/engine/normalize";
-import { formatValue } from "@/lib/engine/values";
 import { detectPolicyPatterns, hasTimelineWords } from "@/lib/engine/patterns";
 import type {
   AiRunInfo,
@@ -25,7 +24,7 @@ import { MAX_SOURCES_PER_CHECK, mergeOverrides } from "@/lib/workspace/merge";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
 import { escalateTemplate, holdTemplate } from "@/lib/replies/templates";
-import { isCovered } from "@/lib/topics";
+import { describeValue, isCovered } from "@/lib/topics";
 
 export class CheckInputError extends Error {
   constructor(
@@ -243,13 +242,13 @@ function templateParts(facts: GovernedClaim[]): { text: string; claims: DraftCla
   const parts = facts
     .map((f) => ({ topic: f.claim.draftClaim.topic, value: f.claim.governing.value }))
     .filter((p) => {
-      const key = `${p.topic}|${formatValue(p.value)}`;
+      const key = `${p.topic}|${describeValue(p.topic, p.value)}`;
       return seen.has(key) ? false : (seen.add(key), true);
     });
   return {
     text: parts.map((p) => holdTemplate(p.topic, p.value)).join(" "),
     claims: parts.map((p, i) => {
-      const valueText = formatValue(p.value);
+      const valueText = describeValue(p.topic, p.value);
       return { claimId: `template#${i + 1}`, topic: p.topic, value: p.value, valueText, span: valueText, definitive: true };
     }),
   };

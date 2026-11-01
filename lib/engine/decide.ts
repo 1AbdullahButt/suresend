@@ -6,8 +6,8 @@ import { detectPolicyPatterns, patternNoun } from "./patterns";
 import { resolve, skip } from "./resolve";
 import { mostSevere } from "./severity";
 import { claimStanding, weakeners } from "./standing";
-import { formatValue, sameValue, unitLabel, unitsMatch, valueWithin } from "./values";
-import { isCovered, topicDef } from "@/lib/topics";
+import { sameValue, unitLabel, unitsMatch, valueWithin } from "./values";
+import { describeValue, isCovered, topicDef } from "@/lib/topics";
 import type {
   Applicability,
   Cap,
@@ -214,7 +214,7 @@ function outsideCoverage(dc: DraftClaim): ClaimResult {
       {
         rule: "D0c",
         outcome: "fired",
-        detail: `"${dc.span}" makes a claim (${dc.value ? formatValue(dc.value) : dc.valueText}) outside the topics this demo covers. Check it manually.`,
+        detail: `"${dc.span}" makes a claim (${dc.value ? describeValue(dc.topic, dc.value) : dc.valueText}) outside the topics this demo covers. Check it manually.`,
       },
     ],
     governing: null,
@@ -255,6 +255,7 @@ function toEvidence(e: EvaluatedClaim, dc: DraftClaim): Evidence {
 
 function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicket, draftText: string): ClaimResult {
   const trace: TraceEntry[] = [];
+  const formatValue = (v: NonNullable<DraftClaim["value"]>) => describeValue(dc.topic, v);
   const onTopic = pool.filter((e) => e.claim.topic === dc.topic);
   const evidence = onTopic.map((e) => toEvidence(e, dc));
   const result = (decision: Decision, reasonCode: ReasonCode, governing: Governing | null = null): ClaimResult => ({
@@ -445,7 +446,7 @@ function headlineFor(
   const gSource = g ? byId.get(g.sourceId) : undefined;
   const gClaimEffective = lead?.evidence.find((e) => e.source.id === g?.sourceId && e.claim.quote === g?.quote)?.claim.effectiveFrom;
   const cite = gSource ? `${gSource.title}${gClaimEffective ? `, effective ${formatDate(gClaimEffective)}` : ""}` : "";
-  const draftVal = lead?.draftClaim.value ? formatValue(lead.draftClaim.value) : "";
+  const draftVal = lead?.draftClaim.value ? describeValue(lead.draftClaim.topic, lead.draftClaim.value) : "";
   const rail = RAIL_LABEL[ticket.rail];
   const railTransfers = ticket.rail === "unknown" ? "transfers" : `${ticket.rail}-rail transfers`;
 

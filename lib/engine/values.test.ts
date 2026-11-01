@@ -1,7 +1,7 @@
 // D-041: the comparator registry. Durations compare as before; amounts on topic "other" get OUTSIDE_COVERAGE (D0c).
 import { describe, expect, it } from "vitest";
 import { decide, type Extractions } from "./decide";
-import { formatValue, isDuration, kindOf, sameValue, unitLabel, unitsMatch, valueWithin, valueWords } from "./values";
+import { formatValue, isDuration, kindOf, sameValue, unitLabel, unitsMatch, valueWithin, valueWords, type QuantityValue } from "./values";
 import type { DraftClaim, Source } from "./types";
 
 const NOW = new Date("2026-10-30T12:00:00Z");
@@ -24,7 +24,7 @@ describe("duration comparator (moved unchanged)", () => {
 });
 
 describe("quantity comparator (amounts outside the covered topics)", () => {
-  const limit = { quantity: 500000, of: "PKR" };
+  const limit: QuantityValue = { quantity: 500000, of: "PKR" };
   it("formats and compares amounts", () => {
     expect(kindOf(limit)).toBe("quantity");
     expect(isDuration(limit)).toBe(false);

@@ -3,7 +3,7 @@
 import type { CheckResult, ClaimResult, Evidence, OverallDecision, Unit, Value } from "@/lib/engine/types";
 import { patternNoun } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
-import { isCovered, topicDef } from "@/lib/topics";
+import { isCovered, topicDef, wordsFor } from "@/lib/topics";
 import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
 
 export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
@@ -135,7 +135,7 @@ function conflictPair(claim: ClaimResult | null): { a: string; av: string; b: st
   const a = cands[0];
   const b = cands.find((e) => a && e.source.id !== a.source.id && !!e.claim.value && !!a.claim.value && !sameValue(e.claim.value, a.claim.value));
   if (!a || !b) return null;
-  return { a: docName(a), av: valueWords(a.claim.value), b: docName(b), bv: valueWords(b.claim.value) };
+  return { a: docName(a), av: wordsFor(a.claim.topic, a.claim.value!), b: docName(b), bv: wordsFor(b.claim.topic, b.claim.value!) };
 }
 
 function cautionSentence(result: CheckResult, claim: ClaimResult | null): string {
@@ -146,7 +146,7 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
       const sig = claim?.evidence.find((e) => (e.standing === "PROPOSAL" || e.standing === "NOT_YET_EFFECTIVE") && e.relation === "contradicts");
       if (sig) {
         const when = sig.standing === "PROPOSAL" ? "pending sign-off" : `due to start${sig.claim.effectiveFrom ? ` ${shortDate(sig.claim.effectiveFrom)}` : ""}`;
-        return `Your reply matches the policy, but a change to ${valueWords(sig.claim.value)} is ${when}.`;
+        return `Your reply matches the policy, but a change to ${sig.claim.value ? wordsFor(sig.claim.topic, sig.claim.value) : sig.claim.valueText} is ${when}.`;
       }
       return "Your reply matches the policy, but a change is signalled.";
     }
@@ -154,7 +154,7 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
       const ev = governingEvidence(claim);
       const w = ev?.weakeners.map((x) => WEAKENER_WORDS[x].toLowerCase()).join(" and ") ?? "weakened";
       return gov && ev
-        ? `The rules point to ${valueWords(gov.value)}, but ${docName(ev)} is ${w}, so it's trusted less.`
+        ? `The rules point to ${wordsFor(claim!.draftClaim.topic, gov.value)}, but ${docName(ev)} is ${w}, so it's trusted less.`
         : "The doc behind this answer is trusted less right now.";
     }
     case "EXTRACTION_GAP": {
@@ -171,9 +171,9 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     case "UNSUPPORTED":
       return `No doc supports ${claim?.draftClaim.valueText ?? "this"}. Check it with the policy owner.`;
     case "UNIT_MISMATCH":
-      return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov ? valueWords(gov.value) : "a different unit"}.`;
+      return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
     case "HEDGED_CONTRADICTION":
-      return `Your hedged “${claim?.draftClaim.valueText ?? ""}” differs from the policy (${gov ? valueWords(gov.value) : "another value"}).`;
+      return `Your hedged “${claim?.draftClaim.valueText ?? ""}” differs from the policy (${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "another value"}).`;
     case "OUTSIDE_COVERAGE":
       return `Your reply promises ${claim?.draftClaim.valueText ?? "something"} that SureSend doesn't cover. Check it against the source.`;
     default:
@@ -251,7 +251,11 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
   const claim = only ?? mostSevereClaim(result);
   const gov = claim?.governing ?? null;
   const govEv = governingEvidence(claim);
-  const replySays = claim ? (claim.draftClaim.value ? valueWords(claim.draftClaim.value) : claim.draftClaim.valueText || "No timeline") : "No policy promise";
+  const replySays = claim
+    ? claim.draftClaim.value
+      ? wordsFor(claim.draftClaim.topic, claim.draftClaim.value)
+      : claim.draftClaim.valueText || "No timeline"
+    : "No policy promise";
 
   let governing: WhyDoc | null = null;
   const others: WhyOther[] = [];
@@ -290,7 +294,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
         : ev.applicability === "SCOPE_UNRESOLVED"
           ? "Only for one rail"
           : "Disagrees";
-      others.push({ id: ev.source.id, title: ev.source.title, line: `${v ? valueWords(v) : ev.claim.valueText}, ${railShort(ev.claim.scope.rail)}`, label });
+      others.push({ id: ev.source.id, title: ev.source.title, line: `${v ? wordsFor(ev.claim.topic, v) : ev.claim.valueText}, ${railShort(ev.claim.scope.rail)}`, label });
     } else {
       const reason =
         ev.standing === "EXCLUDED"
@@ -402,7 +406,7 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
   const g = c.governing;
   const V = g?.valueText ?? "";
   const govName = g ? ctx.name(g.sourceId) : "the governing doc";
-  const draft = c.draftClaim.value ? valueWords(c.draftClaim.value) : c.draftClaim.valueText;
+  const draft = c.draftClaim.value ? wordsFor(c.draftClaim.topic, c.draftClaim.value) : c.draftClaim.valueText;
   // A value kind without units (yes/no) reads "says … , the doc says …" rather than "outside" / "within" (D-041).
   const unitless = g ? unitLabel(g.value) === null : false;
   const fallback = firstSentence(ctx.named(row.detail));

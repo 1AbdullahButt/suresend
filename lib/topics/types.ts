@@ -10,6 +10,8 @@ export interface TopicDef {
   id: string;
   /** The value kind of its claims; the comparator registry compares them (lib/engine/values.ts). */
   valueKind: ValueKind;
+  /** The topic's words for a value ("refunded"), when the comparator's own wording ("yes") would read badly. */
+  valueWords?: (v: AnyValue) => string;
   /** For the trace: "a definitive reversal-window claim". */
   label: string;
   /** For headlines: "the reversal timeline depends on the payment rail". */

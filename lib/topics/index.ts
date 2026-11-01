@@ -1,6 +1,7 @@
 // The topic taxonomy (D-041). Adding a topic = a TopicDef file registered here, extraction examples in it, and, if its
 // values aren't a kind the engine already compares, a comparator in lib/engine/values.ts. The decision rules stay as
 // they are: they ask this registry and the comparator registry, and never name a topic (lib/engine/topicAgnostic.test.ts).
+import { formatValue, valueWords, type AnyValue } from "@/lib/engine/values";
 import { reversalWindow } from "./reversalWindow";
 import type { TopicDef } from "./types";
 
@@ -25,3 +26,15 @@ export function topicDef(topic: string): TopicDef {
 }
 
 export const topicIds = (): TopicId[] => TOPICS.map((t) => t.id);
+
+const custom = (topic: string) => (byId.get(topic) as TopicDef | undefined)?.valueWords;
+
+/** A value as the engine words it (traces, headlines, the governing value): the topic's words, else the comparator's. */
+export function describeValue(topic: string, v: AnyValue): string {
+  return custom(topic)?.(v) ?? formatValue(v);
+}
+
+/** A value as a reply would say it (UI, MCP): the topic's words, else the comparator's reply wording. */
+export function wordsFor(topic: string, v: AnyValue): string {
+  return custom(topic)?.(v) ?? valueWords(v);
+}
