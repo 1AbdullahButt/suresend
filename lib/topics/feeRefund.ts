@@ -22,7 +22,7 @@ export const feeRefund = {
     taxonomy: `- "fee_refund": whether the transfer FEE comes back to the customer when a transfer fails (a yes/no fact, not the fee amount).`,
     about: "the fee refund",
     draftRule: `A statement about whether the customer gets the transfer fee back ("the fee is refunded with your money", "no fee is kept", "the fee isn't refundable", "the transfer charge stays with us") is "fee_refund". A fee AMOUNT ("a PKR 25 fee") is "other".`,
-    values: `- "fee_refund" values are yes/no: {"flag": true} when the fee comes back ("refunded with the principal", "you get the fee back", "no fee is kept"); {"flag": false} when it doesn't ("isn't refundable", "the fee is charged anyway", "stays with us"). Hedged wording ("should be refunded", "I don't think it's refundable") keeps its flag. valueText: the words as written, e.g. "refunded with the principal".`,
+    values: `- "fee_refund" values are yes/no: {"flag": true} when the fee comes back ("refunded with the principal", "you get the fee back", "no fee is kept"); {"flag": false} when it doesn't ("isn't refundable", "the fee is charged anyway", "stays with us"). Hedged wording ("should be refunded", "probably isn't refunded") keeps its flag. valueText: the words as written, e.g. "refunded with the principal".`,
     sourceNote: `A fee policy stated as a negative ("the transfer fee is not refunded") IS a claim: fee_refund with {"flag": false}. Rule 2 only skips instructions not to say something ("Do NOT promise same day").`,
   },
   patterns: [
