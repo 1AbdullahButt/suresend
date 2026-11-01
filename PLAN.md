@@ -193,3 +193,19 @@ Brief: `design/v2/REDESIGN_PROMPT.md`; artboards `design/v2/*.dc.html`; contract
   another project", D-032) and https://answerguard.vercel.app redirecting to it (308).
 - **Gate:** typecheck, all tests, e2e and the axe audit (1440/1024/390) pass; GIF re-recorded; deployed; live check that the
   header says SureSend and both URLs load; QA APPROVED; `git worktree list` clean.
+
+## 10. Phase 7: review fixes (added 2026-11-01, approved by Abdullah)
+Fixes from the independent pre-sharing review (D-034). The engine, locked tests and seed data stay untouched.
+- **Docs and repo:** README accuracy pass (eval table labelled as the tuned demo set, held-out results beside it, video
+  placeholder removed, Slite claims limited to the confirmed list, send-integrity limitation), MIT LICENSE, repo
+  description/homepage/topics, `docs/VIDEO_SCRIPT.md` in `.gitignore`.
+- **Hardening:** security headers (`frame-ancestors 'none'`, nosniff, referrer and permissions policies), postcss advisory
+  override, CI `permissions: contents: read` + SHA-pinned actions + concurrency, generic 500 bodies with server-side logging,
+  idle IPs dropped from the in-memory limiter.
+- **Demo resilience:** Upstash via the Vercel Marketplace (shared per-IP + daily limiter); tour step 5's edit always replays
+  saved responses, never live AI.
+- **UI:** a hint under the pre-filled composer; the suggested-reply label says why when it's Double-check.
+- **Eval:** held-out cases the prompts were never tuned on, reported in their own table.
+- **Gate:** typecheck, all tests, e2e, axe audit (1440/1024/390), `pnpm audit` with no high/moderate, held-out eval run on
+  both providers and reported; deployed; live check of headers, Upstash in use, tour step 5 replaying saved responses and both
+  URLs; QA APPROVED; `git worktree list` clean.

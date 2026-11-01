@@ -45,9 +45,11 @@ function badRequest(error: z.ZodError): HandlerResponse {
   };
 }
 
+/** Input errors keep their message; anything unexpected gets a generic body, and the detail goes to the server log only. */
 function failure(e: unknown): HandlerResponse {
   if (e instanceof CheckInputError) return { status: e.status, body: { error: e.message } };
-  return { status: 500, body: { error: "CHECK_FAILED", message: e instanceof Error ? e.message : String(e) } };
+  console.error("[suresend] check failed:", e);
+  return { status: 500, body: { error: "CHECK_FAILED", message: "Something went wrong while checking this reply. Try again." } };
 }
 
 /** GET /api/seed: tickets and the seed sources visible to the persona. */

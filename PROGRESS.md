@@ -589,3 +589,150 @@ AUDIT_EXIT=0
 ```
 
 GATE: PASSED
+
+## Phase 7
+Review fixes (D-034, D-035): hardening, Upstash, tour step 5 on saved responses only, the composer hint (F10), the
+suggested-reply reason (F12), generic 500s (F13), a held-out eval, README accuracy, MIT LICENSE and repo metadata. The engine,
+locked tests and seed data are untouched.
+
+- **Loop:** builder (lead) → tests → QA CHANGES_REQUIRED. The major finding: the README eval section was not yet labelled as
+  the tuned set, and the held-out table was missing. QA's minor findings were also fixed:
+  - the README test count, the e2e wording and two general Slite lines;
+  - the composer hint stayed after a doc edit plus a reload (QA reproduced it); it is now hidden once any doc is edited.
+
+  QA re-review: **APPROVED**. After approval, one README word changed ("the project adopted").
+- **Upstash:** installed from the Marketplace on the free plan, Production only, with `--no-env-pull`, after Abdullah
+  accepted the terms. Pulling Production env to read Redis was refused by the safety classifier (credential
+  materialization), so the check is the `x-suresend-limiter` header on a request that needed live AI (block below).
+- **Tour step 5:** `pnpm record --tour-edits` added 2 saved responses (17 → 19) and left the 17 existing ones
+  byte-identical. `lib/ai/tourReplay.test.ts` fails without them: with the two files moved aside it printed
+  `Tests  3 failed | 3 passed (6)`; with them restored, `Tests  6 passed (6)`.
+- **Held-out eval:** 10 cases written after the prompts were frozen, live, 3 runs per provider (`evals/heldout.md`).
+
+**Typecheck, tests, audit and saved replay (final tree):**
+```
+
+> suresend@0.1.0 typecheck D:\Project\slite
+> tsc --noEmit
+TYPECHECK_EXIT=0
+ RUN  v5.0.5 D:/Project/slite
+ Test Files  16 passed (16)
+      Tests  122 passed (122)
+TEST_EXIT=0
+$ pnpm audit
+No known vulnerabilities found
+$ pnpm eval --saved
+- Decision accuracy: **100.0%** (12/12)
+- Quote validity: **100.0%** (13/13 extracted quotes/spans verbatim; 0 rejected)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+```
+
+**E2E (saved mode) and axe audit (local build, 1440/1024/390):**
+```
+Running 1 test using 1 worker
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.1s)
+  1 passed (2.2s)
+E2E_EXIT=0
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+```
+
+**Tour step-5 recording (live Groq, append-only):**
+```
+✓ full      verify   support_agent HOLD/CONTRADICTS_GOVERNING · suggestion "Failed transfers are reversed within 2 business days." (ai) rechecks CAUTION/CHANGE_SIGNALLED
+✓ full      verify   ops_lead      HOLD/CONTRADICTS_GOVERNING · suggestion "Failed transfers are reversed within 2 business days." (ai) rechecks CAUTION/CHANGE_SIGNALLED
+✓ full      re-check support_agent CAUTION/WEAK_BASIS
+✓ full      re-check ops_lead      CAUTION/WEAK_BASIS
+✓ digitOnly verify   support_agent HOLD/CONTRADICTS_GOVERNING · suggestion "Failed transfers are reversed within 2 business days." (ai) rechecks CAUTION/CHANGE_SIGNALLED
+✓ digitOnly verify   ops_lead      HOLD/CONTRADICTS_GOVERNING · suggestion "Failed transfers are reversed within 2 business days." (ai) rechecks CAUTION/CHANGE_SIGNALLED
+✓ digitOnly re-check support_agent CAUTION/WEAK_BASIS
+✓ digitOnly re-check ops_lead      CAUTION/WEAK_BASIS
+Added 2 saved responses (17 → 19) with groq / openai/gpt-oss-120b. Unexpected: 0
+```
+
+**Held-out eval (live, 3 runs per provider):**
+```
+groq openai/gpt-oss-120b: - Decision accuracy: **100.0%** (30/30)
+groq openai/gpt-oss-120b: - Quote validity: **100.0%** (50/50 extracted quotes/spans verbatim; 0 rejected)
+gemini gemini-3.5-flash-lite: - Decision accuracy: **100.0%** (30/30)
+gemini gemini-3.5-flash-lite: - Quote validity: **100.0%** (51/51 extracted quotes/spans verbatim; 0 rejected)
+```
+
+**Locked paths, saved responses, worktrees:**
+```
+$ git diff --stat HEAD -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md | wc -l
+0
+$ git status --short -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md | wc -l
+0
+$ sha256sum -c (17 saved responses tracked at HEAD)
+17
+$ git status --short data/ai-cache
+?? data/ai-cache/ae109287edd0235847ecd555d6afadc261d6a4e3b18bc6401dec87ee05e5c062.json
+?? data/ai-cache/ec47179e450fb43c474792c455f679b987a1533de7e531f4e54c6d59b6fb6b04.json
+$ git worktree list
+D:/Project/slite 3ce8f39 [main]
+```
+
+**Live, after the final `vercel deploy --prod`:**
+- Headers and the shared limiter on a check that needed live AI:
+```
+Content-Security-Policy: frame-ancestors 'none'
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: strict-origin-when-cross-origin
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+X-Suresend-Limiter: upstash
+live check (new text): HOLD/CONTRADICTS_GOVERNING | ai.mode: live | provider: groq
+```
+- Tour step 5 through the API, both ways of typing the edit:
+```
+PASS full: Send 4-day → 409 HOLD · ai saved · suggestion "Failed transfers are reversed within 2 business days." · label note "a Slack note proposes 1 day"
+PASS full: Send suggestion → 428 CAUTION/CHANGE_SIGNALLED · ai saved (needs the acknowledgement)
+PASS digitOnly: Send 4-day → 409 HOLD · ai saved · suggestion "Failed transfers are reversed within 2 business days." · label note "a Slack note proposes 1 day"
+PASS digitOnly: Send suggestion → 428 CAUTION/CHANGE_SIGNALLED · ai saved (needs the acknowledgement)
+ALL PASS
+```
+- Browser check of the hint, the reason label, headers and phone layout; the hint check includes QA's edit-and-reload repro:
+```
+PASS security headers on /
+PASS security headers on /how-it-works
+PASS security headers on /api/seed?role=support_agent
+PASS hint shown under the pre-filled reply (TCK-9001, instant)
+PASS reply textarea is described by the hint
+PASS axe on the composer with the hint: serious/critical = 0
+PASS hint hidden once the reply is held
+PASS canonical Hold: suggestion label stays "Checked against your docs" ( business day. Checked against your docs)
+PASS no hint on Usman's ticket (rail unknown)
+PASS no hint on Hina's ticket (standard)
+PASS no page errors (0)
+PASS after Save and verify at 2 days: label says "Double-check: a Slack note proposes 1 day"
+PASS after a doc edit and a reload, no hint on the untouched reply
+PASS phone: hint visible
+PASS phone: no horizontal scroll
+PASS phone: axe on the composer clean
+ALL PASS
+```
+- Tour step 5 in the browser (desktop and phone, both card states, axe):
+```
+29 checks passed
+ALL PASS
+```
+- Both URLs (old one redirects with 308, path kept), browser at 1440 and 390:
+```
+200 https://suresend-demo.vercel.app 
+200 https://suresend-demo.vercel.app/how-it-works 
+308 https://answerguard.vercel.app https://suresend-demo.vercel.app/
+308 https://answerguard.vercel.app/how-it-works https://suresend-demo.vercel.app/how-it-works
+PASS https://suresend-demo.vercel.app @ desktop 1440
+PASS https://suresend-demo.vercel.app @ phone 390
+PASS https://answerguard.vercel.app @ desktop 1440
+PASS https://answerguard.vercel.app @ phone 390
+ALL PASS
+```
+- Axe audit against the live site (not-sent is local-only):
+```
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 27
+```
+
+GATE: PASSED

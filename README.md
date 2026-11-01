@@ -4,7 +4,7 @@
 
 **An independent product concept for Slite Agent. Not affiliated with Slite. Synthetic data only.**
 
-> Slite keeps the docs true. SureSend checks the reply before it reaches the customer.
+> Slite's drift detection keeps the docs current. SureSend checks the reply before it reaches the customer.
 
 A support agent writes a reply. Before it's sent, SureSend:
 
@@ -13,22 +13,23 @@ A support agent writes a reply. Before it's sent, SureSend:
 3. weighs those sources with transparent, deterministic rules, and
 4. returns **Allow, Caution, Hold or Escalate**, plus a rechecked safe reply and the full reasoning.
 
-**Live demo:** https://suresend-demo.vercel.app (the old https://answerguard.vercel.app redirects here) · **Source:** https://github.com/1AbdullahButt/suresend · works with no setup; the canonical path replays saved AI responses if live AI is
-unavailable or rate-limited. **Walkthrough video:** _link added after recording._
+**Live demo:** https://suresend-demo.vercel.app (the old https://answerguard.vercel.app redirects here) · **Source:** https://github.com/1AbdullahButt/suresend · works with no setup; the canonical path and the guided tour replay saved AI responses, so they work even when live AI is
+unavailable or rate-limited.
 
 ![SureSend demo: a 4-day draft is held because the instant-rail exception says 1 business day; the safe reply is used and sent; an unknown-rail ticket escalates with a holding reply.](docs/demo.gif)
 
 ## The problem
 
-Slite keeps knowledge accurate over time. But between a policy change and the doc fix, an agent can still type the old
-answer into a customer conversation. The doc that's verified isn't always the one that governs: a newer, more specific
+Slite detects drift in docs and routes the fixes through Triage. But between a policy change and the doc fix, an agent
+can still type the old answer into a customer conversation. The doc that's verified isn't always the one that governs: a newer, more specific
 exception can override it, an informal Slack proposal can look authoritative, and an outdated macro can still be the
 first thing an agent copies.
 
 ## The hypothesis
 
-Slite already has cited, permission-aware answers, drift detection, Ask Insights, a Slack bot and a Chrome extension.
-This concept tests something narrower, and it is presented as a hypothesis (Slite may have something similar internally):
+Slite already has cited, permission-aware answers; drift detection with fixes reviewed in Triage; Ask Insights; a Slack
+bot; MCP; and a Chrome extension. This concept tests something narrower, and it is presented as a hypothesis (Slite may
+have something similar internally):
 
 - check the **agent's own draft reply** at the moment of sending, not just answer a question;
 - weigh conflicting sources with **explicit, inspectable rules**, where verification is one signal among several;
@@ -79,35 +80,55 @@ flowchart TD
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
   stored identity hashes to its name.
 - **Send integrity:** `POST /api/send` reruns the full check on the exact submitted text. Hold and Escalate return 409
-  (an intercept), Caution needs an acknowledgement, and AI unavailable returns 503.
+  (an intercept), Caution needs an acknowledgement, and AI unavailable returns 503. A result the client sends back is
+  ignored; the docs the check runs against are the workspace the client submits (see Limitations).
 - **Permissions (simulated):** the persona filter runs before extraction, so a hidden source never reaches the AI or a
   response. Personas are not authorization: anyone can switch, and a real deployment would take the role from the session.
 - **Spend limit:** Both keys are free tier with no billing account linked, so there is nothing to spend. When the quota runs out, requests are refused (429). That's a hard stop at $0.
-- **Rate limiting on the public demo:** an in-memory per-instance limiter (not shared across serverless instances), the
-  providers' free-tier quotas, and the saved-response fallback with a "Live AI paused" badge. Upstash was skipped because
-  installing it needs a browser terms click and there is no money at risk, only quota (DECISIONS D-025). The code also supports
-  a shared Upstash limiter (per IP + global daily cap); it switches on if the two `UPSTASH_REDIS_REST_*` vars are added.
-  Input caps (4,000 chars per doc, 1,000 per draft, 6 sources) and free cache hits apply either way.
+- **Rate limiting on the public demo:** a shared Upstash Redis limiter from the Vercel Marketplace (a per-IP cap per 10
+  minutes and a daily cap overall, set by `RATE_LIMIT_PER_10MIN` and `GLOBAL_LIVE_CHECKS_PER_DAY`; defaults 20 and 500),
+  then the providers' free-tier quotas, then the saved-response fallback with a "Live AI paused" badge (D-034). Responses
+  from `/api/check` and `/api/send` carry `x-suresend-limiter`, which reads `upstash` after a live check went through the
+  shared limiter. Without the Upstash vars the code falls back to an in-memory per-instance limiter. Input caps
+  (4,000 chars per doc, 1,000 per draft, 6 sources) and free cache hits apply either way. The canonical path and the guided
+  tour, including both ways of typing step 5's edit, replay saved responses, so they never spend live AI.
+- **Hardening:** security headers (`frame-ancestors 'none'`, `nosniff`, referrer and permissions policies), generic 500
+  bodies with the detail logged server-side only, zod on every request body, and a read-only CI token with SHA-pinned actions.
 
 ## Tests and eval
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests | 105 passed |
-| `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Hold → blocked send → safe reply → sent → Impact shows 1 intercept | passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's saved-response replay) | 122 passed |
+| `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 12 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft) × 3 runs × 2 providers | see below |
-| `scripts/ui-audit.ts` | axe-core + screenshots, 6 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
+| `pnpm eval --heldout` | 10 held-out cases × 3 runs × 2 providers | see below |
+| `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
-Live-AI eval, from [evals/results.md](evals/results.md) (prompt `2026-10-30.2`, throttled to the free tiers):
+**Regression on the 12-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
+that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-10-30.2`, throttled to the free tiers):
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 100% (36/36) | 100% (39/39) | 100% (180/180) | PASS |
 | Gemini · `gemini-3.5-flash-lite` | 100% (36/36) | 100% (38/38) | 100% (180/180) | PASS |
 
-Honest caveats: the golden set is small and built around one scenario; a first Gemini run missed the Slack proposal and
-rejected two quotes until the prompt said proposals are claims and quotes exclude markdown labels (the fix was in the
-prompt, never the rules or tests).
+A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
+exclude markdown labels (the fix was in the prompt, never the rules or tests).
+
+**Held-out set (10 cases, never used for tuning).** Written after the prompts were frozen: reworded drafts ("working days",
+a number word, calendar days, a hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal,
+an injection inside the draft and a no-claim reply. From [evals/heldout.md](evals/heldout.md), live, 3 runs each:
+
+| Provider · model | Decision accuracy | Quote validity |
+|---|---|---|
+| Groq · `openai/gpt-oss-120b` | 100% (30/30) | 100% (50/50) |
+| Gemini · `gemini-3.5-flash-lite` | 100% (30/30) | 100% (51/51) |
+
+Read it for what it is: 10 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
+conventions the project adopted: "4 days" without "business" means calendar days (H5); a signalled change is compared on the
+amount only, so a proposed "1 day" doesn't contradict "1 business day" (H3); and the exception supersedes the SOP by naming
+its title, even after the SOP is reworded (H7).
 
 ## Run it
 
@@ -123,7 +144,9 @@ pnpm dev
 | `pnpm e2e` | Playwright demo flow in saved mode |
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
+| `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
 | `pnpm record` | Re-records `data/ai-cache/` with the primary provider |
+| `pnpm record --tour-edits` | Adds only what the tour's step 5 needs; never clears existing saved responses |
 
 ## How it was built
 
@@ -133,12 +156,17 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 
 ## Limitations
 
-- Fixed topic taxonomy (`reversal_window | other`) for the demo.
+- Fixed topic taxonomy (`reversal_window | other`) for the demo: any other factual claim is "outside coverage" (Caution).
+  The rules are topic-agnostic; a new topic needs a taxonomy entry, prompt examples and, for non-time values such as fees,
+  a comparator.
+- Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
+  could submit edited docs; in a real deployment the docs would come from Slite, not the browser.
 - Personas are simulated: anyone can switch. DOC-105 is synthetic. Never use this design with real restricted data.
 - No real Slite or Intercom integration; all data is synthetic.
 - Free-tier AI limits (Groq ~8K tokens/min): concurrent live checks fall back to saved responses with a visible badge.
-- No shared rate limiter on the public demo (Upstash skipped, D-025): the in-memory limiter is per serverless instance.
-- Saved responses cover the seeded docs, the Appendix B variants and the canonical drafts; arbitrary new text needs live AI.
+- Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts and the tour's step-5 edit;
+  arbitrary new text needs live AI.
+- The eval is small and built around one scenario; the held-out set (10 cases) is a first check on generalisation, not proof.
 
 ## What not to claim
 

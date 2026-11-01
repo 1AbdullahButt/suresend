@@ -18,6 +18,7 @@ import type {
   SourceClaim,
   Suggestion,
 } from "@/lib/engine/types";
+import { recheckNote, type CheckedSuggestion } from "@/lib/check/recheckNote";
 import { MAX_SOURCES_PER_CHECK, mergeOverrides } from "@/lib/workspace/merge";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
@@ -169,7 +170,7 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   const out = decide(extractions, sources, ticket, now);
 
-  let suggestion: Suggestion | null = null;
+  let suggestion: CheckedSuggestion | null = null;
   if (out.decision === "HOLD") {
     const governing = out.claims.find((c) => c.decision === "HOLD" && c.governing)?.governing;
     if (governing) suggestion = await holdSuggestion(input.draft, governing, extractions, sources, ticket, now, deps, infos);
@@ -190,6 +191,12 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
     patternMatches: out.patternMatches,
     trace: out.trace,
   };
+}
+
+/** The suggestion as returned, with the plain reason when its recheck is CAUTION. */
+function checked(text: string, origin: Suggestion["origin"], re: ReturnType<typeof decide>, sources: Source[]): CheckedSuggestion {
+  const note = recheckNote(re, sources);
+  return { text, origin, recheckDecision: re.decision as Decision, ...(note ? { recheckNote: note } : {}) };
 }
 
 /** Rechecks a candidate reply against the same source extractions. Pure apart from the given draft claims. */
@@ -221,7 +228,7 @@ async function holdSuggestion(
   now: Date,
   deps: CheckDeps,
   infos: AiRunInfo[],
-): Promise<Suggestion> {
+): Promise<CheckedSuggestion> {
   // AI rewrite first (SPEC §6.7): it gets only V, its quote and the draft. The server rechecks it.
   if (deps.suggestReply) {
     try {
@@ -233,7 +240,7 @@ async function holdSuggestion(
         const rejected: RejectedExtraction[] = [];
         const claims = validateDraftClaims(text, ex.claims, rejected);
         const re = recheck(text, claims, extractions, sources, ticket, now);
-        if (rejected.length === 0 && isAcceptable(re)) return { text, origin: "ai", recheckDecision: re.decision as Decision };
+        if (rejected.length === 0 && isAcceptable(re)) return checked(text, "ai", re, sources);
       }
     } catch {
       // fall through to the template
@@ -250,15 +257,15 @@ async function holdSuggestion(
     ticket,
     now,
   );
-  return { text, origin: "template", recheckDecision: re.decision as Decision };
+  return checked(text, "template", re, sources);
 }
 
-function escalateSuggestion(extractions: Extractions, sources: Source[], ticket: DecideTicket, now: Date): Suggestion {
+function escalateSuggestion(extractions: Extractions, sources: Source[], ticket: DecideTicket, now: Date): CheckedSuggestion {
   const text = ESCALATE_TEMPLATE;
   // SPEC §6.7: no digits, no day/hour words, and the policy-pattern detector must not fire.
   if (hasTimelineWords(text) || detectPolicyPatterns(text).length > 0) {
     throw new Error("ESCALATE template contains a timeline; refusing to suggest it");
   }
   const re = recheck(text, [], extractions, sources, ticket, now);
-  return { text, origin: "template", recheckDecision: re.decision as Decision };
+  return checked(text, "template", re, sources);
 }

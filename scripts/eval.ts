@@ -12,6 +12,8 @@
 //   pnpm eval --runs 1              quicker smoke run
 //   pnpm eval --combine             rebuild results.md from results-<provider>.json (no model calls)
 //   pnpm eval --saved               replay data/ai-cache only (AI_MODE=saved, no key needed), configured provider chain
+//   pnpm eval --heldout             the held-out cases in evals/heldout.json (D-035): live, both providers, report-only
+//                                   → evals/heldout.md; never touches results.md, the provider selection or data/ai-cache
 import { loadEnvConfig } from "@next/env";
 import { existsSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
@@ -21,34 +23,60 @@ import { createAiCache } from "@/lib/ai/cache";
 import type { ProviderName } from "@/lib/ai/client";
 import { PROMPT_VERSION } from "@/lib/ai/prompts";
 import { isVerbatim } from "@/lib/engine/normalize";
-import { variantOverrides, type VariantId } from "@/lib/workspace/variants";
-import type { CheckDeps, DraftClaim, SourceClaim } from "@/lib/engine/types";
+import { draftSave, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
+import type { CheckDeps, DraftClaim, SourceClaim, SourceOverride } from "@/lib/engine/types";
 
 loadEnvConfig(process.cwd());
 
 const args = process.argv.slice(2);
 const argValue = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
 const savedMode = args.includes("--saved");
+const heldOutMode = args.includes("--heldout");
+if (savedMode && heldOutMode) throw new Error("--heldout runs live only: held-out cases are never recorded (D-035)");
 if (savedMode) process.env.AI_MODE = "saved";
 const runs = savedMode ? 1 : Number(argValue("--runs") ?? 3) || 3;
 const onlyProvider = argValue("--provider") as ProviderName | undefined;
 const providers: ProviderName[] = onlyProvider ? [onlyProvider] : ["groq", "gemini"];
 
+/** A held-out case's doc edit: the body as saved with "Save and verify" or "Save and re-check", or the doc removed. */
+interface OverrideSpec {
+  id: string;
+  save?: "verify" | "draft";
+  body?: string;
+  deleted?: boolean;
+}
+
 interface GoldenCase {
   id: string;
+  note?: string;
   ticketId: string;
   rail: "instant" | "standard" | "unknown";
   draft: string;
-  variant: VariantId | null;
+  variant?: VariantId | null;
+  overrides?: OverrideSpec[];
   expect: { decision: string; reasonCode: string; suggestionIncludes?: string };
 }
-const root = process.cwd();
-const golden = JSON.parse(readFileSync(path.join(root, "evals", "golden.json"), "utf8")) as {
+
+interface Suite {
   decisionTime: string;
   saveTime: string;
-  gate: string[];
+  gate?: string[];
   cases: GoldenCase[];
-};
+}
+
+const root = process.cwd();
+const loadSuite = (file: string) => JSON.parse(readFileSync(path.join(root, "evals", file), "utf8")) as Suite;
+const golden = loadSuite("golden.json");
+const suite = heldOutMode ? loadSuite("heldout.json") : golden;
+
+function overridesFor(c: GoldenCase, saveTime: string): SourceOverride[] {
+  if (c.overrides) {
+    return c.overrides.map((o) =>
+      o.deleted ? { id: o.id, deleted: true } : (o.save === "draft" ? draftSave : verifiedSave)(o.id, o.body ?? "", saveTime),
+    );
+  }
+  return c.variant ? variantOverrides(c.variant, saveTime) : [];
+}
 
 // Expected extractions (the hand-written test fixtures, read-only) for field accuracy.
 const fixtureDir = path.join(root, "tests", "fixtures", "extractions");
@@ -211,11 +239,11 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
         }),
       suggestReply: (req) => withBackoff(() => base.suggestReply!(req)),
     };
-    for (const c of golden.cases) {
-      const overrides = c.variant ? variantOverrides(c.variant, golden.saveTime) : [];
+    for (const c of suite.cases) {
+      const overrides = overridesFor(c, suite.saveTime);
       let entry: CaseRun;
       try {
-        const r = await runCheck({ ticketId: c.ticketId, rail: c.rail, draft: c.draft, role: "support_agent", overrides, decisionTime: golden.decisionTime }, deps);
+        const r = await runCheck({ ticketId: c.ticketId, rail: c.rail, draft: c.draft, role: "support_agent", overrides, decisionTime: suite.decisionTime }, deps);
         const suggestionOk = !c.expect.suggestionIncludes || (r.suggestion?.text.includes(c.expect.suggestionIncludes) ?? false);
         const ok = r.decision === c.expect.decision && r.reasonCode === c.expect.reasonCode && suggestionOk;
         entry = {
@@ -235,16 +263,18 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
   const pct = (a: number, b: number) => (b === 0 ? "n/a" : `${((100 * a) / b).toFixed(1)}%`);
   let totalOk = 0;
   let total = 0;
-  const rows = golden.cases.map((c) => {
+  const gate = suite.gate ?? [];
+  const rows = suite.cases.map((c) => {
     const rs = results.get(c.id) ?? [];
     const okCount = rs.filter((r) => r.ok).length;
     totalOk += okCount;
     total += rs.length;
-    return `| ${c.id} | ${golden.gate.includes(c.id) ? "gate" : ""} | ${c.expect.decision} / ${c.expect.reasonCode} | ${rs
+    const label = heldOutMode ? (c.note ?? "") : gate.includes(c.id) ? "gate" : "";
+    return `| ${c.id} | ${label} | ${c.expect.decision} / ${c.expect.reasonCode} | ${rs
       .map((r) => (r.ok ? "✓" : `✗ ${r.decision}/${r.reasonCode}`))
       .join(" · ")} | ${okCount}/${rs.length} |`;
   });
-  const gatePass = golden.gate.every((id) => {
+  const gatePass = gate.every((id) => {
     const rs = results.get(id) ?? [];
     return rs.length === runs && rs.every((r) => r.ok);
   });
@@ -254,10 +284,9 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
 - Runs per case: ${runs} · date: ${new Date().toISOString()}${savedMode ? "" : " · throttled to stay under the free tier"}
 - Decision accuracy: **${pct(totalOk, total)}** (${totalOk}/${total})
 - Quote validity: **${pct(quotes.valid, quotes.total)}** (${quotes.valid}/${quotes.total} extracted quotes/spans verbatim; ${quoteRejections} rejected)
-- Extraction field accuracy (vs hand-written fixtures): **${pct(fields.correct, fields.total)}** (${fields.correct}/${fields.total})
-- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **${gatePass ? "PASS" : "FAIL"}**
-
-| Case | | Expected | Runs | Correct |
+- Extraction field accuracy (vs hand-written fixtures${heldOutMode ? "; seed docs only, the reworded texts have none" : ""}): **${pct(fields.correct, fields.total)}** (${fields.correct}/${fields.total})
+${heldOutMode ? "" : `- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **${gatePass ? "PASS" : "FAIL"}**\n`}
+| Case | ${heldOutMode ? "What it probes" : ""} | Expected | Runs | Correct |
 |---|---|---|---|---|
 ${rows.join("\n")}
 ${fieldMisses.length ? `\nField misses:\n${[...new Set(fieldMisses)].map((m) => `- ${m}`).join("\n")}\n` : ""}`;
@@ -318,7 +347,37 @@ ${reports.map((r) => r.markdown).join("\n")}`;
   return primary;
 }
 
+/** evals/heldout.md from heldout-<provider>.json: report-only, no gate and no provider selection (D-035). */
+function writeHeldOut() {
+  const dir = path.join(root, "evals");
+  const reports = (["groq", "gemini"] as const)
+    .filter((p) => existsSync(path.join(dir, `heldout-${p}.json`)))
+    .map((p) => JSON.parse(readFileSync(path.join(dir, `heldout-${p}.json`), "utf8")) as ProviderReport);
+  const md = `# Held-out eval results
+
+${suite.cases.length} held-out cases (\`evals/heldout.json\`), written after the prompts were frozen at \`${PROMPT_VERSION}\` and never used
+to tune them: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a calendar-day reply, a hedge, an
+unknown rail, an injection inside the draft and a no-claim reply. Each runs ${runs}× per provider, live. Report only: no gate,
+not used for the provider selection, never recorded into \`data/ai-cache\`. Failures are reported as they are.
+
+${reports.map((r) => r.markdown).join("\n")}`;
+  writeFileSync(path.join(dir, "heldout.md"), md, "utf8");
+  console.log(md);
+}
+
 async function main() {
+  if (heldOutMode) {
+    for (const p of providers) {
+      try {
+        const r = await evalProvider(p);
+        writeFileSync(path.join(root, "evals", `heldout-${p}.json`), JSON.stringify(r, null, 2), "utf8");
+      } catch (e) {
+        console.error(`${p}: held-out eval could not run: ${e instanceof Error ? e.message : String(e)}`);
+      }
+    }
+    writeHeldOut();
+    process.exit(0);
+  }
   if (args.includes("--combine")) {
     // Rebuild evals/results.md from the existing results-<provider>.json files without new model calls.
     process.exit(writeCombined() ? 0 : 1);

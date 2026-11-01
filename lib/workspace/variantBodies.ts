@@ -12,6 +12,15 @@ export function replaceOnce(body: string, from: string, to: string): string {
   return body.replace(from, to);
 }
 
+/**
+ * Guided-tour step 5 asks the visitor to change "1 business day" to "2 business days" in DOC-103. Both ways of typing it
+ * have saved responses (D-034), so the step never needs live AI: the full edit (the B1 body) and changing only the digit.
+ */
+export const tourStep5Edits = {
+  full: (seed: string) => replaceOnce(seed, "1 business day", "2 business days"),
+  digitOnly: (seed: string) => replaceOnce(seed, "1 business day", "2 business day"),
+};
+
 /** DOC-103 variant bodies, given DOC-103's seed body. B7 uses the B1 body with Save draft. */
 export const doc103Variant = {
   B1: (seed: string) => replaceOnce(seed, "1 business day", "2 business days"),

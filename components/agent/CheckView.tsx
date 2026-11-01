@@ -1,6 +1,6 @@
 "use client";
 import { Check, CircleCheck, RefreshCw } from "lucide-react";
-import type { Rail } from "@/lib/engine/types";
+import type { Rail, Suggestion } from "@/lib/engine/types";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
 import { summarize } from "@/lib/client/outcome";
@@ -17,6 +17,11 @@ const STALE_TEXT: Record<Exclude<StaleReason, null>, string> = {
   persona: "Viewing as someone else now. Press Send to check again.",
   workspace: "A doc changed. Press Send to check again.",
 };
+
+/** The server's plain reason for a Double-check recheck (D-034); results saved before it existed have none. */
+function recheckNoteOf(sug: Suggestion): string | null {
+  return "recheckNote" in sug && typeof sug.recheckNote === "string" ? sug.recheckNote : null;
+}
 
 /** Emphasise one value inside the generated sentence (e.g. "1 business day"). */
 function Sentence({ text, strong }: { text: string; strong: string | null }) {
@@ -163,6 +168,7 @@ export function CheckView({
   const off = result.decision === "AI_UNAVAILABLE";
   const needsAck = !stale && (result.decision === "CAUTION" || sendState.kind === "ack_required");
   const sug = result.suggestion;
+  const note = sug ? recheckNoteOf(sug) : null;
   const holding = result.decision === "ESCALATE";
 
   return (
@@ -196,7 +202,7 @@ export function CheckView({
               Checked against your docs
             </Tag>
           ) : (
-            <Tag tone="amber">Checked: double-check before sending</Tag>
+            <Tag tone="amber">{note ? `Double-check: ${note}` : "Checked: double-check before sending"}</Tag>
           )}
         </section>
       ) : null}

@@ -312,6 +312,12 @@
   gap: 10px;
   align-items: flex-end;
 }
+.draftHint {
+  margin: -2px 0 0;
+  padding: 0 22px;
+  font-size: 13px;
+  color: var(--muted);
+}
 .input {
   flex: 1;
   min-width: 0;

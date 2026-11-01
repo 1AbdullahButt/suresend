@@ -5,6 +5,8 @@
 //
 //   pnpm record                    re-record everything live with AI_PROVIDER (clears data/ai-cache first)
 //   pnpm record --provider gemini  record with a specific provider
+//   pnpm record --tour-edits       only add what guided-tour step 5 needs (both ways of typing its edit, saved with
+//                                  verify and with re-check); appends, existing files are reused and never cleared (D-034)
 import { loadEnvConfig } from "@next/env";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
@@ -12,7 +14,8 @@ import { runCheck } from "@/lib/check/runCheck";
 import { AI_CACHE_DIR, AiTaskError, aiDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { createAiCache } from "@/lib/ai/cache";
 import { providerChain, type ProviderName } from "@/lib/ai/client";
-import { variantOverrides, type VariantId } from "@/lib/workspace/variants";
+import { draftSave, seedBody, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
+import { tourStep5Edits } from "@/lib/workspace/variantBodies";
 import type { CheckDeps, Role } from "@/lib/engine/types";
 
 loadEnvConfig(process.cwd());
@@ -54,14 +57,47 @@ async function main() {
   const rt = createRuntime({ only, throttle: true, cache: createAiCache({ dir: AI_CACHE_DIR, maxEntries: 1000 }), persist: true });
   const slot = rt.chain[0]!;
   if (!slot.provider) throw new Error(`No live provider for ${only} (check the key and AI_MODE); data/ai-cache left untouched`);
-  rmSync(AI_CACHE_DIR, { recursive: true, force: true });
-  mkdirSync(AI_CACHE_DIR, { recursive: true });
+  const tourOnly = args.includes("--tour-edits");
+  if (!tourOnly) {
+    rmSync(AI_CACHE_DIR, { recursive: true, force: true });
+    mkdirSync(AI_CACHE_DIR, { recursive: true });
+  }
+  const before = readdirSync(AI_CACHE_DIR).filter((f) => f.endsWith(".json")).length;
   const base = aiDeps(rt);
   const deps: CheckDeps = {
     extractSource: (s) => withBackoff(() => base.extractSource(s)),
     extractDraft: (d) => withBackoff(() => base.extractDraft(d)),
     suggestReply: (r) => withBackoff(() => base.suggestReply!(r)),
   };
+
+  if (tourOnly) {
+    // Step 5: the canonical 4-day reply on TCK-9001 after the visitor's edit, then "Use this reply" → Send on the suggestion.
+    let unexpected = 0;
+    const seed = seedBody("DOC-103");
+    for (const [name, body] of Object.entries(tourStep5Edits).map(([n, f]) => [n, f(seed)] as const)) {
+      for (const [mode, save, expected] of [
+        ["verify", verifiedSave, "HOLD"],
+        ["re-check", draftSave, "CAUTION"],
+      ] as const) {
+        for (const role of ["support_agent", "ops_lead"] as Role[]) {
+          const overrides = [save("DOC-103", body, golden.saveTime)];
+          const input = { ticketId: "TCK-9001", rail: "instant" as const, role, overrides };
+          const r = await runCheck({ ...input, draft: golden.cases[0]!.draft }, deps);
+          let replyNote = "";
+          if (r.suggestion) {
+            const re = await runCheck({ ...input, draft: r.suggestion.text }, deps);
+            replyNote = ` · suggestion "${r.suggestion.text}" (${r.suggestion.origin}) rechecks ${re.decision}/${re.reasonCode}`;
+          }
+          const ok = r.decision === expected;
+          if (!ok) unexpected++;
+          console.log(`${ok ? "✓" : "✗"} ${name.padEnd(9)} ${mode.padEnd(8)} ${role.padEnd(13)} ${r.decision}/${r.reasonCode}${replyNote}`);
+        }
+      }
+    }
+    const after = readdirSync(AI_CACHE_DIR).filter((f) => f.endsWith(".json")).length;
+    console.log(`\nAdded ${after - before} saved responses (${before} → ${after}) with ${slot.name} / ${slot.model}. Unexpected: ${unexpected}`);
+    process.exit(unexpected === 0 ? 0 : 1);
+  }
 
   let mismatches = 0;
   const roles: Role[] = ["support_agent", "ops_lead"];

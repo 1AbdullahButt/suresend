@@ -27,6 +27,7 @@ export function ChatCard({
   checking,
   sent,
   stored,
+  docsEdited,
   overlay,
   agentOpen,
   onToggleAgent,
@@ -41,6 +42,8 @@ export function ChatCard({
   checking: boolean;
   sent: SentMessage[];
   stored: StoredResult | null;
+  /** Any doc edited in this demo: the hint's "the docs say 1" may no longer be true, so it's hidden. */
+  docsEdited: boolean;
   overlay: boolean;
   agentOpen: boolean;
   onToggleAgent: () => void;
@@ -51,6 +54,10 @@ export function ChatCard({
   const held = sendState.kind === "blocked";
   const busy = sendState.kind === "sending" || checking;
   const empty = !draft.trim();
+  const hint =
+    meta.draftHint && rail === meta.draftHint.rail && draft === ticket.draft && !docsEdited && !stored && !held && sent.length === 0
+      ? meta.draftHint.text
+      : null;
 
   // Grow the pill composer with its text (up to the CSS max-height).
   useEffect(() => {
@@ -140,6 +147,7 @@ export function ChatCard({
             maxLength={MAX_DRAFT}
             placeholder="Type a reply…"
             spellCheck={false}
+            aria-describedby={hint ? "reply-hint" : undefined}
             onChange={(e) => onDraft(e.target.value)}
           />
           <button
@@ -154,6 +162,11 @@ export function ChatCard({
             {busy ? <span className={s.spin} aria-hidden="true" /> : <ArrowUp aria-hidden="true" strokeWidth={2.2} />}
           </button>
         </div>
+        {hint ? (
+          <p id="reply-hint" className={s.draftHint}>
+            {hint}
+          </p>
+        ) : null}
       </div>
     </main>
   );

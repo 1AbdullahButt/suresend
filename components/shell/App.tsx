@@ -226,6 +226,7 @@ export function App() {
                 checking={ag.checking !== null}
                 sent={ag.sent}
                 stored={ag.stored}
+                docsEdited={Object.keys(ag.overrides).length > 0}
                 overlay={overlay}
                 agentOpen={ag.panelOpen}
                 onToggleAgent={() => (ag.panelOpen ? closeAgent() : openAgent())}

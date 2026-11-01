@@ -10,4 +10,7 @@ coverage/
 *.tsbuildinfo
 next-env.d.ts
 .loop/attempts.json
+.loop/waiting.json
 design/build-screens/
+# Abdullah's own notes; they name his employer and the repo is public (D-031, D-034)
+docs/VIDEO_SCRIPT.md

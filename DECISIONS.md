@@ -417,3 +417,56 @@ On Windows/Git Bash the parent PID seen by `start` is a short-lived wrapper, so 
 - If DOC-103 is already edited when the step opens, the card shows only "This doc was already changed. Restore it to start
   fresh." and [Restore the doc]; the numbered steps appear once it is restored and stay while the visitor edits the doc.
 - The "Esc to close" footer hint is removed; Esc still closes the tour (D-024).
+
+### D-034 · Phase 7: fixes from the pre-sharing review (approved by Abdullah)
+An independent-style review before sharing with Slite (security, correctness, UX, pitch) produced these fixes. The engine
+(`lib/engine/`), the locked tests and the seed data are untouched.
+- **Security headers** (`next.config.ts`): `Content-Security-Policy: frame-ancestors 'none'` plus `X-Frame-Options: DENY`,
+  `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin` and a Permissions-Policy that turns
+  off camera, microphone and geolocation. A full script CSP needs per-request nonces in Next; framing was the risk worth
+  closing, so the CSP stops there.
+- **Dependencies:** `pnpm audit` reported 2 high and 2 moderate advisories, all in `postcss 8.4.31`, which `next 15.5.28`
+  (the latest 15.5.x) pins. A pnpm override lifts it to `^8.5.32`; the audit is clean, and build, tests and e2e pass.
+- **CI:** `permissions: contents: read`, a concurrency group per ref, and the three actions pinned to the commit SHAs of
+  their `v4` tags.
+- **Errors:** an unexpected failure returns a generic 500 body (`CHECK_FAILED`, "Something went wrong…"); the detail goes
+  to the server log only. Input errors (unknown ticket, invalid time) keep their message.
+- **Limiter:** the in-memory fallback drops IPs with no hit in the window once a minute, so its map no longer grows for the
+  instance's lifetime. It also reads the Marketplace's `KV_REST_API_URL`/`KV_REST_API_TOKEN` names as well as
+  `UPSTASH_REDIS_REST_*`.
+- **Upstash (supersedes the "skipped" part of D-025):** Upstash for Redis from the Vercel Marketplace, free plan, connected
+  to Production only, installed with `--no-env-pull` so the local `.env.local` is never overwritten. Abdullah accepted the
+  Marketplace terms in the browser (the one step the CLI can't do). The Marketplace added `KV_REST_API_URL` /
+  `KV_REST_API_TOKEN` (not `UPSTASH_*`), hence the fallback names above.
+- **Verifying it without credentials:** pulling the Production env to read Redis directly was refused by the session's
+  safety classifier (credential materialization), so `/api/check` and `/api/send` now return `x-suresend-limiter`: what the
+  last live-check gate on that instance used (`upstash`, `upstash-unreachable`, `upstash-unused` or `memory`). No keys, IPs
+  or counts. After deploy, a check that needed live AI returned `upstash`. QA noted that `upstash-unreachable` tells a caller
+  the limits have dropped to per-instance; with free-tier quotas and the saved fallback behind it, that's accepted for the
+  value of letting a reviewer confirm the shared limiter.
+- **Tour step 5 never needs live AI:** the visitor may type the edit as "2 business days" (the B1 body, already recorded) or
+  change only the digit ("2 business day"). `pnpm record --tour-edits` added the second (2 files: the DOC-103 extraction and
+  its safe reply) without clearing anything; the 17 existing saved responses are byte-identical. `lib/ai/tourReplay.test.ts`
+  runs both edits through Save and verify, the Send that follows and the tip's re-check with the live gate refusing, and
+  fails if a recording is missing (checked by moving the two files aside: 3 of 6 cases failed).
+- **Composer hint (F10):** under the pre-filled reply on Ayesha's ticket, "This reply promises 4 days. The docs say 1. Press
+  Send.", shown only while the reply is untouched on the instant rail, no doc has been edited in this demo (an edit can
+  make "the docs say 1" untrue, and edits outlive a reload) and nothing has been checked or sent. It lives in `ticketMeta`
+  like the other synthetic ticket details, and the textarea points at it with `aria-describedby`.
+- **Suggested-reply reason (F12):** when the safe reply's recheck is Double-check, the label says why, e.g. "Double-check: a
+  Slack note proposes 1 day". `lib/check/recheckNote.ts` reads the recheck's own output (reason code, governing value,
+  evidence); it never re-decides. Results saved before this change have no note and keep the old label.
+- **Docs and repo:** README eval table labelled as the tuned demo set with the held-out results beside it (D-035); the
+  video placeholder removed; Slite claims limited to the confirmed list (cited, permission-aware answers; drift detection
+  with fixes reviewed in Triage; Ask Insights; a Slack bot; MCP; a Chrome extension); the send-integrity limitation stated;
+  MIT LICENSE; repo description, homepage and topics; `docs/VIDEO_SCRIPT.md` in `.gitignore`.
+
+### D-035 · Held-out eval (Phase 7)
+- The 12 golden cases are the ones the prompts were tuned on, so their 100% is a regression check, not evidence of
+  generalisation. `evals/heldout.json` adds 10 cases written after the prompts were frozen at `2026-10-30.2`: reworded
+  drafts ("working days", a number word, calendar days, a hedge), the unknown-rail ticket, a reworded SOP on both rails, a
+  reworded Slack proposal, an injection inside the draft, and a no-claim reply. Expected outcomes follow SPEC §6 unchanged.
+- They live in their own file (not a `heldOut` flag in `golden.json` as first planned) so they stay out of the recorder, the
+  CI saved replay and the provider selection. `pnpm eval --heldout` runs them live, 3× per provider, and writes
+  `evals/heldout.md`. Report only: no gate, and failures are published as they are. Fixing a failure would mean changing
+  the prompts, which would make these cases tuned too; any such change is a separate, approved step.

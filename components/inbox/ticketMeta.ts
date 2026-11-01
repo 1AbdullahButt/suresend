@@ -6,10 +6,18 @@ export interface TicketMeta {
   created: string;
   transfer: string;
   avatarTone: "a" | "b" | "c";
+  /** One line under the pre-filled reply, shown only while it's untouched on this rail (D-034). */
+  draftHint?: { rail: Rail; text: string };
 }
 
 const META: Record<string, TicketMeta> = {
-  "TCK-9001": { time: "9:41", created: "Oct 30, 9:41", transfer: "TX-48213 · PKR 25,000", avatarTone: "a" },
+  "TCK-9001": {
+    time: "9:41",
+    created: "Oct 30, 9:41",
+    transfer: "TX-48213 · PKR 25,000",
+    avatarTone: "a",
+    draftHint: { rail: "instant", text: "This reply promises 4 days. The docs say 1. Press Send." },
+  },
   "TCK-9002": { time: "9:28", created: "Oct 30, 9:28", transfer: "TX-48197 · PKR 12,500", avatarTone: "b" },
   "TCK-9003": { time: "8:55", created: "Oct 30, 8:55", transfer: "TX-48150 · PKR 40,000", avatarTone: "c" },
 };
