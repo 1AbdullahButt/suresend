@@ -237,3 +237,22 @@ ordinary client-side doc edit.
 - **Gate:** typecheck, all tests (source matching, validation, canonical recheck, DOC-105, MCP applies nothing, saved replay),
   e2e and axe, browser checks of the review and the tour, `pnpm mcp:e2e` local and live; QA APPROVED; deployed;
   `git worktree list` clean.
+
+## 13. Phase 10: a second topic, fee_refund (added 2026-11-02, approved by Abdullah)
+Prove the rules generalise: adding a topic is a taxonomy entry, extraction examples and a comparator, with zero changes to
+the decision rules S, A, D0–D11 (D-041). Topic: is the transfer fee refunded when a transfer fails (yes/no, scoped by rail;
+DOC-101 §4 already states it). The engine's rule logic, `data/seed`, `SPEC.md`, the brief and the locked tests stay untouched.
+- **Engine:** a comparator registry keyed by value kind (`lib/engine/values.ts`; the duration comparison moved in unchanged)
+  and a topic taxonomy (`lib/topics`). The rules call the registries and never name a topic
+  (`lib/engine/topicAgnostic.test.ts`). Done first as a behaviour-identical refactor (snapshot 68/68 identical).
+- **Topic:** `lib/topics/feeRefund.ts` plus a boolean comparator, in a commit that touches no rule file.
+- **Replies with several claims:** a decision per claim, the most severe overall, one card per claim in Why and Trace, and a
+  suggested reply that fixes only the wrong claim.
+- **Coverage:** amounts on other topics (fee amounts, limits) carry a value, so D0c's OUTSIDE_COVERAGE applies to them.
+- **Demo:** "Try another reply" presets in the composer, replaying saved responses. No new tickets; the tour is unchanged.
+- **Evals:** fee cases in the golden set; 4–6 held-out fee cases written before any fee prompt work; both providers, 3 runs.
+- **MCP:** `check_reply` covers the topic and returns a verdict per claim; an MCP e2e case for the two-claim reply.
+- **Gate:** typecheck, all tests, e2e, axe; `pnpm record` re-records every saved response and
+  `scripts/snapshot-results.ts` shows every canonical, tour and Fix-the-doc decision and reason code unchanged; evals on
+  both providers published as they are; `git diff` on the rule files, tests, seed and spec; README "Adding a topic"; D-041;
+  QA APPROVED; deployed; `git worktree list` clean.
