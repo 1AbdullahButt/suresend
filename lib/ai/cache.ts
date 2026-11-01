@@ -7,7 +7,7 @@ import type { Decision, Value } from "@/lib/engine/types";
 
 /** Full cache identity (SPEC §10, plus provider per DECISIONS.md D-001). */
 export interface CacheIdentity {
-  task: "source_extraction" | "draft_extraction" | "safe_reply";
+  task: "source_extraction" | "draft_extraction" | "safe_reply" | "doc_fix";
   promptVersion: string;
   schemaVersion: string;
   provider: string;
@@ -17,6 +17,16 @@ export interface CacheIdentity {
   sourceKind?: string;
   /** safe_reply only */
   governing?: { value: Value; quote: string; decision: Decision };
+  /** doc_fix only (D-037): the claim sentence agents copy, the exception it misses, and how to tell the rail. */
+  fix?: {
+    sourceId: string;
+    sourceQuote: string;
+    exceptionQuote: string;
+    exceptionTitle: string;
+    exceptionValue: string;
+    exceptionRail: string;
+    railHint: string | null;
+  };
 }
 
 /** On-disk format of a saved AI response in data/ai-cache/<key>.json. */

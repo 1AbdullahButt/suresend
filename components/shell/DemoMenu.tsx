@@ -42,6 +42,7 @@ export function DemoMenu({
   onRole,
   metrics,
   onReview,
+  onReviewFix,
   ai,
   onTour,
   onReset,
@@ -51,6 +52,8 @@ export function DemoMenu({
   onRole: (r: Role) => void;
   metrics: Metrics;
   onReview: (checkHash: string, r: Review | null) => void;
+  /** "Review fix" for a doc in "Docs causing held replies" (D-037). */
+  onReviewFix: (docId: string) => void;
   ai: AiRunInfo | null;
   onTour: () => void;
   onReset: () => void;
@@ -98,6 +101,7 @@ export function DemoMenu({
   };
 
   const flags = metrics.flags;
+  const heldDocs = Object.entries(metrics.heldByDoc).sort((a, b) => b[1].count - a[1].count);
 
   return (
     <div ref={ref} className={s.menu} role="dialog" aria-label="Demo menu" onKeyDown={onKey}>
@@ -173,6 +177,34 @@ export function DemoMenu({
           </details>
         ) : null}
       </div>
+
+      {heldDocs.length ? (
+        <div className={s.menuSection}>
+          <h3 className={ui.sectionLabel} id="held-docs">
+            Docs causing held replies
+          </h3>
+          <ul className={s.heldDocs} aria-labelledby="held-docs">
+            {heldDocs.map(([id, d]) => (
+              <li key={id} className={s.heldDoc}>
+                <span className={s.heldDocName}>
+                  <b>{d.title}</b>
+                  <span>
+                    {d.count} held · copied {d.valueText}
+                  </span>
+                </span>
+                {d.fixedText ? (
+                  <span className={s.fixedTag}>Fix approved</span>
+                ) : (
+                  <button type="button" className={s.reviewFix} onClick={() => onReviewFix(id)} aria-label={`Review fix for ${d.title}`}>
+                    Review fix
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+          <p className={s.small}>Simulated in your browser: replies held this session, by the doc they copied.</p>
+        </div>
+      ) : null}
 
       <div className={s.menuActions}>
         <button type="button" className={cx(ui.btn, ui.primary)} onClick={onTour}>

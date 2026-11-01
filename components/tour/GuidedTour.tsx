@@ -5,11 +5,15 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, CircleCheck, X } from "lucide-react";
 import type { SureSend } from "@/lib/client/useSureSend";
+import { findFixSource } from "@/lib/fix/source";
 import { cx } from "@/components/ui/atoms";
 import s from "./tour.module.css";
 
 export const CANONICAL_DRAFT = "Failed transfers are reversed within 4 business days.";
-export const TOUR_STEPS = 5;
+export const TOUR_STEPS = 6;
+/** 0-based index of "Fix the doc that caused this" (D-037) and of the live doc edit after it. */
+const FIX_STEP = 4;
+const EDIT_STEP = 5;
 
 export interface TourState {
   mode: "offer" | "tour";
@@ -90,6 +94,25 @@ const STEPS: Step[] = [
       ag.actions.prepareTicket("TCK-9002", CANONICAL_DRAFT);
       ag.actions.setTab("check");
       hideAgent();
+    },
+  },
+  {
+    title: "Fix the doc that caused this",
+    body: (
+      <>
+        Usman&apos;s reply copied <b>4 business days</b> from the SOP. It covers all rails but never mentions the instant-rail exception.
+        SureSend drafts a one-line fix to that doc and rechecks it. As with fixes reviewed in Slite&apos;s Triage, nothing changes until a
+        person approves it.
+      </>
+    ),
+    target: (ag) => (ag.fixReview ? ['[data-tour="fix-review"]'] : ['[data-tour="fix-link"]', '[data-tour="decision"]']),
+    enter: ({ ag, showAgent }) => {
+      // Stay on the held reply from step 4; if a review from earlier is open, keep it.
+      if (!ag.fixReview) {
+        ag.actions.setTab("check");
+        ag.actions.setView("main");
+      }
+      showAgent();
     },
   },
   {
@@ -178,7 +201,7 @@ export function GuidedTour({
   const titleRef = useRef<HTMLHeadingElement>(null);
   const [box, setBox] = useState<Box | null>(null);
   const [pos, setPos] = useState<{ top: number; left: number }>({ top: 80, left: 16 });
-  // Step 5 only: DOC-103 was already edited when the step opened, so it offers a restore before the numbered steps.
+  // Step 6 only: DOC-103 was already edited when the step opened, so it offers a restore before the numbered steps.
   const [startEdited, setStartEdited] = useState(false);
   const [phoneTop, setPhoneTop] = useState(false);
   const scrolledFor = useRef<string>("");
@@ -204,7 +227,7 @@ export function GuidedTour({
 
   useEffect(() => {
     if (!isTour || !ready || !step) return;
-    if (state.step === 4) setStartEdited(Boolean(agRef.current.overrides["DOC-103"]));
+    if (state.step === EDIT_STEP) setStartEdited(Boolean(agRef.current.overrides["DOC-103"]));
     step.enter?.(ctx());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTour, state.step, ready]);
@@ -273,7 +296,7 @@ export function GuidedTour({
         {box ? <div className={s.ring} style={box} aria-hidden="true" /> : null}
         <div ref={cardRef} className={cx(s.card, phoneTop && s.cardTop)} style={pos} role="dialog" aria-labelledby={titleId} aria-describedby={bodyId}>
           <div className={s.top}>
-            <span className={s.counter}>Guided tour · 5 steps</span>
+            <span className={s.counter}>Guided tour · {TOUR_STEPS} steps</span>
             <span className={s.spacer} />
             <button type="button" className={s.close} aria-label="Close tour offer" onClick={onClose}>
               <X aria-hidden="true" />
@@ -283,8 +306,8 @@ export function GuidedTour({
             New here? Take the 2-minute tour
           </h2>
           <p id={bodyId} className={s.body}>
-            Catch a wrong reply at Send, see why the rules held it, send the right one, handle an unknown rail and edit a doc live. Skip at any
-            step.
+            Catch a wrong reply at Send, see why the rules held it, send the right one, handle an unknown rail, fix the doc behind it and
+            edit a doc live. Skip at any step.
           </p>
           <div className={s.nav}>
             <button type="button" className={cx(s.tbtn, s.tghost)} onClick={onClose}>
@@ -307,7 +330,9 @@ export function GuidedTour({
   const t2 = ag.ticket?.id === "TCK-9002";
   const sent = t1 && ag.sendState.kind === "sent";
   const hasHold = t1 && ag.stored?.result.decision === "HOLD";
-  const restoreFirst = state.step === 4 && startEdited;
+  const restoreFirst = state.step === EDIT_STEP && startEdited;
+  // The current reply's result points to a doc that can be fixed (D-037).
+  const fixable = !!ag.stored && findFixSource(ag.stored.result) !== null;
 
   const sendFor = (id: string, label: string) => (
     <button
@@ -416,7 +441,37 @@ export function GuidedTour({
           </div>
         ) : null}
 
-        {state.step === 4 ? (
+        {state.step === FIX_STEP ? (
+          <div className={s.actions}>
+            {ag.fixReview?.status === "ready" ? (
+              <span className={s.done}>
+                <CircleCheck aria-hidden="true" />
+                The suggested fix, with only the changed line. Approve or dismiss it; either works for the tour.
+              </span>
+            ) : ag.fixReview?.status === "loading" ? null : ag.fixApproved ? (
+              <span className={s.done}>
+                <CircleCheck aria-hidden="true" />
+                Fix approved: {ag.fixApproved.title} now names the exception, so agents stop copying 4 days for instant transfers.
+              </span>
+            ) : fixable ? (
+              <button
+                type="button"
+                className={s.tbtn}
+                disabled={busy}
+                onClick={() => {
+                  ag.actions.openFixReview();
+                  if (overlay) ag.actions.setPanelOpen(true);
+                }}
+              >
+                Show me the fix
+              </button>
+            ) : (
+              <p className={s.note}>Go back to step 4 to hold Usman&apos;s reply first.</p>
+            )}
+          </div>
+        ) : null}
+
+        {state.step === EDIT_STEP ? (
           <div className={s.actions}>
             {restoreFirst ? (
               <button

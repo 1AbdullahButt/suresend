@@ -3,6 +3,7 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { CheckDeps } from "@/lib/engine/types";
+import type { FixDeps } from "@/lib/fix/propose";
 import {
   CheckReplyInput,
   CheckReplyOutput,
@@ -12,6 +13,9 @@ import {
   TicketsOutput,
   checkReply,
   checkReplyText,
+  DocFixOutput,
+  docFixText,
+  proposeDocFix,
   getDoc,
   listTickets,
   visibleDocIds,
@@ -42,7 +46,7 @@ function unexpected(tool: string, e: unknown): CallToolResult {
  * `depsFor` is called once per check_reply, so each check asks the live-AI limiter for itself (a runtime asks it only
  * once, then remembers the answer).
  */
-export function createSureSendMcpServer(depsFor: () => CheckDeps): McpServer {
+export function createSureSendMcpServer(depsFor: () => CheckDeps & FixDeps): McpServer {
   const server = new McpServer({ name: "suresend", title: "SureSend", version: SERVER_VERSION }, { instructions: INSTRUCTIONS });
 
   server.registerTool(
@@ -118,6 +122,28 @@ Pass ticket_id from list_tickets; its payment rail is used unless you pass rail.
         return { content: text(`${d.title} (${d.id}, ${d.kind}, v${d.version}) · ${signals.join(" · ")}\n\n${d.text}\n\n${d.note}`), structuredContent: d };
       } catch (e) {
         return unexpected("get_doc", e);
+      }
+    },
+  );
+
+  server.registerTool(
+    "propose_doc_fix",
+    {
+      title: "Propose a fix to the doc behind a held reply",
+      description: `After check_reply returns Hold or Ask first, find the doc the reply's wrong value was copied from and propose a minimal edit to it, like fixes reviewed in Slite's Triage. Read-only: it returns the doc, the reason, and only the changed line before and after (one passage added after the claim sentence), and applies nothing. A person approves fixes in the SureSend app.
+
+The fix states the exception's value exactly, changes only the claim sentence, and is offered only if the demo's canonical replies keep their decisions with it applied. Returns proposal: null (with why) when no general doc taught the value, or that doc already covers the exception. Same inputs as check_reply. ${DEMO_NOTE}`,
+      inputSchema: CheckReplyInput,
+      outputSchema: DocFixOutput,
+      annotations: READ_ONLY,
+    },
+    async (args) => {
+      try {
+        const out = await proposeDocFix(args, depsFor());
+        if (!out.ok) return failure(out.error);
+        return { content: text(docFixText(out.value)), structuredContent: out.value };
+      } catch (e) {
+        return unexpected("propose_doc_fix", e);
       }
     },
   );

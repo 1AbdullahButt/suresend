@@ -4,6 +4,7 @@ import type { Rail, Suggestion } from "@/lib/engine/types";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
 import { summarize } from "@/lib/client/outcome";
+import { findFixSource } from "@/lib/fix/source";
 import { cx, OutcomeTag, Tag, ui } from "@/components/ui/atoms";
 import { TraceView } from "./TraceView";
 import { WhyView } from "./WhyView";
@@ -85,6 +86,7 @@ export function CheckView({
   view,
   onView,
   onOpenDoc,
+  onFixDoc,
   intercepts,
   pausedVisible,
 }: {
@@ -101,6 +103,8 @@ export function CheckView({
   view: AgentView;
   onView: (v: AgentView) => void;
   onOpenDoc: (id: string) => void;
+  /** "Fix the doc that caused this" (D-037): opens the fix review in the Docs tab. */
+  onFixDoc: () => void;
   intercepts: number;
   pausedVisible: boolean;
 }) {
@@ -169,6 +173,8 @@ export function CheckView({
   const needsAck = !stale && (result.decision === "CAUTION" || sendState.kind === "ack_required");
   const sug = result.suggestion;
   const note = sug ? recheckNoteOf(sug) : null;
+  // A Hold or Ask first whose wrong value came from a general doc that misses the exception (D-037).
+  const fixable = !off && findFixSource(result) !== null;
   const holding = result.decision === "ESCALATE";
 
   return (
@@ -205,6 +211,12 @@ export function CheckView({
             <Tag tone="amber">{note ? `Double-check: ${note}` : "Checked: double-check before sending"}</Tag>
           )}
         </section>
+      ) : null}
+
+      {fixable && !stale ? (
+        <button type="button" className={s.fixLink} onClick={onFixDoc} data-tour="fix-link">
+          Fix the doc that caused this
+        </button>
       ) : null}
 
       {needsAck ? (

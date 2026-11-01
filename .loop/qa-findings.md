@@ -1,89 +1,148 @@
-# QA findings · Phase 8 (MCP check_reply tool) re-review · 2026-11-01T11:27Z
+# QA findings · Phase 9 (re-review) · 2026-11-01T14:15:05Z
 
-This re-review checks the fixes for the 2026-11-01T11:15Z findings (2 major, 8 minor). Reviewed tree: `main` @ 41d63d9
-plus uncommitted Phase 8 changes. The last file change was at 16:20:01 local, before this re-review started at 16:21. The
-hash of `git diff HEAD` (excluding `.loop/qa-findings.md` and `.loop/waiting.json`) plus the untracked files is
-`82dc6f4bd87d…`. It didn't change during the review. Gate reference: PLAN.md §11 and D-036.
+Scope: Phase 9 "Fix the doc" (PLAN.md §12, D-037) after the coordinator's fixes to my first review. Uncommitted tree on
+`main` at 58f6f48.
+
+Not run by QA:
+- The deployed app and `pnpm mcp:e2e` against the live URL (the lead's gate items).
+- Live eval and `pnpm record`.
+- A fresh `pnpm build` (see the build line below).
 
 ## Commands run
-- Locked paths: `git diff --stat -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md` is empty, and
-  `git status` shows nothing untracked under them.
-- `pnpm typecheck` → exit 0.
-- `pnpm test` → `Test Files 19 passed (19) · Tests 143 passed (143)`, exit 0. A verbose run of `lib/mcp` and the limiter
-  tests gave 23/23, including these new tests:
-  - "builds fresh deps for every check_reply…" (3 checks → `depsFor` called 3 times; `list_tickets` → 0)
-  - "on Hold, tells the agent to show a human first when the suggested reply itself comes back Double-check" (SRC-202
-    fails → SOURCE_UNREAD)
-  - `route.test.ts`: batch → 400 `-32600`; malformed → 400 `-32700`; GET and DELETE → 405 with `Allow: POST`.
-- `pnpm audit` → `No known vulnerabilities found`.
-- `pnpm build` → exit 0, `ƒ /api/mcp` listed.
-- `pnpm e2e` → `1 passed (44.1s)`.
-- `AI_MODE=saved pnpm start -p 3100`, then `pnpm mcp:e2e` → 16 PASS lines and `ALL PASS`, exit 0:
-  - "idle 3 s: client made 1 GET in total, none while idle"
-  - Hold with a 1-day suggestion (Good to send), Ask first, Good to send, all with `ai_mode saved`
-  - DOC-105 refused
-  - raw batch → 400; GET and DELETE → 405 with `Allow: POST`
-- Independent probes:
-  - **Idle reconnect** (SDK client, 10 s idle): `{"POST":2,"GET":1}`, down from `GET:10` before the fix.
-  - **Batch and limiter** (calls the real `app/api/mcp/route.ts` POST with a dummy key, all outbound fetch stubbed,
-    `MCP_RATE_LIMIT_PER_10MIN=1`):
-    - a batch of 5 → HTTP 400, 0 gate passes, 0 outbound attempts (before the fix: 5/5);
-    - 5 separate requests → 1/5 pass, the rest `live_ai_paused=true`.
-  - **Raw HTTP:**
-    - malformed JSON → 400 `-32700`; `[1,2,3]` → 400 `-32600`;
-    - unknown method → `-32601`; unknown tool → `isError`;
-    - `doc-105`, `"  DOC-105\n\t"` and `DOC-999` → the identical "No doc with that ID…" error;
-    - bad types, lengths and enums → zod `-32602` text only;
-    - an injection inside the reply → "Couldn't check", with no echo;
-    - extra `role`/`overrides` arguments → stripped;
-    - no `accept` → 406; `text/plain` → 415 (the SDK still runs these checks when given `parsedBody`);
-    - GET (with any Accept), DELETE and PUT → 405.
-  - **Leaks:** a grep of the captured bodies for `DOC-105|FR-HOLD|CMP-7|Fraud|Compliance` found 0 hits, and no response
-    contained a stack trace or internal text.
-  - **Rail-only call:** returns `ticket: {"id":null,"rail":"standard"}`.
-  - The server was stopped and port 3100 is free.
-- stdio, started the documented way from `%TEMP%`:
-  - raw → 5 stdout lines, all JSON-RPC; stderr carries only the startup line; `doc-105` refused; canonical Hold with
-    `ai_mode=saved`;
-  - SDK `StdioClientTransport` → 3 tools; Ask first with `{ id: null, rail: 'unknown' }`; 0 client errors.
-- Axe audit (`scripts/ui-audit.ts` run from a scratch cwd; the tracked `design/` folder is unchanged) → `Serious/critical
-  axe violations: 0. Horizontal page scroll: none`, exit 0.
-- Secrets: the precommit-scan patterns plus JWT/OIDC patterns over `git diff` (1,024 added lines) and the 10 untracked
-  files → no hits.
-- `git worktree list` → only `D:/Project/slite 41d63d9 [main]`.
-
-## Previous findings: status
-- [major] Batch requests getting around the MCP budget → **fixed.**
-  - `createSureSendMcpServer(depsFor)` calls `depsFor()` inside the `check_reply` handler (lib/mcp/server.ts:70).
-  - stdio builds a runtime per check (lib/mcp/stdio.ts:12-13).
-  - The route rejects arrays before the transport (app/api/mcp/route.ts:29).
-  - Proven by the unit tests and by my probe above.
-- [major] GET answering with a closing SSE stream → **fixed.** GET and DELETE return 405 with `Allow: POST` (route.ts:44-49).
-  The SDK client makes 1 GET and stops.
-- [minor] The Hold next_step ignoring the suggestion's own check → fixed and tested (tools.ts:121-125).
-- [minor] Ask first always naming the rail → fixed. SCOPE_UNKNOWN and CONFLICT_UNRESOLVED now get different text
-  (tools.ts:126-129).
-- [minor] Coverage overclaim → fixed with the COVERAGE sentence in the instructions and the description (server.ts:22-25,
-  61).
-- [minor] "The AI only reads and quotes" → fixed (server.ts:63).
-- [minor] README omitting "Couldn't check" → fixed, and the coverage note was added (README.md:37).
-- [minor] README stating the claude.ai menu path as fact → hedged: "at the time of writing; menus move" (README.md:29).
-- [minor] A ticket the caller never chose → `ticket.id` is now null, and the text says "No ticket, <rail> rail".
-- [minor] README.md:136 "passed (local and live)" → still to be confirmed. The lead reports 13/13 on the previous deploy
-  and will rerun on the new deploy before committing (gate item).
+- `pnpm typecheck` → exit 0
+- `pnpm test` → exit 0 · `Test Files 21 passed (21)` · `Tests 163 passed (163)`
+- `pnpm audit` → `No known vulnerabilities found`
+- `AI_MODE=saved pnpm eval --saved` → `Decision accuracy 100.0% (12/12)` · `Quote validity 100.0% (13/13)` ·
+  `Extraction field accuracy 100.0% (60/60)` · `Gate: PASS`
+- **Build:**
+  - Not rebuilt this round, because the coordinator's server on 3100 was serving from `.next` and a rebuild would have
+    disrupted it.
+  - `.next/BUILD_ID` is 2026-11-01 17:31:54 local, and `find app components lib scripts data/ai-cache README.md
+    DECISIONS.md -newer .next/BUILD_ID` returned nothing.
+  - That build served the new behaviour in the browser: the "Fix approved" menu tag, the new review wording, and the
+    re-recorded fix text.
+  - The first round's `pnpm build` passed (exit 0).
+- `AI_MODE=saved AI_PROVIDER=groq AI_FALLBACK_PROVIDER=gemini pnpm start -p 3200` → `✓ Ready`; stopped afterwards.
+- e2e/demo.spec.ts against 3200, via a QA-only config (the same spec, with baseURL on 3200) → `1 passed`
+- `pnpm mcp:e2e http://127.0.0.1:3200/api/mcp` → `ALL PASS` (18 PASS lines), including `propose_doc_fix … drafted by AI,
+  checked by the rules, applied false` and `no response mentions DOC-105`
+- `POST /api/fix` on 3200:
+  - TCK-9001 as support_agent and as ops_lead → `hold`, DOC-101, `origin ai`, `edit.action add_after`, `exception.rail
+    instant`, recheck `HOLD/CONTRADICTS_GOVERNING | ESCALATE/SCOPE_UNKNOWN | ALLOW/SUPPORTED | ALLOW/SUPPORTED`
+  - TCK-9002 as ops_lead → `ask`, DOC-101
+  - TCK-9003 (Allow) → `proposal: null`
+  - missing draft → 400
+  - no DOC-105/FR-HOLD/CMP-7/Fraud text anywhere
+- **Cache:**
+  - 21 files, and every key verifies against its identity (`cacheKey`).
+  - The 19 HEAD files are byte-identical (sha256 compare, 19/19).
+  - The 2 orphans from the first recording are gone.
+  - The new files are `doc_fix` e85c7d94, whose identity carries `sourceId: DOC-101` and `exceptionRail: instant` with
+    FIX_PROMPT_VERSION `2026-11-01.1`, and the fixed-DOC-101 `source_extraction` 50d58304 under PROMPT_VERSION
+    `2026-10-30.2`.
+  - The doc_fix identity now covers every input `fixUserPrompt` sends.
+- **Validator probe** (QA-only vitest, calling `validateFix`/`proposeFix` on seed DOC-101):
+  - **Original major, fixed:** all five of my first-round edits are rejected (now also locked in lib/fix/fix.test.ts).
+  - **Case and whitespace variants of the target:** accepted, but the validated edit is `add_after` at the exact quote,
+    so nothing else can change.
+  - **Rejected:** "same day", "4-day", "no longer".
+  - **Accepted:** see the first minor finding.
+- **Playwright browser checks** (`scratchpad/qa/browser3200.cjs`) → `BROWSER FAILS: 0`:
+  - **Hold → review → Dismiss (1440):**
+    - The link is reachable by Tab, has a visible focus ring, and focus moves to `#fix-title`.
+    - The review shows the title, "A reply this session copied 4 business days from this doc.", "…gives instant-rail
+      transfers 1 business day…", one Before/After pair, and `<ins>` around "For instant-rail transfers, failed
+      transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: …".
+    - The label reads "Drafted by AI, checked by the rules: it adds one passage after the claim sentence and changes
+      nothing else…".
+    - Dismiss leaves localStorage byte-identical.
+  - **Menu → Review fix → Approve (1440):**
+    - The menu shows "2 held · copied 4 business days" before approval and the "2 replies…" why line.
+    - Approval shows the toast and stores the DOC-101 override (verified), and the Docs tab shows the text.
+    - The same Hold is rechecked and stays Hold with suggestion "We’ll reverse failed transfers within 1 business day.".
+      There is no fix link and no AI-unavailable state.
+    - Ask first no longer offers a fix.
+    - The menu then shows "Fix approved", with no "Review fix" button.
+  - **Ask first on TCK-9002 (1024):** the link and the review with the rail hint work.
+  - **390:** the review fits (Approve at 16+249 px, card 358/358) and the menu renders.
+  - **axe:** 0 violations of any impact on review@1440, ask-review@1024, review@390, menu@1440, menu after approval@1440,
+    menu@1024 and menu@390.
+  - **Layout:** no horizontal scroll at 1024 or 390, and the disclaimer footer is present.
+- **Tour** (`scratchpad/qa/tour3200.cjs`; 1440 approve, 1440 dismiss, 390 approve):
+  - "STEP n OF 6" for n = 1…6, ending in "Finish".
+  - Step 5 axe: 0 violations.
+  - After approve, step 5 shows "Fix approved: Outgoing Transfers: Reversal SOP now names the exception…" with no
+    go-back note.
+  - After dismiss, "Show me the fix" is offered again.
+  - Step 6's DOC-103 edit on top of the approved fix gives Hold with "Failed transfers are reversed within 2 business
+    days." (saved replay).
+  - 1 FAIL, pre-existing: at 390, step 6's card covers "Save and verify" (see the last finding).
+- Secret scan (precommit-scan patterns plus Bearer over `git diff HEAD` and the 10 untracked files, 1,817 lines) →
+  `no secret patterns found`. No tracked `.env*` files.
+- `git status -- tests e2e data/seed lib/engine SPEC.md IMPLEMENTATION_BRIEF.md CLAUDE.md` → 0 entries.
+- `git worktree list` → `D:/Project/slite 58f6f48 [main]` only.
 
 ## Findings
-- [severity: minor] lib/mcp/server.ts:25 · the server `instructions` still say "on Hold or Ask first, send the
-  suggested_reply or ask a human" with no condition. The `check_reply` description and `next_step` now make this
-  conditional on the suggestion's check. "Follow its next_step" comes first, so an agent that does so behaves correctly.
-  For full consistency, add "(when its check is Good to send)".
-- [severity: minor] lib/mcp/tools.ts:125 · cosmetic: when the suggestion has a note, the Hold next_step reads "…comes back
-  Double-check: a doc couldn't be read: show it to a human…", with two colons.
-- [severity: minor] app/api/mcp/route.ts:23 · `req.json()` reads the whole body before the transport, so the SDK's 4 MB
-  `maxRequestBodySize` no longer applies. Vercel's 4.5 MB platform cap still bounds it, and the reply is capped at 1,000
-  characters after parsing. No action needed for the demo.
-- Info: the gate items still open are the lead's: redeploy, `pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp`
-  against the new deploy, and the PROGRESS.md `## Phase 8` evidence block. Everything else in PLAN §11 is proven by the
-  output above.
+First-round major (validator scope): **resolved.**
+- The target must be normalized-equal to the claim quote, and the quote must occur exactly once.
+- The validated edit is always `add_after` at the exact quote, and a `replace` must keep the sentence word for word.
+- Verified by the new tests and by my probe.
+
+First-round minors resolved:
+- The doc_fix identity covers every prompt input.
+- Tour step 5 acknowledges an approval.
+- The step-6 references are fixed in README, record-ai-cache, variantBodies and the tourReplay test names.
+- FixReview uses `exception.rail`.
+- The source.ts comment is fixed.
+- Ask first requires exactly one distinct exception.
+- The menu shows "Fix approved".
+- The mcp-e2e formatting is fixed.
+- The Triage wording is "like fixes reviewed in Slite's Triage".
+- The approve guard is now `fixStillApplies`, with a test.
+
+Remaining, all minor:
+- [severity: minor] lib/fix/validate.ts:47-48 and 77-84 (the content checks on the added passage)
+  - **Expected:** README "From held replies to doc fixes" step 2 says the passage "may contain no other timeline,
+    amount, number, negation or promise".
+  - **Actual:** my probe got `ok: true` for these additions:
+    - "Instant-rail transfers don’t get 1 business day yet." (curly apostrophe, so `don't` doesn't match)
+    - "The instant-rail change to 1 business day wasn't approved." and "…didn't move to 1 business day." (contractions not in the list)
+    - "Standard-rail transfers are reversed within 1 business day." and "All transfers are reversed within 1 business day." (wrong rail or all rails)
+    - "Standard transfers can take two months.", "…can take a month.", "…eleven days." (months and number words beyond ten aren't in the pattern detector)
+    - "…usually immediately." and "…the fee is waived."
+  - **Why minor:** the edit is now purely additive, shown verbatim to the approver, and rechecked against the canonical
+    decisions. The badScope test shows that a mis-scoped claim moves TCK-9003 and is dropped. Nothing is applied without
+    approval.
+  - **Suggested fix:**
+    - Normalize ’ to ' and match any `\w+n't`.
+    - Add `month(s)` and `immediately|instantly` to a fix-specific check.
+    - Require the exception's rail word and no other rail word.
+    - Or soften README step 2 to "no other digits or detected timelines, and no common negation or promise words".
+  - (D-037's wording, "the policy-pattern detector… no negation or promise ("not", "never", "guaranteed"…)", is closer to
+    what the code does.)
+- [severity: minor] lib/client/useSureSend.ts:583-584 with lib/client/metrics.ts:96-99
+  - **What happens:** `fixApproved` and `heldByDoc[id].fixed` are set on approve and cleared only by Reset demo (or, for
+    `fixed`, by a new hold).
+  - **Effect:** if the visitor then restores or deletes DOC-101 in the Docs tab, the menu still says "Fix approved" and
+    tour step 5 still says "Fix approved: … now names the exception" even though the doc no longer has the fix.
+  - **Severity:** an edge case; clear both when the DOC-101 override is restored or removed.
+- [severity: minor] components/tour/GuidedTour.tsx:204 and scripts/record-ai-cache.ts:129
+  - **What's left:** two code comments still say "Step 5" for the doc-edit step, now step 6.
+  - **Severity:** cosmetic; the user-facing text is correct.
+- [severity: minor, pre-existing, not Phase 9] At 390 px, tour step 6's card covers the bottom sheet's "Save and verify".
+  The Playwright click was intercepted by the card. The step body and positioning are unchanged from HEAD's step 5. The
+  coordinator has logged this as a follow-up.
+
+Accepted as documented scope (D-037):
+- A 5–7 day reply is not a Hold, so no fix is offered. The matcher maps it to DOC-104, and that is tested.
+- The Ask-first fix is the same DOC-101 edit, with the rail hint.
+
+Checked and fine:
+- **DOC-105:** it can never be a target. Only "everyone" docs qualify, visibility comes from the seed, and the prompt only
+  receives DOC-101 and the DOC-103 quote, title and hint.
+- **Canonical recheck:** it compares decision/reasonCode against a baseline under the same overrides and role, and fails
+  safe on a missing extraction.
+- **Nothing applied:** neither MCP nor `/api/fix` applies anything.
+- **Locked areas:** the engine, tests, e2e, seed data, SPEC.md and IMPLEMENTATION_BRIEF.md are untouched.
 
 ## VERDICT: APPROVED

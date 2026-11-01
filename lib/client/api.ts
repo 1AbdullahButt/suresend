@@ -1,5 +1,6 @@
 // Typed wrappers around the three API routes (SPEC §12, lib/check/handlers.ts).
 import type { CheckResult, Rail, Role, SourceOverride } from "@/lib/engine/types";
+import type { FixResult } from "@/lib/fix/propose";
 import type { SeedResponse } from "./types";
 
 export interface CheckRequest {
@@ -55,6 +56,19 @@ export async function postCheck(req: CheckRequest, signal?: AbortSignal): Promis
   const body = await readBody(res);
   if (!res.ok) throw new ApiError(res.status, errorMessage(res.status, body));
   return body as CheckResult;
+}
+
+/** POST /api/fix (D-037): a doc-fix proposal for a Hold or Ask first, or why there's none. Nothing is applied. */
+export async function postFix(req: CheckRequest, signal?: AbortSignal): Promise<FixResult> {
+  const res = await fetch("/api/fix", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(req),
+    signal,
+  });
+  const body = await readBody(res);
+  if (!res.ok) throw new ApiError(res.status, errorMessage(res.status, body));
+  return body as FixResult;
 }
 
 export type SendOutcome =

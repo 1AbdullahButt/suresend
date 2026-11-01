@@ -50,7 +50,7 @@ async function main() {
   check((methods.GET ?? 0) - getsBefore === 0 && (methods.GET ?? 0) <= 1, `idle 3 s: client made ${methods.GET ?? 0} GET in total, none while idle`);
 
   const { tools } = await client.listTools();
-  check(tools.map((t) => t.name).sort().join(",") === "check_reply,get_doc,list_tickets", `tools: ${tools.map((t) => t.name).join(", ")}`);
+  check(tools.map((t) => t.name).sort().join(",") === "check_reply,get_doc,list_tickets,propose_doc_fix", `tools: ${tools.map((t) => t.name).join(", ")}`);
   check(tools.every((t) => t.annotations?.readOnlyHint === true), "every tool is read-only");
 
   const tickets = await call(client, "list_tickets", {});
@@ -74,6 +74,15 @@ async function main() {
 
   const good = await call(client, "check_reply", { reply: ONE_DAY, ticket_id: "TCK-9001" });
   check(good.s.decision === "Good to send" && good.s.checked_with?.ai_mode === "saved", `check_reply 1 day on TCK-9001: ${good.s.decision} (ai_mode ${good.s.checked_with?.ai_mode})`);
+
+  const fix = await call(client, "propose_doc_fix", { reply: FOUR_DAYS, ticket_id: "TCK-9001" });
+  const proposal = fix.s.proposal as { doc_id: string; drafted_by: string; changed_lines: Array<{ after: string }> } | null;
+  check(
+    proposal?.doc_id === "DOC-101" && fix.s.applied === false && (proposal?.changed_lines[0]?.after ?? "").includes("1 business day"),
+    `propose_doc_fix 4 days on TCK-9001: fix to ${proposal?.doc_id} drafted by ${proposal?.drafted_by}, applied ${String(fix.s.applied)}`,
+  );
+  const after = await call(client, "check_reply", { reply: FOUR_DAYS, ticket_id: "TCK-9001" });
+  check(after.s.decision === "Hold" && after.s.governing?.doc_title === "Instant Rail: Reversal Exception", "  nothing applied: the same reply still holds against the unedited docs");
 
   const bad = await call(client, "check_reply", { reply: "x".repeat(1001) });
   check(bad.r.isError === true, "check_reply over 1,000 characters: refused");

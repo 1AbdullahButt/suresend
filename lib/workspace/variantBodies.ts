@@ -13,7 +13,7 @@ export function replaceOnce(body: string, from: string, to: string): string {
 }
 
 /**
- * Guided-tour step 5 asks the visitor to change "1 business day" to "2 business days" in DOC-103. Both ways of typing it
+ * Guided-tour step 6 asks the visitor to change "1 business day" to "2 business days" in DOC-103. Both ways of typing it
  * have saved responses (D-034), so the step never needs live AI: the full edit (the B1 body) and changing only the digit.
  */
 export const tourStep5Edits = {

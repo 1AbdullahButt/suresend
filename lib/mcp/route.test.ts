@@ -10,11 +10,11 @@ const post = (body: string) => POST(new Request(URL_, { method: "POST", headers:
 const rpc = (id: number, method: string, params: Record<string, unknown> = {}) => ({ jsonrpc: "2.0", id, method, params });
 
 describe("/api/mcp", () => {
-  it("answers a single tools/list with the 3 tools", async () => {
+  it("answers a single tools/list with the 4 tools", async () => {
     const res = await post(JSON.stringify(rpc(1, "tools/list")));
     expect(res.status).toBe(200);
     const json = (await res.json()) as { result: { tools: Array<{ name: string }> } };
-    expect(json.result.tools.map((t) => t.name).sort()).toEqual(["check_reply", "get_doc", "list_tickets"]);
+    expect(json.result.tools.map((t) => t.name).sort()).toEqual(["check_reply", "get_doc", "list_tickets", "propose_doc_fix"]);
     expect(res.headers.get("x-suresend-limiter")).toBeTruthy();
   });
 

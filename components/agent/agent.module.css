@@ -789,3 +789,91 @@
     font-size: 20px;
   }
 }
+
+/* ---------- fix the doc (D-037): Triage-style review ---------- */
+.fixCard {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+}
+.fixLoading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 15px;
+}
+.spin {
+  width: 18px;
+  height: 18px;
+  flex: none;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+  border-top-color: var(--ink);
+  animation: spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .spin {
+    animation: none;
+  }
+}
+.fixWhy {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.fixWhy b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.fixDiff {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.fixPair {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.fixLabel {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+}
+.fixBefore,
+.fixAfter {
+  margin: 0;
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 15px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}
+.fixBefore {
+  background: var(--soft);
+}
+.fixAfter {
+  background: var(--bg);
+}
+.fixIns {
+  text-decoration: none;
+  background: var(--tag-amber);
+  color: var(--ink);
+  border-radius: 4px;
+  padding: 0 2px;
+}
+.small {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--muted);
+}
+.fixLink {
+  composes: linkBtn;
+  font-size: 14px;
+  margin-top: -4px;
+}

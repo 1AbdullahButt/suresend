@@ -5,6 +5,7 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { CANONICAL_DRAFT, fixtureDeps } from "../../tests/helpers/fixtures";
+import { fixAwareDeps } from "@/lib/fix/testDeps";
 import { createSureSendMcpServer } from "./server";
 
 async function connected(depsFor?: () => ReturnType<typeof fixtureDeps>["deps"]) {
@@ -20,10 +21,10 @@ async function connected(depsFor?: () => ReturnType<typeof fixtureDeps>["deps"])
 const textOf = (r: CallToolResult) => r.content.map((c) => (c.type === "text" ? c.text : "")).join("\n");
 
 describe("SureSend MCP server", () => {
-  it("lists 3 read-only tools, and tells agents to check before sending", async () => {
+  it("lists 4 read-only tools, and tells agents to check before sending", async () => {
     const client = await connected();
     const { tools } = await client.listTools();
-    expect(tools.map((t) => t.name).sort()).toEqual(["check_reply", "get_doc", "list_tickets"]);
+    expect(tools.map((t) => t.name).sort()).toEqual(["check_reply", "get_doc", "list_tickets", "propose_doc_fix"]);
     for (const t of tools) expect(t.annotations).toMatchObject({ readOnlyHint: true, destructiveHint: false });
     const check = tools.find((t) => t.name === "check_reply")!;
     expect(check.description).toMatch(/BEFORE you send it/);
@@ -50,6 +51,32 @@ describe("SureSend MCP server", () => {
     for (let i = 0; i < 3; i++) await client.callTool({ name: "check_reply", arguments: { reply: CANONICAL_DRAFT, ticket_id: "TCK-9001" } });
     await client.callTool({ name: "list_tickets", arguments: {} });
     expect(depsFor).toHaveBeenCalledTimes(3);
+  });
+
+  it("propose_doc_fix returns the DOC-101 proposal and applies nothing", async () => {
+    const { deps } = fixAwareDeps();
+    const client = await connected(() => deps);
+    const args = { reply: CANONICAL_DRAFT, ticket_id: "TCK-9001" };
+    const first = (await client.callTool({ name: "propose_doc_fix", arguments: args })) as CallToolResult;
+    const p = (first.structuredContent as { proposal: { doc_id: string; for_decision: string; changed_lines: unknown[] }; applied: boolean }) ?? {};
+    expect(first.isError).toBeFalsy();
+    expect(p.proposal).toMatchObject({ doc_id: "DOC-101", for_decision: "Hold" });
+    expect(p.proposal.changed_lines).toHaveLength(1);
+    expect(p.applied).toBe(false);
+    expect(textOf(first)).toMatch(/Nothing was applied/);
+    // Nothing changed: the reply still holds against the unedited docs, and the same fix is proposed again.
+    const check = (await client.callTool({ name: "check_reply", arguments: args })) as CallToolResult;
+    expect(check.structuredContent).toMatchObject({ decision: "Hold", governing: { doc_id: "DOC-103" } });
+    const second = (await client.callTool({ name: "propose_doc_fix", arguments: args })) as CallToolResult;
+    expect(second.structuredContent).toEqual(first.structuredContent);
+    expect(JSON.stringify([first, second])).not.toMatch(/DOC-105|FR-HOLD|CMP-7|Fraud Hold/);
+  });
+
+  it("propose_doc_fix on a correct reply returns no proposal, with why", async () => {
+    const { deps } = fixAwareDeps();
+    const client = await connected(() => deps);
+    const r = (await client.callTool({ name: "propose_doc_fix", arguments: { reply: "Failed transfers are reversed within 1 business day.", ticket_id: "TCK-9001" } })) as CallToolResult;
+    expect(r.structuredContent).toMatchObject({ proposal: null, applied: false });
   });
 
   it("check_reply: invalid arguments are an error result, not a crash", async () => {

@@ -3,14 +3,17 @@
 // also check new wording live. Nothing may be printed to stdout except MCP messages, so logs go to stderr.
 import { loadEnvConfig } from "@next/env";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
-import { aiDeps, createRuntime } from "@/lib/ai/aiDeps";
+import { aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { allowLiveCheck } from "@/lib/rateLimit";
 import { createSureSendMcpServer } from "./server";
 
 export async function runStdio(): Promise<void> {
   loadEnvConfig(process.cwd(), false, { info: () => {}, error: (...args: unknown[]) => console.error(...args) });
-  // A fresh runtime per check, so the MCP budget is asked for every live check, not once per process.
-  const depsFor = () => aiDeps(createRuntime({ liveGate: () => allowLiveCheck("stdio", "mcp") }));
+  // A fresh runtime per check (and per fix proposal), so the MCP budget is asked every time, not once per process.
+  const depsFor = () => {
+    const rt = createRuntime({ liveGate: () => allowLiveCheck("stdio", "mcp") });
+    return { ...aiDeps(rt), ...aiFixDeps(rt) };
+  };
   await createSureSendMcpServer(depsFor).connect(new StdioServerTransport());
-  console.error("[suresend] MCP server on stdio: check_reply, list_tickets, get_doc");
+  console.error("[suresend] MCP server on stdio: check_reply, list_tickets, get_doc, propose_doc_fix");
 }

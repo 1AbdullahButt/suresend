@@ -55,6 +55,8 @@ old SOP:
   and check it with SureSend first." SureSend returns Ask first and a holding reply with no timeline.
 - **Show the evidence:** "Which doc did SureSend rely on? Show it." Claude calls `get_doc` for DOC-103: the doc's text,
   verification date and owner.
+- **Fix the doc behind it:** "Which doc taught that 4-day answer? Propose a fix." Claude calls `propose_doc_fix`: the SOP,
+  why, and the one added sentence, with `applied: false`. A person approves it in the app's Docs tab.
 
 ## Notes
 

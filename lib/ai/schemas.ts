@@ -157,3 +157,17 @@ export const DRAFT_JSON_SCHEMA: Json = obj({
 });
 
 export const REPLY_JSON_SCHEMA: Json = obj({ reply: str("The rewritten customer reply.") });
+
+// ---- doc_fix (D-037) ---------------------------------------------------------------------------
+
+export const DocFixWire = z.object({
+  action: z.enum(["add_after", "replace"]),
+  target: z.string().min(1).max(1000),
+  text: z.string().min(1).max(600),
+});
+
+export const DOC_FIX_JSON_SCHEMA: Json = obj({
+  action: { type: "string", enum: ["add_after", "replace"], description: "Prefer add_after: add a sentence right after the target." },
+  target: str("The sentence that states the general value, copied character for character from the document."),
+  text: str("The sentence(s) to add after the target (or its replacement): plain text, one short paragraph."),
+});

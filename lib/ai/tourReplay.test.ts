@@ -1,4 +1,4 @@
-// Builder-owned (D-034): guided-tour step 5 never needs live AI. Both ways of typing its edit ("2 business days", or only
+// Builder-owned (D-034): guided-tour step 6 (the doc edit) never needs live AI. Both ways of typing its edit ("2 business days", or only
 // the digit) replay saved responses from data/ai-cache, for Save and verify, the Send that follows, and the tip's re-check.
 import { describe, expect, it } from "vitest";
 import { aiDeps, createRuntime } from "@/lib/ai/aiDeps";
@@ -12,7 +12,7 @@ const SAVED_AT = "2026-11-01T10:00:00Z";
 // The live gate refuses, so a missing saved response shows up as "paused", never as a silent live call.
 const deps = aiDeps(createRuntime({ liveGate: async () => false }));
 
-describe.each(Object.entries(tourStep5Edits))("tour step 5, edit typed as %s", (_name, edit) => {
+describe.each(Object.entries(tourStep5Edits))("tour step 6, edit typed as %s", (_name, edit) => {
   const body = edit(seedBody("DOC-103"));
 
   it.each(["support_agent", "ops_lead"] as const)("Save and verify → Send: saved Hold, and the suggestion's Send is saved too (%s)", async (role) => {

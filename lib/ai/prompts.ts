@@ -96,3 +96,37 @@ ${escapeEnvelope(req.draft)}
 </reply>
 Return the rewritten reply as JSON.`;
 }
+
+// ---- doc_fix (D-037) ---------------------------------------------------------------------------
+// Versioned on its own: changing it never invalidates the extraction and safe-reply responses saved under PROMPT_VERSION.
+export const FIX_PROMPT_VERSION = "2026-11-01.1";
+
+export const FIX_SYSTEM = `You propose the smallest possible edit to an internal support document, so support agents stop copying a value that is wrong for one payment rail.
+${DATA_RULE}
+
+The document states a general value that applies to all rails. An in-force exception in another document gives one rail a different value, and the document doesn't mention it, so agents copy the general value for that rail too.
+
+Return ONE edit:
+- action: "add_after" to add a short sentence right after the target sentence (preferred), or "replace" to rewrite only the target sentence.
+- target: copy the sentence that states the general value, character for character from the document.
+- text: one or two short plain sentences, no markdown. State the exception's value exactly as given (for example "1 business day"), say which rail it applies to, and name the exception document's title. If a "how to tell the rail" line is given, you may add it. Keep the general value for the other rails. Don't add any other numbers, dates, fees or promises, and don't change anything else.`;
+
+export function fixUserPrompt(req: DocFixRequest): string {
+  return `<document id="${req.sourceId}">
+${escapeEnvelope(req.sourceBody)}
+</document>
+Sentence agents copy (general value, all rails): "${escapeEnvelope(req.sourceQuote)}"
+Exception: "${escapeEnvelope(req.exceptionQuote)}" (from "${escapeEnvelope(req.exceptionTitle)}"; value: ${req.exceptionValue}; applies to ${req.exceptionRail}-rail transfers)
+${req.railHint ? `How agents tell the rail (from the exception document): "${escapeEnvelope(req.railHint)}"\n` : ""}Return the edit as JSON.`;
+}
+
+export interface DocFixRequest {
+  sourceId: string;
+  sourceBody: string;
+  sourceQuote: string;
+  exceptionQuote: string;
+  exceptionTitle: string;
+  exceptionValue: string;
+  exceptionRail: "instant" | "standard";
+  railHint: string | null;
+}

@@ -2,7 +2,8 @@
 // workspace and the support-agent persona only; nothing over MCP edits a doc. check_reply goes through handleCheck, so it
 // gets the same validation, input caps, persona filter, engine and generic errors as POST /api/check.
 import { z } from "zod";
-import { handleCheck } from "@/lib/check/handlers";
+import { handleCheck, handleFix } from "@/lib/check/handlers";
+import type { FixDeps, FixResult } from "@/lib/fix/propose";
 import { OUTCOME, summarize, traceRows } from "@/lib/client/outcome";
 import type { CheckDeps, CheckResult, Rail, Suggestion } from "@/lib/engine/types";
 import { visibleSources } from "@/lib/workspace/permissions";
@@ -205,6 +206,75 @@ export async function checkReply(
   const res = await handleCheck({ ticketId: checkOn, rail: reported.rail, draft: input.reply, role: MCP_ROLE }, deps);
   if (res.status !== 200) return { ok: false, error: errorText(res.body) };
   return { ok: true, value: present(res.body as CheckResult, reported) };
+}
+
+// ---- propose_doc_fix (D-037) -----------------------------------------------------------------------------------------
+
+export const DocFixOutput = {
+  proposal: z
+    .object({
+      doc_id: z.string(),
+      doc_title: z.string(),
+      for_decision: z.enum(["Hold", "Ask first"]),
+      reason: z.string(),
+      edit: z.object({ action: z.enum(["add_after", "replace"]), text: z.string() }),
+      changed_lines: z.array(z.object({ before: z.string(), after: z.string() })),
+      drafted_by: z.string(),
+      canonical_recheck: z.array(z.string()),
+    })
+    .nullable(),
+  why: z.string().nullable(),
+  applied: z.literal(false),
+  note: z.string(),
+};
+export type DocFixResult = z.infer<z.ZodObject<typeof DocFixOutput>>;
+
+const FIX_NOTE =
+  "Nothing was applied. A person approves doc fixes in the SureSend app (Docs tab), like fixes reviewed in Slite's Triage; this tool only proposes. " + DEMO_NOTE;
+
+export async function proposeDocFix(
+  input: { reply: string; ticket_id?: string; rail?: Rail },
+  deps: CheckDeps & FixDeps,
+): Promise<ToolOutcome<DocFixResult>> {
+  const ticket = resolveTicket(input.ticket_id, input.rail);
+  if (!ticket.ok) return ticket;
+  const { checkOn, reported } = ticket.value;
+  const res = await handleFix({ ticketId: checkOn, rail: reported.rail, draft: input.reply, role: MCP_ROLE }, deps, deps);
+  if (res.status !== 200) return { ok: false, error: errorText(res.body) };
+  const { proposal: p, why } = res.body as FixResult;
+  return {
+    ok: true,
+    value: {
+      proposal: p
+        ? {
+            doc_id: p.doc.id,
+            doc_title: p.doc.title,
+            for_decision: p.kind === "hold" ? "Hold" : "Ask first",
+            reason: p.reason,
+            edit: { action: p.edit.action, text: p.edit.text },
+            changed_lines: p.changed,
+            drafted_by: p.origin === "ai" ? "AI, checked by the rules" : `template${p.aiSetAside ? ` (${p.aiSetAside})` : ""}, checked by the rules`,
+            canonical_recheck: p.recheck.map((r) => `${r.ticketId} ${r.rail} rail, "${r.draft}": ${r.decision} (unchanged)`),
+          }
+        : null,
+      why,
+      applied: false,
+      note: FIX_NOTE,
+    },
+  };
+}
+
+export function docFixText(r: DocFixResult): string {
+  if (!r.proposal) return `No doc fix to propose: ${r.why ?? "nothing matched"}\n${r.note}`;
+  const p = r.proposal;
+  return [
+    `Proposed fix to ${p.doc_title} (${p.doc_id}), for a ${p.for_decision}:`,
+    p.reason,
+    ...p.changed_lines.flatMap((l) => [`- ${l.before}`, `+ ${l.after}`]),
+    `Drafted by ${p.drafted_by}. Canonical replies rechecked with the fix applied:`,
+    ...p.canonical_recheck.map((x) => `  ${x}`),
+    r.note,
+  ].join("\n");
 }
 
 /** The same result as readable lines, for clients that only show text content. */

@@ -18,8 +18,22 @@ import {
   type StructuredRequest,
 } from "./client";
 import { createAiCache, type AiCache, type CacheIdentity } from "./cache";
-import { DRAFT_SYSTEM, PROMPT_VERSION, REPLY_SYSTEM, SOURCE_SYSTEM, draftUserPrompt, replyUserPrompt, sourceUserPrompt } from "./prompts";
+import type { FixDeps } from "@/lib/fix/propose";
 import {
+  DRAFT_SYSTEM,
+  FIX_PROMPT_VERSION,
+  FIX_SYSTEM,
+  PROMPT_VERSION,
+  REPLY_SYSTEM,
+  SOURCE_SYSTEM,
+  draftUserPrompt,
+  fixUserPrompt,
+  replyUserPrompt,
+  sourceUserPrompt,
+} from "./prompts";
+import {
+  DOC_FIX_JSON_SCHEMA,
+  DocFixWire,
   DRAFT_JSON_SCHEMA,
   DraftExtractionWire,
   REPLY_JSON_SCHEMA,
@@ -265,6 +279,39 @@ export function aiDeps(rt: AiRuntime): CheckDeps {
         (w) => w.reply,
       );
       return { text: value, info };
+    },
+  };
+}
+
+/**
+ * "Fix the doc" (D-037): the AI drafts a minimal edit to the doc agents copied. Same chain as the extractions (cache →
+ * saved → live → fallback), with its own prompt version in the identity. lib/fix validates and rechecks the edit.
+ */
+export function aiFixDeps(rt: AiRuntime): Required<FixDeps> {
+  return {
+    async draftDocFix(req) {
+      const { value, info } = await runTask(
+        rt,
+        "doc_fix",
+        req.sourceBody,
+        {
+          promptVersion: FIX_PROMPT_VERSION,
+          // Every input the prompt uses (QA, D-037); the body is inputText.
+          fix: {
+            sourceId: req.sourceId,
+            sourceQuote: req.sourceQuote,
+            exceptionQuote: req.exceptionQuote,
+            exceptionTitle: req.exceptionTitle,
+            exceptionValue: req.exceptionValue,
+            exceptionRail: req.exceptionRail,
+            railHint: req.railHint,
+          },
+        },
+        { system: FIX_SYSTEM, user: fixUserPrompt(req), schemaName: "doc_fix", schema: DOC_FIX_JSON_SCHEMA },
+        DocFixWire,
+        (w) => w,
+      );
+      return { edit: value, info };
     },
   };
 }

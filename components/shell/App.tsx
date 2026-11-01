@@ -182,6 +182,13 @@ export function App() {
             onRole={(r) => void actions.switchRole(r)}
             metrics={ag.metrics}
             onReview={actions.review}
+            onReviewFix={(docId) => {
+              const last = ag.metrics.heldByDoc[docId]?.last;
+              closeMenu();
+              if (!last) return;
+              actions.openFixReview(last);
+              openAgent();
+            }}
             ai={ag.lastAi}
             onTour={() => {
               tourReturnRef.current = tourBtnRef.current;
@@ -251,6 +258,7 @@ export function App() {
                   view={ag.view}
                   onView={actions.setView}
                   onOpenDoc={actions.openDoc}
+                  onFixDoc={() => actions.openFixReview()}
                   intercepts={ag.metrics.intercepts}
                   pausedVisible={!ag.pausedDismissed}
                 />
@@ -264,6 +272,10 @@ export function App() {
                   onSave={actions.saveSource}
                   onRemove={actions.deleteSource}
                   onRestore={actions.restoreSource}
+                  fixReview={ag.fixReview}
+                  holdsFor={(id) => ag.metrics.heldByDoc[id]?.count ?? 0}
+                  onApproveFix={actions.approveFix}
+                  onDismissFix={actions.dismissFix}
                 />
               )}
             </AgentCard>

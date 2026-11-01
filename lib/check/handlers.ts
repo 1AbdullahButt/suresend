@@ -4,6 +4,7 @@
 import { z } from "zod";
 import type { CheckDeps, HandlerResponse, Role } from "@/lib/engine/types";
 import { CheckInputError, runCheck } from "@/lib/check/runCheck";
+import { proposeFix, type FixDeps } from "@/lib/fix/propose";
 import { MAX_DOC_CHARS, MAX_SOURCES_PER_CHECK } from "@/lib/workspace/merge";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
@@ -66,6 +67,20 @@ export async function handleCheck(body: unknown, deps: CheckDeps): Promise<Handl
   if (!parsed.success) return badRequest(parsed.error);
   try {
     return { status: 200, body: await runCheck(parsed.data, deps) };
+  } catch (e) {
+    return failure(e);
+  }
+}
+
+/**
+ * POST /api/fix (D-037): the same body as /api/check; returns a doc-fix proposal for a Hold or Ask first, or why there's
+ * none. Read-only: nothing is applied, the browser applies an approved fix as an ordinary doc edit.
+ */
+export async function handleFix(body: unknown, deps: CheckDeps, fixDeps: FixDeps): Promise<HandlerResponse> {
+  const parsed = CheckBody.safeParse(body);
+  if (!parsed.success) return badRequest(parsed.error);
+  try {
+    return { status: 200, body: await proposeFix(parsed.data, deps, fixDeps) };
   } catch (e) {
     return failure(e);
   }

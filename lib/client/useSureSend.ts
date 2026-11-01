@@ -5,12 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CheckResult, Rail, Role, Source, Ticket } from "@/lib/engine/types";
 import { mergeOverrides } from "@/lib/workspace/merge";
 import { doc103Variant } from "@/lib/workspace/variantBodies";
-import { ApiError, fetchSeed, postCheck, postSend, type CheckRequest } from "./api";
+import { findFixSource } from "@/lib/fix/source";
+import type { FixProposal } from "@/lib/fix/propose";
+import { fixStillApplies } from "@/lib/fix/validate";
+import { ApiError, fetchSeed, postCheck, postFix, postSend, type CheckRequest } from "./api";
 import {
   clearMetrics,
   emptyMetrics,
   loadMetrics,
   recordCheck,
+  markDocFixed,
+  recordDocHold,
   recordIntercept,
   saveMetrics,
   setReview,
@@ -86,6 +91,10 @@ export function useSureSend() {
   const [panelOpen, setPanelOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "thread">("list");
   const [docFocus, setDocFocus] = useState<{ sourceId: string; nonce: number } | null>(null);
+  const [fixReview, setFixReview] = useState<FixReview | null>(null);
+  /** Title of the doc whose fix was last approved this session (the tour acknowledges it). */
+  const [fixApproved, setFixApproved] = useState<{ docId: string; title: string; text: string } | null>(null);
+  const fixRequestId = useRef(0);
   const [toast, setToast] = useState<Toast | null>(null);
   const [pausedDismissed, setPausedDismissed] = useState(false);
   const [lastAi, setLastAi] = useState<CheckResult["ai"] | null>(null);
@@ -113,6 +122,22 @@ export function useSureSend() {
       return next;
     });
   }, []);
+
+  /**
+   * A doc whose approved fix is gone (the doc restored or removed, or saved without the added text) no longer counts as
+   * fixed. `newBody` is the doc's text after a save; null docId means every doc (restore seed versions).
+   */
+  const forgetFix = useCallback(
+    (docId: string | null, newBody?: string) => {
+      const stillThere = (text: string | undefined) => newBody !== undefined && !!text && newBody.includes(text);
+      setFixApproved((a) => (a && (docId === null || a.docId === docId) && !stillThere(a.text) ? null : a));
+      updateMetrics((m) => {
+        const ids = docId === null ? Object.keys(m.heldByDoc) : [docId];
+        return ids.reduce((acc, id) => (stillThere(acc.heldByDoc[id]?.fixedText) ? acc : markDocFixed(acc, id, null)), m);
+      });
+    },
+    [updateMetrics],
+  );
 
   // ---- seed ---------------------------------------------------------------------------------------
   const loadSeed = useCallback(
@@ -307,6 +332,13 @@ export function useSureSend() {
         setSendStates((s) => ({ ...s, [ticketId]: { kind: "sent", customer, payoff } }));
       } else if (out.kind === "blocked") {
         updateMetrics(recordIntercept);
+        // D-037: attribute the held reply to the doc it copied, for "Docs causing held replies".
+        const copied = findFixSource(out.result);
+        if (copied) {
+          updateMetrics((m) =>
+            recordDocHold(m, copied.source.id, copied.source.title, copied.draftValueText, { ticketId, rail: req.rail, draft: req.draft }),
+          );
+        }
         setHeld((h) => ({ ...h, [ticketId]: valueAdjective(mostSevereClaim(out.result)?.draftClaim.value ?? null) }));
         setSendStates((s) => ({ ...s, [ticketId]: { kind: "blocked", result: out.result } }));
       } else if (out.kind === "ack_required") {
@@ -403,6 +435,7 @@ export function useSureSend() {
   /** Sources editor save (SPEC §9). Save draft: text only. Save and verify (simulated): text + verified now. */
   const saveSource = useCallback(
     (source: Source, edit: { body: string; verification: Source["verification"]; flaggedOutdated: boolean; ownerActive: boolean }, mode: SaveMode) => {
+      forgetFix(source.id, edit.body);
       const now = nowIso();
       const prev = ref.current.overrides[source.id];
       const bodyChanged = edit.body !== source.body;
@@ -460,6 +493,7 @@ export function useSureSend() {
 
   const deleteSource = useCallback(
     (source: Source) => {
+      forgetFix(source.id);
       const base = ref.current.overrides[source.id];
       const rec: OverrideRecord = base
         ? { ...base, deleted: true }
@@ -484,6 +518,7 @@ export function useSureSend() {
 
   const restoreSource = useCallback(
     (id: string) => {
+      forgetFix(id);
       const next = { ...ref.current.overrides };
       delete next[id];
       commitOverrides(next);
@@ -494,6 +529,7 @@ export function useSureSend() {
 
   /** AI unavailable → "Restore seed versions": clears overrides so saved responses can replay. */
   const restoreSeedVersions = useCallback(() => {
+    forgetFix(null);
     clearOverrides();
     setOverrides({});
     ref.current.overrides = {};
@@ -508,6 +544,8 @@ export function useSureSend() {
     ref.current.overrides = {};
     setMetrics(emptyMetrics());
     setDocFocus(null);
+    setFixReview(null);
+    setFixApproved(null);
     setHeld({});
     showToast("Demo reset: seed docs restored and this browser's numbers cleared.");
   }, [showToast]);
@@ -519,8 +557,58 @@ export function useSureSend() {
 
   /** Trace → "Open the docs": the Docs tab with the given doc selected. */
   const openDoc = useCallback((sourceId: string) => {
+    setFixReview(null);
     setDocFocus({ sourceId, nonce: Date.now() });
     setTab("docs");
+  }, []);
+
+  /**
+   * "Fix the doc that caused this" (D-037): asks the server for a proposal for the current reply (or a held reply from the
+   * Demo menu) and shows it in the Docs tab. Nothing is applied until approveFix.
+   */
+  const openFixReview = useCallback(
+    (from?: { ticketId: string; rail: Rail; draft: string }) => {
+      const st = ref.current;
+      const req: CheckRequest | null = from
+        ? { ...from, role: st.role, overrides: toRequestOverrides(st.overrides) }
+        : (buildRequest()?.req ?? null);
+      if (!req || !req.draft.trim()) return;
+      const id = ++fixRequestId.current;
+      setTab("docs");
+      setFixReview({ status: "loading", proposal: null, why: null });
+      postFix(req)
+        .then((r) => {
+          if (id !== fixRequestId.current) return;
+          setFixReview(r.proposal ? { status: "ready", proposal: r.proposal, why: null } : { status: "none", proposal: null, why: r.why });
+        })
+        .catch((e: unknown) => {
+          if (id !== fixRequestId.current) return;
+          setFixReview({ status: "error", proposal: null, why: e instanceof Error ? e.message : String(e) });
+        });
+    },
+    [buildRequest],
+  );
+
+  /** Approve fix (simulated): the proposal becomes an ordinary doc edit, saved and verified, and the reply is rechecked. */
+  const approveFix = useCallback(() => {
+    const p = fixReview?.proposal;
+    const doc = p ? effectiveSources.find((x) => x.id === p.doc.id) : undefined;
+    if (!p || !doc) return;
+    if (!fixStillApplies(doc.body, p)) {
+      setFixReview({ status: "error", proposal: null, why: "The doc changed after this fix was drafted. Open the review again." });
+      return;
+    }
+    fixRequestId.current++;
+    setFixReview(null);
+    saveSource(doc, { body: p.after, verification: doc.verification, flaggedOutdated: doc.flaggedOutdated, ownerActive: doc.owner?.active ?? true }, "verify");
+    setFixApproved({ docId: p.doc.id, title: p.doc.title, text: p.edit.text });
+    updateMetrics((m) => markDocFixed(m, p.doc.id, p.edit.text));
+    showToast(`Fix approved: ${p.doc.title} now names the exception (simulated approval and verification).`);
+  }, [fixReview, effectiveSources, saveSource, showToast, updateMetrics]);
+
+  const dismissFix = useCallback(() => {
+    fixRequestId.current++;
+    setFixReview(null);
   }, []);
 
   return {
@@ -542,6 +630,8 @@ export function useSureSend() {
     panelOpen,
     mobileView,
     docFocus,
+    fixReview,
+    fixApproved,
     view,
     toast,
     pausedDismissed,
@@ -574,6 +664,9 @@ export function useSureSend() {
       resetWorkspace,
       review,
       openDoc,
+      openFixReview,
+      approveFix,
+      dismissFix,
       setView,
       setTab,
       setPanelOpen,
@@ -585,3 +678,11 @@ export function useSureSend() {
 }
 
 export type SureSend = ReturnType<typeof useSureSend>;
+
+/** The Triage-style review of a doc-fix proposal in the Docs tab (D-037). */
+export interface FixReview {
+  status: "loading" | "ready" | "none" | "error";
+  proposal: FixProposal | null;
+  /** Why there's no proposal, or what went wrong. */
+  why: string | null;
+}

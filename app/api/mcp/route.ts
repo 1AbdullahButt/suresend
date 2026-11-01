@@ -2,7 +2,7 @@
 // connector. One server and transport per request; each check_reply builds its own deps, so every live check asks the MCP
 // budget of the shared limiter.
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
-import { routeDeps } from "@/lib/check/deps";
+import { routeFixDeps } from "@/lib/check/deps";
 import { createSureSendMcpServer } from "@/lib/mcp/server";
 import { limiterStatus } from "@/lib/rateLimit";
 
@@ -28,7 +28,7 @@ export async function POST(req: Request): Promise<Response> {
   // limiter context. The SDK client never batches.
   if (Array.isArray(body)) return jsonRpcError(400, -32600, "Batch requests are not supported. Send one JSON-RPC message per request.");
 
-  const server = createSureSendMcpServer(() => routeDeps(req.headers, "mcp"));
+  const server = createSureSendMcpServer(() => routeFixDeps(req.headers, "mcp"));
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {

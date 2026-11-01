@@ -878,3 +878,198 @@ D:/Project/slite 41d63d9 [main]
 ```
 
 GATE: PASSED
+
+## Phase 9
+"Fix the doc" (D-037). A Hold or Ask first points to the doc that taught the wrong value, and SureSend proposes a minimal
+fix to it. A person approves it, like fixes reviewed in Slite's Triage. Nothing is applied automatically, and an approved fix
+is an ordinary client-side doc edit. The engine, locked tests and seed data are untouched.
+
+- **Loop:**
+  - First, builder → tests → QA CHANGES_REQUIRED. The major finding: the validator accepted a fragment of the claim
+    sentence as the target, so an edit could land in the scope line or a heading, delete "Do NOT promise same day", flip
+    the meaning, or add "two weeks". QA proved 5 such edits passing validation; they were dropped only by a fixture
+    artifact.
+  - Fix: the target must be the exact claim sentence, found once, and the edit is always an addition after it; a
+    "replace" must keep the sentence word for word. No other timeline (detector), digits, negation or promise words.
+  - Minors fixed too:
+    - the cache identity covers every prompt input (re-recorded, 2 orphans removed);
+    - tour step 5 acknowledges an approval;
+    - step numbers and the hard-coded rail corrected;
+    - Ask first needs exactly one exception;
+    - the menu shows "Fix approved";
+    - the Triage wording stays within the confirmed list.
+  - QA re-review **APPROVED**. Its remaining minors were fixed after approval: stricter content checks (curly
+    apostrophes and any "n't", months, number words beyond ten, "immediately", fees, the exception's rail only) with the
+    README matched to the code; "Fix approved" cleared once the fixed text is gone from the doc; two stale comments.
+  - Left as a follow-up: at 390px, tour step 6's card covers "Save and verify". This predates Phase 9.
+- **Scope note (D-037):** a "5–7 days" reply is Double-check (unit mismatch), not Hold, so the app offers no fix for it. The
+  matcher maps it to DOC-104 and is tested.
+
+**Typecheck, tests, audit and saved replay (final tree):**
+```
+
+> suresend@0.1.0 typecheck D:\Project\slite
+> tsc --noEmit
+TYPECHECK_EXIT=0
+ RUN  v5.0.5 D:/Project/slite
+ Test Files  21 passed (21)
+      Tests  164 passed (164)
+TEST_EXIT=0
+$ pnpm audit
+No known vulnerabilities found
+$ pnpm eval --saved
+- Decision accuracy: **100.0%** (12/12)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+```
+
+**Fix-the-doc recording on live Groq (append-only), with the fuller cache identity:**
+```
+✓ support_agent TCK-9001 ai fix to DOC-101
+    + For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.
+  ✓ after approval: TCK-9001 HOLD/CONTRADICTS_GOVERNING
+  ✓ + tour full verify: HOLD/CONTRADICTS_GOVERNING · suggestion rechecks CAUTION/CHANGE_SIGNALLED
+  ✓ + tour full re-check: CAUTION/WEAK_BASIS
+  ✓ + tour digitOnly verify: HOLD/CONTRADICTS_GOVERNING · suggestion rechecks CAUTION/CHANGE_SIGNALLED
+  ✓ + tour digitOnly re-check: CAUTION/WEAK_BASIS
+✓ support_agent TCK-9002 ai fix to DOC-101
+    + For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.
+  ✓ after approval: TCK-9002 ESCALATE/SCOPE_UNKNOWN
+✓ ops_lead      TCK-9001 ai fix to DOC-101
+    + For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.
+  ✓ after approval: TCK-9001 HOLD/CONTRADICTS_GOVERNING
+  ✓ + tour full verify: HOLD/CONTRADICTS_GOVERNING · suggestion rechecks CAUTION/CHANGE_SIGNALLED
+  ✓ + tour full re-check: CAUTION/WEAK_BASIS
+  ✓ + tour digitOnly verify: HOLD/CONTRADICTS_GOVERNING · suggestion rechecks CAUTION/CHANGE_SIGNALLED
+  ✓ + tour digitOnly re-check: CAUTION/WEAK_BASIS
+✓ ops_lead      TCK-9002 ai fix to DOC-101
+    + For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.
+  ✓ after approval: TCK-9002 ESCALATE/SCOPE_UNKNOWN
+Added 2 saved responses (21 → 23) with groq / openai/gpt-oss-120b. Unexpected: 0
+```
+
+**Local build (AI_MODE=saved), after the QA fixes: e2e and axe audit (1440/1024/390):**
+```
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.8s)
+  1 passed (3.3s)
+E2E_EXIT=0
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+```
+
+**Locked paths, saved responses, worktrees:**
+```
+$ git diff --stat HEAD -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md | wc -l
+0
+$ git status --short -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md | wc -l
+0
+$ sha256sum -c (the 19 saved responses tracked at HEAD)
+19
+$ git status --short data/ai-cache
+?? data/ai-cache/50d58304430c15c806aa37449d8451b83cec9cfe6f0069b088d698fae28c93cc.json
+?? data/ai-cache/e85c7d94c3a7819c2a3e6504939f82b67bba96020f3a955e43705d23ac9ea90c.json
+$ git worktree list
+D:/Project/slite 58f6f48 [main]
+```
+
+**Live, after the final `vercel deploy --prod`: /api/fix**
+```
+== /api/fix canonical Hold (TCK-9001)
+HTTP/1.1 200 OK
+X-Suresend-Limiter: upstash-unused
+proposal: DOC-101 · ai · changed lines 1
+  added: For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.
+  recheck: TCK-9001 instant HOLD / CONTRADICTS_GOVERNING; TCK-9002 unknown ESCALATE / SCOPE_UNKNOWN; TCK-9003 standard ALLOW / SUPPORTED; TCK-9001 instant ALLOW / SUPPORTED
+== /api/fix canonical Ask first (TCK-9002)
+proposal: DOC-101 · ask · ai
+== /api/fix correct reply
+proposal: null | why: Only a Hold or an Ask first points to a doc to fix.
+```
+
+**Live: `pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp`** (includes `propose_doc_fix`, applying nothing)
+```
+MCP endpoint: https://suresend-demo.vercel.app/api/mcp
+server: suresend 0.8.0
+PASS idle 3 s: client made 1 GET in total, none while idle
+PASS tools: check_reply, list_tickets, get_doc, propose_doc_fix
+PASS every tool is read-only
+PASS list_tickets: TCK-9001/instant, TCK-9002/unknown, TCK-9003/standard
+PASS get_doc DOC-103: Instant Rail: Reversal Exception
+PASS get_doc DOC-105: refused like an unknown ID
+PASS check_reply 4 days on TCK-9001: Hold · suggestion "We’ll reverse failed transfers within 1 business day." (Good to send) · governing Instant Rail: Reversal Exception
+PASS   replayed saved responses (ai_mode saved)
+PASS check_reply 4 days on TCK-9002: Ask first (ai_mode saved)
+PASS check_reply 1 day on TCK-9001: Good to send (ai_mode saved)
+PASS propose_doc_fix 4 days on TCK-9001: fix to DOC-101 drafted by AI, checked by the rules, applied false
+PASS   nothing applied: the same reply still holds against the unedited docs
+PASS check_reply over 1,000 characters: refused
+PASS no response mentions DOC-105 or its contents
+PASS raw tools/list: HTTP 200, x-suresend-limiter: upstash-unused
+PASS raw batch of 3 check_reply calls: HTTP 400
+PASS GET: HTTP 405, Allow: POST
+PASS DELETE: HTTP 405, Allow: POST
+ALL PASS
+```
+
+**Live: the fix review in the browser** (link → review → dismiss; menu → review → approve; menu "Fix approved"; removing the
+fixed doc clears it; phone 390; axe on the card, review and menu)
+```
+PASS no fix link before any check
+PASS Hold card shows "Fix the doc that caused this"
+PASS held card: axe serious/critical = 0
+PASS review names the doc: Outgoing Transfers: Reversal SOP
+PASS why: a reply this session copied 4 business days
+PASS before/after of the changed line
+PASS added text marked: "For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel."
+PASS states nothing changes until approval
+PASS Dismiss button
+PASS fix review: axe serious/critical = 0
+PASS Dismiss closes the review, nothing applied
+PASS   the doc editor is back
+PASS Demo menu lists the SOP: 1 held, copied 4 business days
+PASS   labelled as simulated
+PASS Demo menu with held docs: axe serious/critical = 0
+PASS "Review fix" from the menu opens the same review
+PASS approval toast: "Fix approved: Outgoing Transfers: Reversal SOP now names the exception (simulated approval and verification)."
+PASS after approval the same Hold no longer offers a fix
+PASS DOC-101 now names the exception and keeps 4 business days
+PASS menu shows the SOP as "Fix approved", no dead-end review link
+PASS after removing the fixed doc, the menu no longer says "Fix approved"
+PASS no page errors (0)
+PASS phone: no horizontal scroll with the review open
+PASS phone fix review: axe serious/critical = 0
+ALL PASS
+```
+
+**Live: the tour (6 steps; step 5 the fix, desktop dismiss / phone approve; step 6 the doc edit) and both URLs:**
+```
+PASS desktop 1440: the tour has 6 steps
+PASS desktop 1440: step 5 of 6 is "Fix the doc that caused this"
+PASS desktop 1440: the step confirms the review is open
+PASS desktop 1440: the fix review is visible
+PASS desktop 1440: axe on the tour card clean
+PASS desktop 1440: no horizontal scroll
+PASS desktop 1440: after dismissing, step 5 offers the fix again
+PASS desktop 1440: step 6 of 6 is the live doc edit
+PASS desktop 1440: step 6 opens the doc editor (the review is closed)
+PASS phone 390: the tour has 6 steps
+PASS phone 390: step 5 of 6 is "Fix the doc that caused this"
+PASS phone 390: the step confirms the review is open
+PASS phone 390: the fix review is visible
+PASS phone 390: axe on the tour card clean
+PASS phone 390: no horizontal scroll
+PASS phone 390: after approving, step 5 says "Fix approved…" (not an error)
+PASS phone 390: step 6 of 6 is the live doc edit
+PASS phone 390: step 6 opens the doc editor (the review is closed)
+ALL PASS
+step-6 doc edit: 29 PASS lines
+ALL PASS
+both URLs: ALL PASS
+```
+
+**Live axe audit (not-sent is local-only):**
+```
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 27
+```
+
+GATE: PASSED

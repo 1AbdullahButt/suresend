@@ -5,13 +5,18 @@
 //
 //   pnpm record                    re-record everything live with AI_PROVIDER (clears data/ai-cache first)
 //   pnpm record --provider gemini  record with a specific provider
-//   pnpm record --tour-edits       only add what guided-tour step 5 needs (both ways of typing its edit, saved with
+//   pnpm record --tour-edits       only add what guided-tour step 6 (the doc edit) needs (both ways of typing its edit, saved with
 //                                  verify and with re-check); appends, existing files are reused and never cleared (D-034)
+//   pnpm record --fix-edits        only add what "Fix the doc" needs on the canonical path: the fix proposal for the
+//                                  canonical Hold and Ask first, then the workspace with that fix approved (incl. the tour's
+//                                  doc edit on top of it); appends like --tour-edits (D-037)
 import { loadEnvConfig } from "@next/env";
 import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { runCheck } from "@/lib/check/runCheck";
-import { AI_CACHE_DIR, AiTaskError, aiDeps, createRuntime } from "@/lib/ai/aiDeps";
+import { AI_CACHE_DIR, AiTaskError, aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
+import { fixOverride, proposeFix, type FixDeps } from "@/lib/fix/propose";
+import { seedSources } from "@/lib/workspace/seed";
 import { createAiCache } from "@/lib/ai/cache";
 import { providerChain, type ProviderName } from "@/lib/ai/client";
 import { draftSave, seedBody, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
@@ -58,7 +63,8 @@ async function main() {
   const slot = rt.chain[0]!;
   if (!slot.provider) throw new Error(`No live provider for ${only} (check the key and AI_MODE); data/ai-cache left untouched`);
   const tourOnly = args.includes("--tour-edits");
-  if (!tourOnly) {
+  const fixOnly = args.includes("--fix-edits");
+  if (!tourOnly && !fixOnly) {
     rmSync(AI_CACHE_DIR, { recursive: true, force: true });
     mkdirSync(AI_CACHE_DIR, { recursive: true });
   }
@@ -70,8 +76,57 @@ async function main() {
     suggestReply: (r) => withBackoff(() => base.suggestReply!(r)),
   };
 
+  if (fixOnly) {
+    const fixBase = aiFixDeps(rt);
+    const fixDeps: Required<FixDeps> = { draftDocFix: (r) => withBackoff(() => fixBase.draftDocFix(r)) };
+    const four = golden.cases[0]!.draft;
+    let unexpected = 0;
+    for (const role of ["support_agent", "ops_lead"] as Role[]) {
+      for (const [ticketId, rail, expected] of [
+        ["TCK-9001", "instant", "HOLD"],
+        ["TCK-9002", "unknown", "ESCALATE"],
+      ] as const) {
+        const { proposal, why } = await proposeFix({ ticketId, rail, draft: four, role }, deps, fixDeps);
+        if (!proposal) {
+          unexpected++;
+          console.log(`✗ ${role.padEnd(13)} ${ticketId} no proposal: ${why}`);
+          continue;
+        }
+        console.log(`✓ ${role.padEnd(13)} ${ticketId} ${proposal.origin} fix to ${proposal.doc.id}${proposal.aiSetAside ? ` (AI set aside: ${proposal.aiSetAside})` : ""}`);
+        console.log(`    + ${proposal.edit.text}`);
+        // The workspace after "Approve fix (simulated)": the same reply, then the tour's doc edit on top of the fix.
+        const doc101 = seedSources().find((s) => s.id === proposal.doc.id)!;
+        const fixed = fixOverride(doc101, proposal.after, golden.saveTime);
+        const after = await runCheck({ ticketId, rail, draft: four, role, overrides: [fixed] }, deps);
+        const ok = after.decision === expected;
+        if (!ok) unexpected++;
+        console.log(`  ${ok ? "✓" : "✗"} after approval: ${ticketId} ${after.decision}/${after.reasonCode}`);
+        if (ticketId === "TCK-9001") {
+          const seed103 = seedBody("DOC-103");
+          for (const [name, edit] of Object.entries(tourStep5Edits)) {
+            for (const [mode, save] of [["verify", verifiedSave], ["re-check", draftSave]] as const) {
+              const ov = [fixed, save("DOC-103", edit(seed103), golden.saveTime)];
+              const r = await runCheck({ ticketId, rail, draft: four, role, overrides: ov }, deps);
+              let reply = "";
+              if (r.suggestion) {
+                const re = await runCheck({ ticketId, rail, draft: r.suggestion.text, role, overrides: ov }, deps);
+                reply = ` · suggestion rechecks ${re.decision}/${re.reasonCode}`;
+              }
+              const want = mode === "verify" ? "HOLD" : "CAUTION";
+              if (r.decision !== want) unexpected++;
+              console.log(`  ${r.decision === want ? "✓" : "✗"} + tour ${name} ${mode}: ${r.decision}/${r.reasonCode}${reply}`);
+            }
+          }
+        }
+      }
+    }
+    const added = readdirSync(AI_CACHE_DIR).filter((f) => f.endsWith(".json")).length;
+    console.log(`\nAdded ${added - before} saved responses (${before} → ${added}) with ${slot.name} / ${slot.model}. Unexpected: ${unexpected}`);
+    process.exit(unexpected === 0 ? 0 : 1);
+  }
+
   if (tourOnly) {
-    // Step 5: the canonical 4-day reply on TCK-9001 after the visitor's edit, then "Use this reply" → Send on the suggestion.
+    // Step 6: the canonical 4-day reply on TCK-9001 after the visitor's edit, then "Use this reply" → Send on the suggestion.
     let unexpected = 0;
     const seed = seedBody("DOC-103");
     for (const [name, body] of Object.entries(tourStep5Edits).map(([n, f]) => [n, f(seed)] as const)) {

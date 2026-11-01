@@ -222,3 +222,18 @@ SureSend as a capability any agent can call (D-036). The engine, locked tests an
 - **Gate:** typecheck, all tests (tool unit tests incl. DOC-105 never returned and the 4-day Hold with a 1-day suggestion, plus
   an in-memory MCP client test), e2e and axe unchanged, `pnpm mcp:e2e` against the local build and the deployed
   `/api/mcp`, README "Use it from Claude" and `docs/MCP_DEMO.md`; QA APPROVED; deployed; `git worktree list` clean.
+
+## 12. Phase 9: Fix the doc (added 2026-11-01, approved by Abdullah)
+A Hold or Ask first is a signal that a doc taught the agent the wrong value; SureSend proposes a fix to that doc and a person
+approves it, like Slite's Triage (D-037). The engine, locked tests and seed data stay untouched; an approved fix is an
+ordinary client-side doc edit.
+- **Source:** the visible general doc (all rails, in force) whose claim matches the held reply's value, when an in-force
+  exception in another doc gives that rail a different value. Otherwise no proposal.
+- **Proposal:** AI-drafted minimal edit (template fallback), validated (only the claim sentence; the exception's value exactly;
+  no other numbers; the general value kept) and offered only if the canonical replies keep their decisions with it applied.
+- **UI:** "Fix the doc that caused this" on Hold/Ask first → Triage-style review in the Docs tab (why, changed lines only,
+  Approve fix (simulated) / Dismiss); "Docs causing held replies" in the Demo menu; tour step 5 of 6.
+- **MCP:** read-only `propose_doc_fix`.
+- **Gate:** typecheck, all tests (source matching, validation, canonical recheck, DOC-105, MCP applies nothing, saved replay),
+  e2e and axe, browser checks of the review and the tour, `pnpm mcp:e2e` local and live; QA APPROVED; deployed;
+  `git worktree list` clean.

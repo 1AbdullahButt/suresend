@@ -527,3 +527,64 @@ An independent-style review before sharing with Slite (security, correctness, UX
     folder; it runs against the local build and the deployed URL in the gate.
 - **Demo:** `docs/MCP_DEMO.md` gives the claude.ai connector steps and the prompt, with a variant that always shows the
   Hold. Claude may write a correct or timeline-free reply on its own, which SureSend honestly passes.
+
+### D-037 · Phase 9: Fix the doc (approved by Abdullah)
+- **Idea:** a Hold or Ask first is a signal that a doc taught the agent the wrong value. SureSend proposes a fix to that doc,
+  and a person approves it, like Slite's Triage. Nothing is ever applied automatically. The engine, locked tests and seed
+  data are untouched; an approved fix is an ordinary client-side doc edit (an override), as before.
+- **Which doc (`lib/fix/source.ts`, pure, shared by browser and server).** The demo fixes one pattern:
+  - A visible, in-force doc scoped to all rails states exactly the held reply's value.
+  - An in-force, rail-specific exception in another doc gives that rail a different value. On Hold that's the governing
+    claim; on Ask first (unknown rail) it's the disagreeing rail-specific claim.
+
+  No proposal otherwise: no matching doc; a rail-specific doc the agent misapplied (e.g. 1 business day on a standard
+  transfer); docs that disagree; the general doc already stating the exception (so an approved fix isn't proposed twice);
+  or a restricted doc (only "everyone" docs, so DOC-105 can't be a target, even for the ops lead).
+  `matchingSourceEvidence` also maps other values to their doc (5–7 days → the outdated DOC-104 macro). That reply is
+  Double-check, not Hold (calendar vs business days, D8), so the app doesn't offer a fix for it.
+- **The fix (`lib/fix/validate.ts`, `lib/fix/propose.ts`).**
+  - The AI drafts one edit (`add_after` or `replace` of the claim sentence) from the exception's own quote, the doc, and
+    the exception doc's "How to tell the rail" line.
+  - Validation, tightened after QA showed a fragment target could land in the scope line or a heading, and a rewrite
+    could delete or flip text:
+    - The target must be the claim sentence, normalized-equal to its quote and found exactly once in the doc. The edit is
+      always an addition right after it, so nothing else in the doc can change.
+    - A `replace` counts only if it starts with the claim sentence word for word; the rest is then the addition.
+    - The added passage is one short plain paragraph and states the exception's value exactly.
+    - It contains no other timeline or amount, no other digits, and no negation, promise or fee wording.
+      - The timeline check is the policy-pattern detector ("two weeks") plus months, number words beyond ten and
+        "immediately".
+      - The negation check folds curly apostrophes and covers any "n't".
+    - It names the exception's rail and no other, and never "all transfers". This was added after QA's second round.
+    - An approved fix stops counting as approved once that doc is edited, restored or removed.
+    - The cache identity covers every prompt input, including the doc ID and the exception's rail.
+  - Then the 4 canonical replies (TCK-9001 instant, TCK-9002 unknown, TCK-9003 standard with 4 business days; TCK-9001
+    with 1 business day) are rechecked with the fix applied as a verified edit. If any decision or reason changes, the fix
+    is dropped. None is intended to change: the fix teaches agents, it doesn't change policy.
+  - The template (the exception's sentence + "See <title>." + the rail hint) is the fallback.
+  - The `doc_fix` AI task has its own prompt version (`FIX_PROMPT_VERSION`) in its cache identity, so adding it didn't
+    invalidate any saved extraction or reply.
+- **On live Groq,** the AI's fix passed the strict validation and the recheck for the canonical Hold and Ask first, both
+  personas: "For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal
+  Exception). How to tell the rail: check "Rail" on the transaction in the admin panel." After approval, the canonical
+  decisions are unchanged, and the tour's step-6 edit still works on top of it.
+- **Saved responses:** `pnpm record --fix-edits` (append-only) adds 2 saved responses: the fix and the fixed DOC-101's
+  extraction. The 19 existing ones are byte-identical. A first recording (before the identity gained the doc ID and rail)
+  left 2 files nothing referenced; they were removed.
+- **UI.**
+  - "Fix the doc that caused this" (a link) on the Hold/Ask-first card opens a Triage-style review in the Docs tab. It
+    shows the doc, why ("N replies this session copied 4 business days from this doc"), only the changed line before and
+    after with the added text marked, "Approve fix (simulated)" and "Dismiss".
+  - Approving saves the edit, verified (simulated), and rechecks the reply. If the doc changed since the draft, it refuses.
+  - The Demo menu lists "Docs causing held replies" with a hold count per doc and "Review fix", simulated per browser. A
+    doc whose fix was approved shows "Fix approved" instead, and tour step 5 acknowledges the approval.
+  - On Ask first, a fix is proposed only if exactly one exception disagrees (one doc, rail and value); the review names
+    that exception's rail.
+  - The tour gets step 5 of 6, "Fix the doc that caused this", after Usman's Ask first.
+- **API and MCP.** `POST /api/fix` takes the same body, validation and errors as `/api/check`, and uses one limiter unit
+  per proposal (its check, draft and recheck share one runtime). The MCP tool `propose_doc_fix` (read-only, MCP budget)
+  returns the same proposal with `applied: false`.
+- **Tests:**
+  - `lib/fix/fix.test.ts`: matching, validation, an unsafe fix dropped, AI vs template, DOC-105, the post-approval guard.
+  - `lib/fix/fixReplay.test.ts`: the canonical path on saved responses only.
+  - `lib/mcp/server.test.ts`: `propose_doc_fix` applies nothing.

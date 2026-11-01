@@ -1,7 +1,8 @@
 "use client";
 import { useEffect, useId, useState } from "react";
 import type { Source } from "@/lib/engine/types";
-import type { SaveMode } from "@/lib/client/useSureSend";
+import type { FixReview as FixReviewState, SaveMode } from "@/lib/client/useSureSend";
+import { FixReview } from "./FixReview";
 import { diffSummary, shortDate } from "@/lib/client/format";
 import { cx, Tag, ui, type TagTone } from "@/components/ui/atoms";
 import s from "./agent.module.css";
@@ -49,6 +50,10 @@ export function DocsView({
   onSave,
   onRemove,
   onRestore,
+  fixReview,
+  holdsFor,
+  onApproveFix,
+  onDismissFix,
 }: {
   sources: Source[];
   deleted: Source[];
@@ -58,6 +63,11 @@ export function DocsView({
   onSave: (source: Source, edit: DocEdit, mode: SaveMode) => void;
   onRemove: (source: Source) => void;
   onRestore: (id: string) => void;
+  /** A doc-fix proposal under review (D-037): shown instead of the editor until approved or dismissed. */
+  fixReview: FixReviewState | null;
+  holdsFor: (docId: string) => number;
+  onApproveFix: () => void;
+  onDismissFix: () => void;
 }) {
   const fallback = sources.find((x) => x.id === preferredId) ?? sources.find((x) => x.id === "DOC-103") ?? sources[0] ?? null;
   const [selId, setSelId] = useState<string | null>(focusId ?? fallback?.id ?? null);
@@ -66,6 +76,16 @@ export function DocsView({
   }, [focusId]);
   const doc = sources.find((x) => x.id === selId) ?? fallback;
 
+  if (fixReview) {
+    return (
+      <FixReview
+        review={fixReview}
+        holds={fixReview.proposal ? holdsFor(fixReview.proposal.doc.id) : 0}
+        onApprove={onApproveFix}
+        onDismiss={onDismissFix}
+      />
+    );
+  }
   if (!doc) return <p className={s.note}>No docs are visible to this role.</p>;
   return (
     <DocEditor
