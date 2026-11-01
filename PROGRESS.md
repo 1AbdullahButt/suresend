@@ -736,3 +736,145 @@ Serious/critical axe violations: 0. Horizontal page scroll: none. States that fa
 ```
 
 GATE: PASSED
+
+## Phase 8
+SureSend as an MCP server (D-036). It runs remote at `/api/mcp` (Streamable HTTP, stateless, JSON responses) and over
+stdio (`scripts/mcp-stdio.ts`). There are three read-only tools over the seed workspace and the support-agent persona:
+`check_reply` (through `handleCheck`), `list_tickets` and `get_doc` (never DOC-105). Live AI over MCP has its own
+budget on the shared Upstash limiter. There's no auth, because this is a public synthetic demo. The engine, locked tests
+and seed data are untouched.
+
+- **Loop:**
+  - First, builder → tests → QA CHANGES_REQUIRED, with 2 majors and 8 minors. Both majors were proven by QA:
+    - a JSON-RPC batch shared one limiter unit (5/5 passed on a budget of 1);
+    - GET returned a stream that closed at once, so the SDK client re-polled about 1/s.
+  - Fixes: deps built per `check_reply`, batches rejected with 400, GET/DELETE answer 405, next steps keyed on the
+    suggestion's check and the reason, coverage and AI wording in the descriptions, `ticket.id: null` when none was
+    chosen, and README hedges.
+  - QA re-review **APPROVED**. QA's own probes: a batch of 5 now gets 400 with 0 through the gate, versus 1 of 5 when
+    sent separately; the client made 1 GET in 10 s idle (it was 10).
+  - Two of QA's remaining minors fixed after approval: the server instructions are conditional too, and a double colon
+    is gone. The third (the body is read before the SDK's 4 MB cap; Vercel's 4.5 MB cap applies) needs no action.
+- **Live, new wording:** a Claude-style reply ("…within 4 working days") over MCP comes back Hold, with a rewritten
+  suggestion that passed its own recheck, on live Groq and the MCP budget (`x-suresend-limiter: upstash`). The canonical
+  replies replay saved responses (`ai_mode saved`).
+
+**Typecheck, tests, audit and saved replay (final tree):**
+```
+
+> suresend@0.1.0 typecheck D:\Project\slite
+> tsc --noEmit
+TYPECHECK_EXIT=0
+ RUN  v5.0.5 D:/Project/slite
+ Test Files  19 passed (19)
+      Tests  143 passed (143)
+TEST_EXIT=0
+$ pnpm audit
+No known vulnerabilities found
+$ pnpm eval --saved
+- Decision accuracy: **100.0%** (12/12)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+```
+
+**UI unchanged: e2e and axe audit (local build, 1440/1024/390):**
+```
+Running 1 test using 1 worker
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.6s)
+  1 passed (2.8s)
+E2E_EXIT=0
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+```
+
+**`pnpm mcp:e2e` against the local build (AI_MODE=saved), after the QA fixes:**
+```
+MCP endpoint: http://127.0.0.1:3100/api/mcp
+server: suresend 0.8.0
+PASS idle 3 s: client made 1 GET in total, none while idle
+PASS tools: check_reply, list_tickets, get_doc
+PASS every tool is read-only
+PASS list_tickets: TCK-9001/instant, TCK-9002/unknown, TCK-9003/standard
+PASS get_doc DOC-103: Instant Rail: Reversal Exception
+PASS get_doc DOC-105: refused like an unknown ID
+PASS check_reply 4 days on TCK-9001: Hold · suggestion "We’ll reverse failed transfers within 1 business day." (Good to send) · governing Instant Rail: Reversal Exception
+PASS   replayed saved responses (ai_mode saved)
+PASS check_reply 4 days on TCK-9002: Ask first (ai_mode saved)
+PASS check_reply 1 day on TCK-9001: Good to send (ai_mode saved)
+PASS check_reply over 1,000 characters: refused
+PASS no response mentions DOC-105 or its contents
+PASS raw tools/list: HTTP 200, x-suresend-limiter: memory
+PASS raw batch of 3 check_reply calls: HTTP 400
+PASS GET: HTTP 405, Allow: POST
+PASS DELETE: HTTP 405, Allow: POST
+ALL PASS
+```
+
+**stdio, started the documented way (`pnpm --dir <project> exec tsx scripts/mcp-stdio.ts`) from %TEMP%:**
+```
+cwd of the client: C:\Users\avata\AppData\Local\Temp
+tools: check_reply, list_tickets, get_doc
+check_reply: Hold | ai_mode: saved | suggestion: We’ll reverse failed transfers within 1 business day.
+server stderr: [suresend] MCP server on stdio: check_reply, list_tickets, get_doc
+```
+
+**`pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp` against the final deploy:**
+```
+MCP endpoint: https://suresend-demo.vercel.app/api/mcp
+server: suresend 0.8.0
+PASS idle 3 s: client made 1 GET in total, none while idle
+PASS tools: check_reply, list_tickets, get_doc
+PASS every tool is read-only
+PASS list_tickets: TCK-9001/instant, TCK-9002/unknown, TCK-9003/standard
+PASS get_doc DOC-103: Instant Rail: Reversal Exception
+PASS get_doc DOC-105: refused like an unknown ID
+PASS check_reply 4 days on TCK-9001: Hold · suggestion "We’ll reverse failed transfers within 1 business day." (Good to send) · governing Instant Rail: Reversal Exception
+PASS   replayed saved responses (ai_mode saved)
+PASS check_reply 4 days on TCK-9002: Ask first (ai_mode saved)
+PASS check_reply 1 day on TCK-9001: Good to send (ai_mode saved)
+PASS check_reply over 1,000 characters: refused
+PASS no response mentions DOC-105 or its contents
+PASS raw tools/list: HTTP 200, x-suresend-limiter: upstash-unused
+PASS raw batch of 3 check_reply calls: HTTP 400
+PASS GET: HTTP 405, Allow: POST
+PASS DELETE: HTTP 405, Allow: POST
+ALL PASS
+```
+
+**Live: the web app's budget and MCP's, each on Upstash, with wording that needs live AI:**
+```
+== web app /api/check, new text (app budget)
+X-Suresend-Limiter: upstash
+decision: HOLD/CONTRADICTS_GOVERNING | ai.mode: live
+== MCP check_reply, Claude-style wording (MCP budget)
+X-Suresend-Limiter: upstash
+decision: Hold | Instant transfers now reverse in 1 business day. Your reply says 4.
+suggested_reply: {"text":"Hi Ayesha, I’m sorry about the failed transfer. The reversal will be processed within 1 business day.","check":"Good to send"}
+next_step: Don't send this reply. Send suggested_reply instead (it passed the same check), or ask a human.
+checked_with: {"ai_mode":"live","provider":"groq","live_ai_paused":false}
+```
+
+**Live: web tour step 5 still on saved responses, and both URLs (desktop and phone):**
+```
+PASS full: Send 4-day → 409 HOLD · ai saved · suggestion "Failed transfers are reversed within 2 business days." · label note "a Slack note proposes 1 day"
+PASS full: Send suggestion → 428 CAUTION/CHANGE_SIGNALLED · ai saved (needs the acknowledgement)
+PASS digitOnly: Send 4-day → 409 HOLD · ai saved · suggestion "Failed transfers are reversed within 2 business days." · label note "a Slack note proposes 1 day"
+PASS digitOnly: Send suggestion → 428 CAUTION/CHANGE_SIGNALLED · ai saved (needs the acknowledgement)
+ALL PASS
+PASS https://suresend-demo.vercel.app @ desktop 1440
+PASS https://suresend-demo.vercel.app @ phone 390
+PASS https://answerguard.vercel.app @ desktop 1440
+PASS https://answerguard.vercel.app @ phone 390
+ALL PASS
+```
+
+**Locked paths and worktrees:**
+```
+$ git diff --stat HEAD -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md | wc -l
+0
+$ git status --short -- lib/engine tests e2e data/seed SPEC.md IMPLEMENTATION_BRIEF.md data/ai-cache | wc -l
+0
+$ git worktree list
+D:/Project/slite 41d63d9 [main]
+```
+
+GATE: PASSED

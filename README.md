@@ -18,6 +18,39 @@ unavailable or rate-limited.
 
 ![SureSend demo: a 4-day draft is held because the instant-rail exception says 1 business day; the safe reply is used and sent; an unknown-rail ticket escalates with a holding reply.](docs/demo.gif)
 
+## Use it from Claude
+
+SureSend is also an MCP server, so any agent can check a reply against the docs before it sends it: Claude, a help-desk
+bot, or an agent like Slite's.
+
+**Connector URL:** `https://suresend-demo.vercel.app/api/mcp` (Streamable HTTP, stateless). **No auth:** it only reads the
+public, synthetic demo workspace, so don't send real customer data to it.
+
+- **claude.ai:** add it as a custom connector (in Settings → Connectors at the time of writing; menus move). Step-by-step,
+  with a demo prompt: [docs/MCP_DEMO.md](docs/MCP_DEMO.md).
+- **Claude Code:** `claude mcp add --transport http suresend https://suresend-demo.vercel.app/api/mcp`
+- **Locally over stdio** (Claude Code or Claude Desktop, from a clone):
+  `claude mcp add suresend-local -- pnpm --dir /path/to/suresend exec tsx scripts/mcp-stdio.ts`
+
+| Tool | What it does |
+|---|---|
+| `check_reply` | `{ reply, ticket_id?, rail? }` → the decision (Good to send, Double-check, Hold, Ask first, or Couldn't check when the reply can't be read), headline, a one-line reason, the next step, a checked suggested reply, the governing quote and its doc, and the rules that mattered. It runs the same validation, caps, persona filter and engine as the web app, and covers the same one topic: when a failed transfer's money comes back. Other values come back Double-check. |
+| `list_tickets` | The 3 demo tickets: customer, payment rail, the customer's message. |
+| `get_doc` | One doc the support agent can see: title, verification signals and text. The restricted DOC-105 is never returned. |
+
+The tool descriptions tell the agent to call `check_reply` before sending any reply that states a timeline, and to send
+the suggested reply or ask a human on Hold or Ask first. Everything is read-only: nothing over MCP edits a doc. Live AI
+over MCP has its own budget on the shared limiter (`MCP_RATE_LIMIT_PER_10MIN`, `MCP_LIVE_CHECKS_PER_DAY`; defaults 10
+and 200), asked once per check; the endpoint takes one JSON-RPC message per request (no batches) and answers GET with
+405, since it's stateless. The demo's canonical replies replay saved responses; new wording uses live AI.
+
+Try these prompts:
+
+1. "Reply to Ayesha's failed instant transfer. Check it with SureSend before you send."
+2. "Usman doesn't know which payment rail his transfer used. Draft a reply about when his money comes back, and check it
+   with SureSend first."
+3. "Is 'Your refund will arrive within 4 business days' right for Hina's standard transfer? Show me the doc SureSend relied on."
+
 ## The problem
 
 Slite detects drift in docs and routes the fixes through Triage. But between a policy change and the doc fix, an agent
@@ -99,7 +132,8 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's saved-response replay) | 122 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's saved-response replay and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 143 passed |
+| `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 12 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft) × 3 runs × 2 providers | see below |
 | `pnpm eval --heldout` | 10 held-out cases × 3 runs × 2 providers | see below |
@@ -147,6 +181,7 @@ pnpm dev
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
 | `pnpm record` | Re-records `data/ai-cache/` with the primary provider |
 | `pnpm record --tour-edits` | Adds only what the tour's step 5 needs; never clears existing saved responses |
+| `pnpm mcp:e2e [url]` | Checks an MCP endpoint end to end (default `http://127.0.0.1:3100/api/mcp`) |
 
 ## How it was built
 
@@ -162,6 +197,8 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
   could submit edited docs; in a real deployment the docs would come from Slite, not the browser.
 - Personas are simulated: anyone can switch. DOC-105 is synthetic. Never use this design with real restricted data.
+- The MCP server has no auth because it only reads this public, synthetic workspace. A real one would sit behind the
+  workspace's own sign-in and check the caller's permissions.
 - No real Slite or Intercom integration; all data is synthetic.
 - Free-tier AI limits (Groq ~8K tokens/min): concurrent live checks fall back to saved responses with a visible badge.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts and the tour's step-5 edit;

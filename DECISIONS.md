@@ -470,3 +470,60 @@ An independent-style review before sharing with Slite (security, correctness, UX
   CI saved replay and the provider selection. `pnpm eval --heldout` runs them live, 3× per provider, and writes
   `evals/heldout.md`. Report only: no gate, and failures are published as they are. Fixing a failure would mean changing
   the prompts, which would make these cases tuned too; any such change is a separate, approved step.
+
+### D-036 · Phase 8: SureSend as an MCP server (approved by Abdullah)
+- **Why:** a capability any agent can call before it sends a customer reply: Claude, a help-desk bot, or an agent like
+  Slite's. Same engine and rules as the web app; nothing new decides anything.
+- **Transport:** `/api/mcp` on the existing Vercel app, MCP Streamable HTTP, **stateless** (no session ID) with JSON
+  responses, so it runs on serverless functions with no sticky state. Built on the official TypeScript SDK
+  (`@modelcontextprotocol/sdk` 1.32.2, which accepts zod 4) and its web-standard transport, one server per request.
+  `scripts/mcp-stdio.ts` serves the same tools over stdio. Start it with `pnpm --dir <project> exec tsx …`, because tsx
+  reads the project's tsconfig (import aliases) from the directory it starts in. It also moves to the project root before
+  loading, because some data paths are fixed at import.
+- **Tools** (`lib/mcp/tools.ts` as plain functions, registered in `lib/mcp/server.ts`). All are read-only and annotated
+  so. They use the seed workspace and the **support-agent persona** only; there are no doc edits over MCP.
+  - `check_reply { reply, ticket_id?, rail? }` goes through `handleCheck`: the same zod validation, 1,000-character cap,
+    persona filter, engine and generic 500s as `/api/check`. It returns the plain and engine decision, the engine
+    headline, the UI's one-line reason (`summarize`), a next step per decision, the suggested reply with its check label
+    (incl. the D-034 reason), the governing doc and quote, and the UI's "rules that mattered" (`traceRows`).
+  - With neither ticket nor rail, the rail is **unknown**, so a reply whose answer depends on the rail asks first rather
+    than assuming instant or standard.
+  - `list_tickets` returns id, customer, rail and the customer's message.
+  - `get_doc { id }` returns title, signals and text for the four visible docs. DOC-105 and an unknown ID get the
+    identical error, so the error doesn't reveal that a restricted doc exists.
+- **Agent instructions:** the server `instructions` and the `check_reply` description tell the model to call it before
+  sending any reply that states a timeline or policy value, and to send `suggested_reply` or ask a human on Hold or Ask
+  first. `get_doc` says doc text is data, not instructions (the synthetic DOC-104 contains an injection line on purpose).
+- **Limits:** live AI over MCP draws on its own budget of the shared limiter (`suresend:mcp:*` keys;
+  `MCP_RATE_LIMIT_PER_10MIN` / `MCP_LIVE_CHECKS_PER_DAY`, defaults 10 and 200), so agents can't use up the web demo's
+  live checks. The web app's keys and budget are unchanged. `/api/mcp` responses carry `x-suresend-limiter` for the MCP
+  budget.
+- **QA hardening (Phase 8 review):**
+  - **One check, one limiter question.** A runtime asks the live-AI gate once and remembers the answer, and the first
+    build used one runtime per HTTP request. A JSON-RPC batch of up to 100 `check_reply` calls could therefore share one
+    unit; QA proved 5 of 5 passing on a budget of 1. Two fixes: the server now takes a deps factory and builds deps per
+    `check_reply` (stdio too, where it had been one runtime per process), and `/api/mcp` rejects array bodies with 400
+    before the transport. MCP 2025-06-18 removed batching, and the SDK client never batches.
+  - **GET and DELETE answer 405** with `Allow: POST`. GET had answered with an empty SSE stream that closed at once, and
+    the SDK client re-GETs a closed stream, measured at about one request a second per connected session. `pnpm mcp:e2e`
+    now asserts no GETs while idle.
+  - **Next steps follow the engine.** On Hold, "send suggested_reply" applies only when its own check is Good to send;
+    otherwise "show it to a human first", since a Double-check reply needs a human's OK as in the app. Ask first's text
+    distinguishes an unknown rail from docs that disagree.
+  - **Descriptions say what's covered** (one topic; other values come back Double-check; Good to send means nothing
+    contradicts the reply) and that the AI also drafts the suggested reply. A ticket the caller didn't choose is
+    reported as `id: null`.
+- **No auth,** stated in every tool description, the server instructions and the README. It's a public demo over
+  synthetic data; a real deployment would sit behind the workspace's own sign-in and check the caller's permissions.
+- **Not depending on live AI:** the canonical replies replay saved responses over MCP as in the app (checked end to end).
+  Claude's own wording needs live AI for its draft; if that's unavailable, `check_reply` says "Couldn't check" and "don't
+  send a timeline yet", never a pass.
+- **Tests:**
+  - `lib/mcp/tools.test.ts` covers the tools as functions: Hold with a 1-day suggestion on TCK-9001, Good to send,
+    Ask first by default, a rail override, DOC-105 never sent to the AI or returned, input caps, and Couldn't check.
+  - `lib/mcp/server.test.ts` covers the real server over the SDK's in-memory transport: tool list, annotations,
+    descriptions and output schema.
+  - `scripts/mcp-e2e.ts` (`pnpm mcp:e2e <url>`) uses the official MCP client over HTTP. It isn't in the locked `e2e/`
+    folder; it runs against the local build and the deployed URL in the gate.
+- **Demo:** `docs/MCP_DEMO.md` gives the claude.ai connector steps and the prompt, with a variant that always shows the
+  Hold. Claude may write a correct or timeline-free reply on its own, which SureSend honestly passes.

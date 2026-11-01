@@ -28,6 +28,15 @@ describe("rate limiter without Upstash vars", () => {
     expect(await allowLiveCheck("203.0.113.1")).toBe(true); // the window has passed (and idle entries were swept)
   });
 
+  it("gives MCP callers their own budget: using it up leaves the web demo's untouched", async () => {
+    vi.stubEnv("MCP_RATE_LIMIT_PER_10MIN", "1");
+    const { allowLiveCheck, limiterStatus } = await import("./rateLimit");
+    expect(await allowLiveCheck("203.0.113.9", "mcp")).toBe(true);
+    expect(await allowLiveCheck("203.0.113.9", "mcp")).toBe(false);
+    expect(await allowLiveCheck("203.0.113.9")).toBe(true); // the app budget (2 per window here) is separate
+    expect(limiterStatus("mcp")).toBe("memory");
+  });
+
   it("reports upstash-unused until the first live check when the Marketplace KV_REST_API_* vars are set", async () => {
     vi.stubEnv("KV_REST_API_URL", "https://example.invalid");
     vi.stubEnv("KV_REST_API_TOKEN", "test-not-a-secret");

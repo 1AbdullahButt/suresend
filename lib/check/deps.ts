@@ -2,9 +2,10 @@
 // behind the shared limiter. One limiter unit per check that actually needs a live call (SPEC §10).
 import { aiDeps, createRuntime } from "@/lib/ai/aiDeps";
 import type { CheckDeps } from "@/lib/engine/types";
-import { allowLiveCheck, clientIp } from "@/lib/rateLimit";
+import { allowLiveCheck, clientIp, type Budget } from "@/lib/rateLimit";
 
-export function routeDeps(headers: Headers): CheckDeps {
+/** `budget` is "mcp" for /api/mcp, so agents draw on their own live-check budget (D-036). */
+export function routeDeps(headers: Headers, budget: Budget = "app"): CheckDeps {
   const ip = clientIp(headers);
-  return aiDeps(createRuntime({ liveGate: () => allowLiveCheck(ip) }));
+  return aiDeps(createRuntime({ liveGate: () => allowLiveCheck(ip, budget) }));
 }

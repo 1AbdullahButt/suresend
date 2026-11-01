@@ -209,3 +209,16 @@ Fixes from the independent pre-sharing review (D-034). The engine, locked tests 
 - **Gate:** typecheck, all tests, e2e, axe audit (1440/1024/390), `pnpm audit` with no high/moderate, held-out eval run on
   both providers and reported; deployed; live check of headers, Upstash in use, tour step 5 replaying saved responses and both
   URLs; QA APPROVED; `git worktree list` clean.
+
+## 11. Phase 8: MCP check_reply tool (added 2026-11-01, approved by Abdullah)
+SureSend as a capability any agent can call (D-036). The engine, locked tests and seed data stay untouched.
+- **Server:** remote MCP at `/api/mcp` (Streamable HTTP, stateless, JSON responses) on the existing Vercel app, plus a stdio
+  entry (`scripts/mcp-stdio.ts`) for Claude Code and Claude Desktop.
+- **Tools** (read-only, seed workspace, support-agent persona): `check_reply` (through `handleCheck`), `list_tickets`,
+  `get_doc` (never DOC-105). Descriptions tell agents to check before sending and to use the suggested reply or ask a human
+  on Hold or Ask first.
+- **Safety:** same zod validation and caps, the shared Upstash limiter with its own MCP budget, generic errors, no auth
+  (public synthetic demo, stated in the tools and the README).
+- **Gate:** typecheck, all tests (tool unit tests incl. DOC-105 never returned and the 4-day Hold with a 1-day suggestion, plus
+  an in-memory MCP client test), e2e and axe unchanged, `pnpm mcp:e2e` against the local build and the deployed
+  `/api/mcp`, README "Use it from Claude" and `docs/MCP_DEMO.md`; QA APPROVED; deployed; `git worktree list` clean.
