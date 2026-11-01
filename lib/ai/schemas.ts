@@ -7,7 +7,7 @@ import type { ValueKind } from "@/lib/engine/values";
 import { topicIds } from "@/lib/topics";
 
 /** Bump whenever a zod schema or the topic taxonomy changes (SPEC §10 cache identity). */
-export const SCHEMA_VERSION = "2026-11-02.1";
+export const SCHEMA_VERSION = "2026-11-02.2";
 
 const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -76,6 +76,16 @@ const WIRE: Record<ValueKind, WireKind> = {
       const v = w as { quantity: number; of: string };
       return { quantity: v.quantity, of: v.of };
     },
+  },
+  boolean: {
+    zod: z.object({ flag: z.boolean() }),
+    json: {
+      type: "object",
+      properties: { flag: { type: "boolean", description: "A yes/no value, e.g. true when the transfer fee is refunded." } },
+      required: ["flag"],
+      additionalProperties: false,
+    },
+    toValue: (w) => ({ flag: (w as { flag: boolean }).flag }),
   },
 };
 const WIRE_KINDS = Object.values(WIRE);

@@ -12,10 +12,14 @@ type NoDuration = { amount?: undefined; amountMax?: undefined; unit?: undefined 
 /** Any other amount: a fee amount, a limit ("PKR 500,000", "3 transfers a day"). Claims on topic "other" carry it. */
 export type QuantityValue = { quantity: number; of: string } & NoDuration;
 
+/** A yes/no fact (fee_refund: is the transfer fee refunded?). The topic words it ("refunded"). */
+export type BooleanValue = { flag: boolean } & NoDuration;
+
 /** Every value kind a claim can carry, and the shape of its value. */
 interface KindMap {
   duration: DurationValue;
   quantity: QuantityValue;
+  boolean: BooleanValue;
 }
 export type ValueKind = keyof KindMap;
 export type AnyValue = KindMap[ValueKind];
@@ -103,9 +107,22 @@ const quantity: Comparator<QuantityValue> = {
   words: (v) => `${v.quantity.toLocaleString("en-US")} ${v.of}`,
 };
 
+// ---- boolean (fee_refund) --------------------------------------------------------------------------------------
+
+const boolean: Comparator<BooleanValue> = {
+  kind: "boolean",
+  is: (v): v is BooleanValue => "flag" in v && typeof v.flag === "boolean",
+  same: (a, b) => a.flag === b.flag,
+  within: (inner, outer) => inner.flag === outer.flag,
+  unitsMatch: () => true,
+  unitLabel: () => null,
+  format: (v) => (v.flag ? "yes" : "no"),
+  words: (v) => (v.flag ? "yes" : "no"),
+};
+
 // ---- the registry ----------------------------------------------------------------------------------------------
 
-const COMPARATORS: { [K in ValueKind]: Comparator<KindMap[K]> } = { duration, quantity };
+const COMPARATORS: { [K in ValueKind]: Comparator<KindMap[K]> } = { duration, quantity, boolean };
 
 export function comparatorFor(v: AnyValue): Comparator<AnyValue> {
   const c = (Object.values(COMPARATORS) as Array<Comparator<AnyValue>>).find((x) => x.is(v));

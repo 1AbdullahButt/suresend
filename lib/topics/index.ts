@@ -2,13 +2,14 @@
 // values aren't a kind the engine already compares, a comparator in lib/engine/values.ts. The decision rules stay as
 // they are: they ask this registry and the comparator registry, and never name a topic (lib/engine/topicAgnostic.test.ts).
 import { formatValue, valueWords, type AnyValue } from "@/lib/engine/values";
+import { feeRefund } from "./feeRefund";
 import { reversalWindow } from "./reversalWindow";
 import type { TopicDef } from "./types";
 
 export type { TopicDef } from "./types";
 
 /** Covered topics, in prompt order. "other" is not a topic here: it is everything outside them (SPEC §6.6 D0c). */
-export const TOPICS = [reversalWindow] as const satisfies readonly TopicDef[];
+export const TOPICS = [reversalWindow, feeRefund] as const satisfies readonly TopicDef[];
 
 export type TopicId = (typeof TOPICS)[number]["id"];
 
