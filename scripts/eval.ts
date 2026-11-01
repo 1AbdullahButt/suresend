@@ -23,6 +23,8 @@ import { createAiCache } from "@/lib/ai/cache";
 import type { ProviderName } from "@/lib/ai/client";
 import { PROMPT_VERSION } from "@/lib/ai/prompts";
 import { isVerbatim } from "@/lib/engine/normalize";
+import { sameValue } from "@/lib/engine/values";
+import { isCovered } from "@/lib/topics";
 import { draftSave, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
 import type { CheckDeps, DraftClaim, SourceClaim, SourceOverride } from "@/lib/engine/types";
 
@@ -157,18 +159,11 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     const fx = sourceFixtures.find((f) => f.sourceId === sourceId && norm(f.body) === norm(body));
     if (!fx) return;
     for (const want of fx.claims.filter((x) => x.value !== null)) {
-      const got =
-        claims.find((c) => c.topic === want.topic && c.value?.amount === want.value?.amount && c.value?.unit === want.value?.unit) ??
-        claims.find((c) => c.topic === want.topic);
+      const same = (c: SourceClaim) => !!c.value && !!want.value && sameValue(c.value, want.value);
+      const got = claims.find((c) => c.topic === want.topic && same(c)) ?? claims.find((c) => c.topic === want.topic);
       const checks: Array<[string, boolean]> = [
         ["found", !!got],
-        [
-          "value",
-          !!got &&
-            got.value?.amount === want.value?.amount &&
-            (got.value?.amountMax ?? got.value?.amount) === (want.value?.amountMax ?? want.value?.amount) &&
-            got.value?.unit === want.value?.unit,
-        ],
+        ["value", !!got && same(got)],
         ["rail", got?.scope.rail === want.scope.rail],
         ["statusWording", got?.statusWording === want.statusWording],
         ["effectiveFrom", (got?.effectiveFrom ?? null) === want.effectiveFrom],
@@ -190,14 +185,14 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     const fx = draftFixtures.find((f) => f.draft === draft);
     if (!fx) return;
     const want = fx.claims[0];
-    const got = claims.find((c) => c.topic === "reversal_window");
+    const got = want ? claims.find((c) => c.topic === want.topic) : undefined;
     const checks: Array<[string, boolean]> = want
       ? [
           ["found", !!got],
-          ["value", !!got && got.value?.amount === want.value?.amount && got.value?.unit === want.value?.unit],
+          ["value", !!got && !!got.value && !!want.value && sameValue(got.value, want.value)],
           ["definitive", got?.definitive === want.definitive],
         ]
-      : [["no claim", claims.filter((c) => c.topic === "reversal_window").length === 0]];
+      : [["no claim", claims.filter((c) => isCovered(c.topic)).length === 0]];
     for (const [name, ok] of checks) {
       fields.total++;
       if (ok) fields.correct++;

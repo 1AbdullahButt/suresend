@@ -1,5 +1,5 @@
 // Topic: when a failed transfer's money comes back (SPEC §4, the demo's first topic). Duration values.
-import { formatValue, unitsMatch, valueWords, type AnyValue } from "@/lib/engine/values";
+import { formatValue, isDuration, unitsMatch, valueWords, type AnyValue } from "@/lib/engine/values";
 import type { ScopeLike, TopicDef } from "./types";
 
 const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same)`;
@@ -11,7 +11,7 @@ function scopeSubject(rail: ScopeLike): string {
 /** "4" when the units match the governing value, else the full "4 calendar days". */
 function draftShort(draft: AnyValue | null, governing: AnyValue, fallback: string): string {
   if (!draft) return fallback;
-  if (unitsMatch(draft, governing) && "amount" in draft) {
+  if (unitsMatch(draft, governing) && isDuration(draft)) {
     return draft.amountMax !== undefined && draft.amountMax !== draft.amount ? `${draft.amount}–${draft.amountMax}` : String(draft.amount);
   }
   return valueWords(draft);

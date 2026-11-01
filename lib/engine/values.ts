@@ -4,10 +4,18 @@
 import type { Unit } from "./types";
 
 export type DurationValue = { amount: number; amountMax?: number; unit: Unit };
+/**
+ * The duration fields, absent. Every other kind declares them, so code written against the SPEC's duration-only Value
+ * (the acceptance tests read `governing.value.amount`) still compiles and reads undefined. Narrow with isDuration.
+ */
+type NoDuration = { amount?: undefined; amountMax?: undefined; unit?: undefined };
+/** Any other amount: a fee amount, a limit ("PKR 500,000", "3 transfers a day"). Claims on topic "other" carry it. */
+export type QuantityValue = { quantity: number; of: string } & NoDuration;
 
 /** Every value kind a claim can carry, and the shape of its value. */
 interface KindMap {
   duration: DurationValue;
+  quantity: QuantityValue;
 }
 export type ValueKind = keyof KindMap;
 export type AnyValue = KindMap[ValueKind];
@@ -50,9 +58,11 @@ const REPLY_UNIT_WORDS: Record<Unit, [string, string]> = {
   hours: ["hour", "hours"],
 };
 
+export const isDuration = (v: AnyValue): v is DurationValue => typeof v.amount === "number" && typeof v.unit === "string";
+
 const duration: Comparator<DurationValue> = {
   kind: "duration",
-  is: (v): v is DurationValue => "amount" in v && "unit" in v,
+  is: isDuration,
   same(a, b) {
     const [alo, ahi] = range(a);
     const [blo, bhi] = range(b);
@@ -78,9 +88,24 @@ const duration: Comparator<DurationValue> = {
   },
 };
 
+// ---- quantity (amounts outside the covered topics) -------------------------------------------------------------
+
+const unitKey = (of: string) => of.trim().toLowerCase().replace(/\s+/g, " ");
+
+const quantity: Comparator<QuantityValue> = {
+  kind: "quantity",
+  is: (v): v is QuantityValue => "quantity" in v && "of" in v,
+  same: (a, b) => a.quantity === b.quantity && unitKey(a.of) === unitKey(b.of),
+  within: (inner, outer) => inner.quantity === outer.quantity,
+  unitsMatch: (a, b) => unitKey(a.of) === unitKey(b.of),
+  unitLabel: (v) => v.of,
+  format: (v) => `${v.quantity.toLocaleString("en-US")} ${v.of}`,
+  words: (v) => `${v.quantity.toLocaleString("en-US")} ${v.of}`,
+};
+
 // ---- the registry ----------------------------------------------------------------------------------------------
 
-const COMPARATORS: { [K in ValueKind]: Comparator<KindMap[K]> } = { duration };
+const COMPARATORS: { [K in ValueKind]: Comparator<KindMap[K]> } = { duration, quantity };
 
 export function comparatorFor(v: AnyValue): Comparator<AnyValue> {
   const c = (Object.values(COMPARATORS) as Array<Comparator<AnyValue>>).find((x) => x.is(v));

@@ -2,7 +2,7 @@
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
 import type { CheckResult, ClaimResult, Evidence, OverallDecision, Unit, Value } from "@/lib/engine/types";
 import { patternNoun } from "@/lib/engine/patterns";
-import { sameValue, unitLabel } from "@/lib/engine/values";
+import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
 import { isCovered, topicDef } from "@/lib/topics";
 import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
 
@@ -34,7 +34,7 @@ const UNIT_ADJ: Record<Unit, string> = { business_days: "business-day", calendar
 
 /** "4 business days" → "4-business-day" (for "The 4-business-day reply never reached Ayesha."). */
 export function valueAdjective(v: Value): string | null {
-  if (!v || !("amount" in v)) return null;
+  if (!v || !isDuration(v)) return null;
   const n = v.amountMax !== undefined && v.amountMax !== v.amount ? `${v.amount}–${v.amountMax}` : String(v.amount);
   return `${n}-${UNIT_ADJ[v.unit]}`;
 }

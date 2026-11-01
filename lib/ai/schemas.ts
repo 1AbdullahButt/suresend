@@ -7,7 +7,7 @@ import type { ValueKind } from "@/lib/engine/values";
 import { topicIds } from "@/lib/topics";
 
 /** Bump whenever a zod schema or the topic taxonomy changes (SPEC §10 cache identity). */
-export const SCHEMA_VERSION = "2026-10-30.1";
+export const SCHEMA_VERSION = "2026-11-02.1";
 
 const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -59,6 +59,22 @@ const WIRE: Record<ValueKind, WireKind> = {
     toValue: (w) => {
       const v = w as { amount: number; amountMax: number | null; unit: z.infer<typeof Unit> };
       return v.amountMax === null || v.amountMax === v.amount ? { amount: v.amount, unit: v.unit } : { amount: v.amount, amountMax: v.amountMax, unit: v.unit };
+    },
+  },
+  quantity: {
+    zod: z.object({ quantity: z.number().nonnegative(), of: z.string().min(1).max(60) }),
+    json: {
+      type: "object",
+      properties: {
+        quantity: { type: "number", description: "The amount, e.g. 500000 for 'PKR 500,000', 3 for '3 transfers a day'." },
+        of: { type: "string", description: "What it counts, as written: 'PKR', 'USD', 'transfers a day'." },
+      },
+      required: ["quantity", "of"],
+      additionalProperties: false,
+    },
+    toValue: (w) => {
+      const v = w as { quantity: number; of: string };
+      return { quantity: v.quantity, of: v.of };
     },
   },
 };
