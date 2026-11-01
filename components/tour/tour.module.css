@@ -115,6 +115,14 @@
   font-size: 13px;
   color: var(--muted);
 }
+.closing {
+  margin: 0;
+  line-height: 1.5;
+}
+.closing b {
+  color: var(--ink);
+  font-weight: 600;
+}
 .tbtn {
   display: inline-flex;
   align-items: center;
@@ -210,6 +218,9 @@
   .cardTop {
     top: 66px !important;
     bottom: auto;
+  }
+  .wideOnly {
+    display: none;
   }
 }
 

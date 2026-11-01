@@ -24,7 +24,8 @@ SureSend is also an MCP server, so any agent can check a reply against the docs 
 bot, or an agent like Slite's.
 
 **Connector URL:** `https://suresend-demo.vercel.app/api/mcp` (Streamable HTTP, stateless). **No auth:** it only reads the
-public, synthetic demo workspace, so don't send real customer data to it.
+public, synthetic demo workspace, so don't send real customer data to it. In the app, the Demo menu's "Use it from Claude
+(MCP)" section has this URL with a Copy button.
 
 - **claude.ai:** add it as a custom connector (in Settings → Connectors at the time of writing; menus move). Step-by-step,
   with a demo prompt: [docs/MCP_DEMO.md](docs/MCP_DEMO.md).
@@ -157,7 +158,7 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's and the doc fix's saved-response replay, Fix the doc, and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 160 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's and the doc fix's saved-response replay, Fix the doc, and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 164 passed |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 12 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft) × 3 runs × 2 providers | see below |

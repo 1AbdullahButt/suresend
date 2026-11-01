@@ -88,6 +88,8 @@ export function useSureSend() {
   const [tab, setTab] = useState<Tab>("check");
   const [view, setView] = useState<AgentView>("main");
   const [held, setHeld] = useState<Record<string, string | null>>({});
+  /** The last held reply per ticket this session, even after a corrected reply was sent (tour step 5 reuses it). */
+  const [heldReplies, setHeldReplies] = useState<Record<string, HeldReply>>({});
   const [panelOpen, setPanelOpen] = useState(false);
   const [mobileView, setMobileView] = useState<"list" | "thread">("list");
   const [docFocus, setDocFocus] = useState<{ sourceId: string; nonce: number } | null>(null);
@@ -340,6 +342,7 @@ export function useSureSend() {
           );
         }
         setHeld((h) => ({ ...h, [ticketId]: valueAdjective(mostSevereClaim(out.result)?.draftClaim.value ?? null) }));
+        setHeldReplies((h) => ({ ...h, [ticketId]: { rail: req.rail, draft: req.draft, fixable: copied !== null } }));
         setSendStates((s) => ({ ...s, [ticketId]: { kind: "blocked", result: out.result } }));
       } else if (out.kind === "ack_required") {
         setSendStates((s) => ({ ...s, [ticketId]: { kind: "ack_required", result: out.result } }));
@@ -547,6 +550,7 @@ export function useSureSend() {
     setFixReview(null);
     setFixApproved(null);
     setHeld({});
+    setHeldReplies({});
     showToast("Demo reset: seed docs restored and this browser's numbers cleared.");
   }, [showToast]);
 
@@ -632,6 +636,7 @@ export function useSureSend() {
     docFocus,
     fixReview,
     fixApproved,
+    heldReplies,
     view,
     toast,
     pausedDismissed,
@@ -678,6 +683,13 @@ export function useSureSend() {
 }
 
 export type SureSend = ReturnType<typeof useSureSend>;
+
+/** A reply Send held this session: what was sent, and whether it points to a doc to fix (D-037). */
+export interface HeldReply {
+  rail: Rail;
+  draft: string;
+  fixable: boolean;
+}
 
 /** The Triage-style review of a doc-fix proposal in the Docs tab (D-037). */
 export interface FixReview {

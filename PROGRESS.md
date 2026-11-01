@@ -1103,3 +1103,110 @@ ALL PASS
 step-6 doc edit (live): ALL PASS
 tour (live): ALL PASS
 ```
+
+### Phase 9 addendum 2: tour step 5 uses Ayesha; MCP in the Demo menu (D-039)
+Step 5 "Fix the doc that caused this" now tells Ayesha's story and does the work itself ("Show me" holds her 4-day reply
+if needed, from saved responses, then opens the review). The card never covers "Approve fix (simulated)" at 1440 or 390.
+The Demo menu has "Use it from Claude (MCP)" with the connector URL and a Copy button. Tour step 6 ends with a pointer to
+it. UI copy and layout only.
+```
+$ pnpm typecheck  (exit 0)
+$ pnpm test
+ Test Files  21 passed (21)
+      Tests  164 passed (164)
+$ pnpm e2e
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped (1.6s)
+  1 passed (2.5s)
+$ ui-audit.ts http://127.0.0.1:3100  (AI_MODE=saved)
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+"axe: none" runs: 30
+$ step5-ayesha.cjs http://127.0.0.1:3100
+PASS 1440 A: step 5 of 6 is "Fix the doc that caused this"
+PASS 1440 A: the new body copy
+PASS 1440 A: no "Go back…" line and no Usman
+  card x=694..1034 y=72..375 · Approve x=1058..1285 y=794..844
+PASS 1440 A: Approve is on screen
+PASS 1440 A: the step-5 card doesn't cover Approve
+PASS 1440 A: the Approve button is what's under its centre
+PASS 1440 A: already held this session, so no second hold (stopped count 2)
+PASS 1440 A: the review counts Ayesha's and Usman's holds (2 replies copied 4 business days)
+PASS 1440 A: axe on the card and the review: 0 serious/critical
+PASS 1440 A: approving works (a real click) and step 5 says "Fix approved…"
+PASS 1440 B: nothing held yet, step 5 still offers "Show me"
+  card x=694..1034 y=72..375 · Approve x=1058..1285 y=794..844
+PASS 1440 B: Approve is on screen
+PASS 1440 B: the step-5 card doesn't cover Approve
+PASS 1440 B: the Approve button is what's under its centre
+PASS 1440 B: "Show me" held Ayesha's reply first (stopped count 1)
+PASS 1440 B: Ayesha's ticket is the selected one
+PASS 1440 B: the review counts the hold it just made
+PASS 1440 B: after Dismiss, "Show me" is offered again
+PASS 1440 B: the second "Show me" reuses the hold (stopped count still 1)
+PASS 1440 B: no horizontal scroll
+PASS 390 A: step 5 of 6 is "Fix the doc that caused this"
+PASS 390 A: the new body copy
+PASS 390 A: no "Go back…" line and no Usman
+  card x=8..382 y=66..118 · Approve x=16..265 y=754..804
+PASS 390 A: Approve is on screen
+PASS 390 A: the step-5 card doesn't cover Approve
+PASS 390 A: the Approve button is what's under its centre
+PASS 390 A: on the phone the card is the one-line bar while the review is open (52px)
+PASS 390 A: already held this session, so no second hold (stopped count 2)
+PASS 390 A: the review counts Ayesha's and Usman's holds (2 replies copied 4 business days)
+  full card y=66..373 · Approve y=754..804
+PASS 390 A: "Show steps" opens the full card on the other half, still clear of Approve
+PASS 390 A: axe on the card and the review: 0 serious/critical
+PASS 390 A: approving works (a real click) and step 5 says "Fix approved…"
+PASS 390 B: nothing held yet, step 5 still offers "Show me"
+  card x=8..382 y=66..118 · Approve x=16..265 y=754..804
+PASS 390 B: Approve is on screen
+PASS 390 B: the step-5 card doesn't cover Approve
+PASS 390 B: the Approve button is what's under its centre
+PASS 390 B: on the phone the card is the one-line bar while the review is open (52px)
+PASS 390 B: "Show me" held Ayesha's reply first (stopped count 1)
+PASS 390 B: Ayesha's ticket is the selected one
+PASS 390 B: the review counts the hold it just made
+PASS 390 B: after Dismiss, "Show me" is offered again
+PASS 390 B: the second "Show me" reuses the hold (stopped count still 1)
+PASS 390 B: no horizontal scroll
+ALL PASS
+mcp-menu.cjs (local): 31 PASS, 0 FAIL · ALL PASS
+step6-phone-fix.cjs (local): 12 PASS, 0 FAIL · ALL PASS
+tour-step6.cjs (local): 29 PASS, 0 FAIL · ALL PASS
+$ mcp-menu.cjs https://suresend-demo.vercel.app
+PASS 1440: the menu has "Use it from Claude (MCP)"
+PASS 1440: the one-line explanation
+PASS 1440: the connector URL is shown
+PASS 1440: the Copy button is named "Copy connector URL"
+PASS 1440: "How to connect" links to the README section
+PASS 1440: the link opens a new tab safely and says so
+PASS 1440: the menu fits the width
+PASS 1440: the URL wraps instead of overflowing
+PASS 1440: axe on the menu: 0 serious/critical
+PASS 1440: after a click the button says "Copied" (name "Copied connector URL")
+PASS 1440: the clipboard holds the connector URL
+PASS 1440: a status region says "Connector URL copied"
+PASS 1440: axe on the menu in the "Copied" state: 0 serious/critical
+PASS 1440: "Copied" goes back to "Copy" after a moment
+PASS 1440: step 6 ends with the MCP line (after the tip, right above the buttons)
+PASS 390: the menu has "Use it from Claude (MCP)"
+PASS 390: the one-line explanation
+PASS 390: the connector URL is shown
+PASS 390: the Copy button is named "Copy connector URL"
+PASS 390: "How to connect" links to the README section
+PASS 390: the link opens a new tab safely and says so
+PASS 390: the menu fits the width
+PASS 390: the URL wraps instead of overflowing
+PASS 390: axe on the menu: 0 serious/critical
+PASS 390: after a click the button says "Copied" (name "Copied connector URL")
+PASS 390: the clipboard holds the connector URL
+PASS 390: a status region says "Connector URL copied"
+PASS 390: axe on the menu in the "Copied" state: 0 serious/critical
+PASS 390: "Copied" goes back to "Copy" after a moment
+PASS 390: step 6 ends with the MCP line (after the tip, right above the buttons)
+PASS no clipboard: an alert says so and the URL is selected to copy by hand
+ALL PASS
+step5-ayesha.cjs (live): 43 PASS, 0 FAIL · ALL PASS
+step6-phone-fix.cjs (live): 12 PASS, 0 FAIL · ALL PASS
+tour-step6.cjs (live): 29 PASS, 0 FAIL · ALL PASS
+```

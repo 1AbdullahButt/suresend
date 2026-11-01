@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import type { AiRunInfo, Role } from "@/lib/engine/types";
 import { falseAlarmStats, type Metrics, type Review } from "@/lib/client/metrics";
 import { aiModeLabel } from "@/lib/client/format";
@@ -31,11 +31,74 @@ function Tile({ label, value }: { label: string; value: string }) {
 
 /** The public source repo (README: problem, architecture, AI vs rules, tests, eval). */
 const REPO_URL = "https://github.com/1AbdullahButt/suresend";
+/** The remote MCP endpoint (D-036) and the README section that explains how to add it. */
+export const MCP_URL = "https://suresend-demo.vercel.app/api/mcp";
+const MCP_HELP_URL = `${REPO_URL}#use-it-from-claude`;
+
+/** "Use it from Claude (MCP)": the connector URL with a Copy button and a short spoken and visible confirmation. */
+function McpSection() {
+  const urlRef = useRef<HTMLElement>(null);
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  useEffect(() => {
+    if (status === "idle") return;
+    const t = window.setTimeout(() => setStatus("idle"), 2500);
+    return () => window.clearTimeout(t);
+  }, [status]);
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(MCP_URL);
+      setStatus("copied");
+      return;
+    } catch {
+      // No clipboard API access (permissions, an embedded or insecure context): fall back to selecting the URL.
+    }
+    const el = urlRef.current;
+    const sel = window.getSelection();
+    if (el && sel) {
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    setStatus(el && sel && document.execCommand("copy") ? "copied" : "failed");
+  };
+
+  return (
+    <div className={s.menuSection}>
+      <h3 className={ui.sectionLabel} id="mcp-label">
+        Use it from Claude (MCP)
+      </h3>
+      <p className={s.small}>Any AI agent can call SureSend before it replies.</p>
+      <div className={s.mcpRow} role="group" aria-labelledby="mcp-label">
+        <code ref={urlRef} className={s.mcpUrl}>
+          {MCP_URL}
+        </code>
+        <button type="button" className={cx(s.copyBtn, status === "copied" && s.copied)} onClick={() => void copy()}>
+          {status === "copied" ? "Copied" : "Copy"}
+          <span className="sr-only"> connector URL</span>
+        </button>
+      </div>
+      <span className="sr-only" role="status">
+        {status === "copied" ? "Connector URL copied" : ""}
+      </span>
+      {status === "failed" ? (
+        <p className={s.small} role="alert">
+          Couldn&apos;t copy. The URL is selected, so you can copy it yourself.
+        </p>
+      ) : null}
+      <a className={s.mcpHelp} href={MCP_HELP_URL} target="_blank" rel="noopener noreferrer">
+        How to connect
+        <span className="sr-only"> (opens the README on GitHub in a new tab)</span>
+      </a>
+    </div>
+  );
+}
 
 /**
  * Demo menu (design v2 DemoMenu artboard): personas, the three Impact numbers, the AI mode line, the past flags to
- * review, the guided tour, Reset demo and "How it works · GitHub". A non-modal popover dialog; Esc and outside clicks
- * close it.
+ * review, docs causing held replies, the MCP connector (D-039), the guided tour, Reset demo and "How it works · GitHub".
+ * A non-modal popover dialog; Esc and outside clicks close it.
  */
 export function DemoMenu({
   role,
@@ -205,6 +268,8 @@ export function DemoMenu({
           <p className={s.small}>Simulated in your browser: replies held this session, by the doc they copied.</p>
         </div>
       ) : null}
+
+      <McpSection />
 
       <div className={s.menuActions}>
         <button type="button" className={cx(ui.btn, ui.primary)} onClick={onTour}>

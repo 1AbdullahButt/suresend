@@ -102,7 +102,7 @@ export function FixReview({
         {p.recheck.length} canonical replies keep their decisions.
       </p>
 
-      <div className={s.actions}>
+      <div className={s.actions} data-tour="fix-approve">
         <button type="button" className={cx(ui.btn, ui.primary, ui.lg)} onClick={onApprove}>
           Approve fix (simulated)
         </button>

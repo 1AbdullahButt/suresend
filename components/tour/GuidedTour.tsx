@@ -5,7 +5,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { ArrowLeft, ArrowRight, CircleCheck, X } from "lucide-react";
 import type { SureSend } from "@/lib/client/useSureSend";
-import { findFixSource } from "@/lib/fix/source";
 import { cx } from "@/components/ui/atoms";
 import s from "./tour.module.css";
 
@@ -30,6 +29,8 @@ interface Step {
   title: string;
   body: ReactNode;
   target: (ag: SureSend) => string[];
+  /** An element the card must never cover (scrolled into view; on phones the card takes the other half of the screen). */
+  keepClear?: (ag: SureSend) => string | null;
   enter?: (c: Ctx) => void;
 }
 
@@ -100,17 +101,17 @@ const STEPS: Step[] = [
     title: "Fix the doc that caused this",
     body: (
       <>
-        Usman&apos;s reply copied <b>4 business days</b> from the SOP. It covers all rails but never mentions the instant-rail exception.
-        SureSend drafts a one-line fix to that doc and rechecks it. As with fixes reviewed in Slite&apos;s Triage, nothing changes until a
-        person approves it.
+        Ayesha&apos;s agent got <b>4 days</b> from the old SOP. SureSend suggests one added line to fix that doc, so the next agent gets it
+        right. Nothing changes until you approve it.
       </>
     ),
     target: (ag) => (ag.fixReview ? ['[data-tour="fix-review"]'] : ['[data-tour="fix-link"]', '[data-tour="decision"]']),
+    keepClear: (ag) => (ag.fixReview?.status === "ready" ? '[data-tour="fix-approve"]' : null),
+    // Ayesha's Hold tells the story best (D-039). The step's own button holds her reply if needed, then opens the review.
     enter: ({ ag, showAgent }) => {
-      // Stay on the held reply from step 4; if a review from earlier is open, keep it.
       if (!ag.fixReview) {
+        ag.actions.prepareTicket("TCK-9001");
         ag.actions.setTab("check");
-        ag.actions.setView("main");
       }
       showAgent();
     },
@@ -217,6 +218,7 @@ export function GuidedTour({
     if (target === "title") titleRef.current?.focus();
   }, [collapsed]);
   const scrolledFor = useRef<string>("");
+  const scrolledClear = useRef<string>("");
   const agRef = useRef(ag);
   agRef.current = ag;
 
@@ -256,6 +258,17 @@ export function GuidedTour({
     return () => document.removeEventListener("focusin", onFocus);
   }, [isTour, state.step, narrow]);
 
+  // Step 5 on a phone: while the fix review is open it gets the screen (the card is a bar); when it closes, the card is back.
+  const reviewReady = ag.fixReview?.status === "ready";
+  const wasReviewReady = useRef(false);
+  useEffect(() => {
+    const closed = wasReviewReady.current && !reviewReady;
+    wasReviewReady.current = reviewReady;
+    if (!isTour || state.step !== FIX_STEP || !narrow) return;
+    if (closed) focusAfterToggle.current = "title";
+    setCollapsed(reviewReady);
+  }, [isTour, state.step, narrow, reviewReady]);
+
   // Restored (by the tour button or Reset demo): show the numbered steps, and keep them when the visitor edits the doc.
   const doc103Edited = Boolean(ag.overrides["DOC-103"]);
   useEffect(() => {
@@ -289,6 +302,13 @@ export function GuidedTour({
         scrolledFor.current = key;
         el.scrollIntoView({ block: "nearest" });
       }
+      const clearSel = isTour && step?.keepClear ? step.keepClear(agRef.current) : null;
+      const clearEl = clearSel ? document.querySelector<HTMLElement>(clearSel) : null;
+      if (!clearEl) scrolledClear.current = "";
+      else if (scrolledClear.current !== clearSel) {
+        scrolledClear.current = clearSel ?? "";
+        clearEl.scrollIntoView({ block: "nearest" });
+      }
       const r = el?.getBoundingClientRect();
       const next = r && r.width > 0 ? { top: r.top - 4, left: r.left - 4, width: r.width + 8, height: r.height + 8 } : null;
       setBox((b) =>
@@ -296,7 +316,9 @@ export function GuidedTour({
           ? b
           : next,
       );
-      setPhoneTop(Boolean(r && r.top + r.height / 2 > window.innerHeight / 2 && window.innerWidth < 700));
+      // Phones: the card docks at the bottom, or at the top when the anchor (or the element to keep clear) is in the lower half.
+      const a = clearEl?.getBoundingClientRect() ?? r;
+      setPhoneTop(Boolean(a && a.top + a.height / 2 > window.innerHeight / 2 && window.innerWidth < 700));
       setNarrow(window.innerWidth < 700);
       const h = cardRef.current?.offsetHeight ?? 240;
       const p = placeCard(next, h);
@@ -356,8 +378,19 @@ export function GuidedTour({
   const sent = t1 && ag.sendState.kind === "sent";
   const hasHold = t1 && ag.stored?.result.decision === "HOLD";
   const restoreFirst = state.step === EDIT_STEP && startEdited;
-  // The current reply's result points to a doc that can be fixed (D-037).
-  const fixable = !!ag.stored && findFixSource(ag.stored.result) !== null;
+
+  // Step 5: review the fix for Ayesha's held 4-day reply. If it wasn't held this session, hold it first (saved responses).
+  const showFix = async () => {
+    if (overlay) ag.actions.setPanelOpen(true);
+    const prior = ag.heldReplies["TCK-9001"];
+    if (prior?.fixable) {
+      ag.actions.openFixReview({ ticketId: "TCK-9001", rail: prior.rail, draft: prior.draft });
+      return;
+    }
+    ag.actions.prepareTicket("TCK-9001", CANONICAL_DRAFT);
+    await ag.actions.send();
+    agRef.current.actions.openFixReview({ ticketId: "TCK-9001", rail: "instant", draft: CANONICAL_DRAFT });
+  };
 
   const sendFor = (id: string, label: string) => (
     <button
@@ -525,20 +558,10 @@ export function GuidedTour({
                 <CircleCheck aria-hidden="true" />
                 Fix approved: {ag.fixApproved.title} now names the exception, so agents stop copying 4 days for instant transfers.
               </span>
-            ) : fixable ? (
-              <button
-                type="button"
-                className={s.tbtn}
-                disabled={busy}
-                onClick={() => {
-                  ag.actions.openFixReview();
-                  if (overlay) ag.actions.setPanelOpen(true);
-                }}
-              >
-                Show me the fix
-              </button>
             ) : (
-              <p className={s.note}>Go back to step 4 to hold Usman&apos;s reply first.</p>
+              <button type="button" className={s.tbtn} disabled={busy} onClick={() => void showFix()}>
+                Show me
+              </button>
             )}
           </div>
         ) : null}
@@ -559,9 +582,16 @@ export function GuidedTour({
                 Restore the doc
               </button>
             ) : (
-              <p className={s.note}>
-                Tip: Save and re-check (without verifying) gives Double-check, because SureSend trusts unapproved edits less.
-              </p>
+              <>
+                {/* Hidden on phones, where the card must leave the doc's text reachable (D-039). */}
+                <p className={cx(s.note, s.wideOnly)}>
+                  Tip: Save and re-check (without verifying) gives Double-check, because SureSend trusts unapproved edits less.
+                </p>
+                {/* The tour's last line points to the MCP connector (D-039). */}
+                <p className={s.closing}>
+                  AI agents can call the same check: <b>Demo menu → Use it from Claude</b>.
+                </p>
+              </>
             )}
           </div>
         ) : null}

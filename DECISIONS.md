@@ -600,3 +600,29 @@ An independent-style review before sharing with Slite (security, correctness, UX
   unchanged.
 - Checked at 390×844: the bar is 52px tall and clear of both save buttons. A real tap on "Save and verify" works and the
   4-day reply is held. axe finds 0 serious or critical issues.
+
+### D-039 · Tour step 5 uses Ayesha; the MCP connector in the Demo menu (follow-up to D-037, D-036)
+- **Step 5, "Fix the doc that caused this", now uses Ayesha (TCK-9001), not Usman.** Her Hold is the clearest story: the
+  reply copied 4 days from the SOP, and the instant-rail exception says 1. New body: "Ayesha's agent got 4 days from the
+  old SOP. SureSend suggests one added line to fix that doc, so the next agent gets it right. Nothing changes until you
+  approve it."
+- The step does the work itself. Its one button, "Show me", opens the fix review for Ayesha's held 4-day reply. If her
+  reply wasn't held this session (the visitor skipped steps 1–3), it holds it first, from saved responses, then opens
+  the review. A reply held earlier isn't held again, so the stopped count doesn't grow. The "Go back to step 4…" line
+  is gone.
+- The app keeps the last held reply per ticket for the session (`heldReplies`: rail, draft, and whether it points to a
+  doc to fix), so step 5 knows about step 1's hold after step 3 sends the corrected reply. Reset demo clears it.
+- **The card never covers "Approve fix (simulated)".** A tour step can name an element to keep clear. Step 5 names the
+  review's buttons: they're scrolled into view, and on phones the card docks on the other half of the screen. On phones,
+  the card also shrinks to the one-line bar (D-038) while the review is open, and comes back when it closes. At 1440 the
+  card sits left of the agent panel. Checked at 1440×900 and 390×844, on both paths (held earlier, held by "Show me").
+- **Demo menu: "Use it from Claude (MCP)".** One line ("Any AI agent can call SureSend before it replies."), the
+  connector URL https://suresend-demo.vercel.app/api/mcp with a Copy button, and "How to connect" to the README section.
+  - The button's name is "Copy connector URL". After copying it says "Copied" for a moment, and a status region
+    announces "Connector URL copied".
+  - Without clipboard access, the URL is selected for copying by hand, and an alert says so.
+- **Tour step 6 ends with** "AI agents can call the same check: Demo menu → Use it from Claude." On phones, step 6's
+  "Tip" line is hidden. Otherwise the taller card would cover the whole doc text (481px), and the doc couldn't be
+  tapped to start editing. With the tip hidden the card is 437px, about what it was before.
+- UI copy and layout only: no engine, rule, locked-test, seed or saved-response changes. README: the Demo menu entry is
+  mentioned, and the test count is corrected to 164.
