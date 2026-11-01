@@ -112,7 +112,8 @@ describe("validation", () => {
       ["Instant-rail transfers take 1 business day; standard ones can take two months.", /another timeline \("months"\)|beyond the instant rail/],
       ["Instant-rail transfers take 1 business day, or eleven days at month-end.", /another timeline/],
       ["Instant-rail transfers take 1 business day, usually immediately.", /another timeline \("immediately"\)/],
-      ["Instant-rail transfers take 1 business day and the fee is waived.", /contains "fee"|contains "waived"/],
+      // D-041: the fee detector now catches it first; either way it's refused for the fee wording.
+      ["Instant-rail transfers take 1 business day and the fee is waived.", /contains "fee"|contains "waived"|("fee is waived")/],
     ];
     for (const [text, reason] of cases) {
       const v = validateFix(body, { action: "add_after", target: SOP_QUOTE, text }, fix);
