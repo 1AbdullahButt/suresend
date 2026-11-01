@@ -1,10 +1,14 @@
-// Domain types. SPEC §6.2, §6.3 and §12 verbatim, plus the extensions recorded in DECISIONS.md D-002.4.
+// Domain types. SPEC §6.2, §6.3 and §12 verbatim, plus the extensions recorded in DECISIONS.md D-002.4 and D-041.
+import type { TopicId } from "@/lib/topics";
+import type { AnyValue } from "./values";
 
 // ---- SPEC §6.2: extraction schemas -------------------------------------------------------------
 
-export type Topic = "reversal_window" | "other"; // fixed taxonomy for the demo (documented limitation)
+// D-041: the covered topics come from the taxonomy registry (lib/topics), and a value is any kind the comparator registry
+// knows (lib/engine/values.ts). With only reversal_window registered, this is exactly SPEC §6.2.
+export type Topic = TopicId | "other";
 export type Unit = "business_days" | "calendar_days" | "hours";
-export type Value = { amount: number; amountMax?: number; unit: Unit } | null;
+export type Value = AnyValue | null;
 
 export type ScopeRail = "instant" | "standard" | "any";
 export type StatusWording = "in_force" | "proposed" | "pending_approval" | "deprecated" | "unstated";
@@ -177,7 +181,8 @@ export interface Cap {
 export interface PatternMatch {
   text: string;
   index: number;
-  kind: "duration" | "relative_time" | "currency";
+  /** "duration", "relative_time" or "currency"; a topic may add its own (D-041). */
+  kind: string;
 }
 
 export interface Suggestion {

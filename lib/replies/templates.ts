@@ -1,9 +1,10 @@
 // Safe-reply templates (SPEC §6.7). Never say or imply a reversal has already started or finished.
-import { formatValue } from "@/lib/engine/normalize";
-import type { Value } from "@/lib/engine/types";
+import type { AnyValue } from "@/lib/engine/values";
+import { topicDef } from "@/lib/topics";
 
-export function holdTemplate(v: NonNullable<Value>): string {
-  return `For transfers on this payment type, the current policy gives a reversal window of ${formatValue(v)}.`;
+/** The HOLD template for a claim on `topic`: the topic's own sentence stating the governing value (D-041). */
+export function holdTemplate(topic: string, v: AnyValue): string {
+  return topicDef(topic).replyTemplate(v);
 }
 
 /** No timeline, and nothing implying anything has happened yet. Asserted timeline-free in runCheck. */

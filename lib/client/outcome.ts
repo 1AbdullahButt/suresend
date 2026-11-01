@@ -1,6 +1,9 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
 import type { CheckResult, ClaimResult, Evidence, OverallDecision, Unit, Value } from "@/lib/engine/types";
+import { patternNoun } from "@/lib/engine/patterns";
+import { sameValue, unitLabel } from "@/lib/engine/values";
+import { isCovered, topicDef } from "@/lib/topics";
 import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
 
 export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
@@ -27,26 +30,11 @@ function governingEvidence(claim: ClaimResult | null): Evidence | undefined {
   return claim.evidence.find((e) => e.source.id === g.sourceId && e.claim.quote === g.quote) ?? claim.evidence.find((e) => e.source.id === g.sourceId);
 }
 
-function scopeSubject(rail: "instant" | "standard" | "any"): string {
-  return rail === "instant" ? "Instant transfers" : rail === "standard" ? "Standard transfers" : "Failed transfers";
-}
-
-function sameUnit(a: Value, b: Value): boolean {
-  return Boolean(a && b && a.unit === b.unit);
-}
-
-/** "4" when the units match the governing value, else the full "4 calendar days". */
-function draftShort(draft: Value, governing: Value, fallback: string): string {
-  if (!draft) return fallback;
-  if (sameUnit(draft, governing)) return draft.amountMax !== undefined && draft.amountMax !== draft.amount ? `${draft.amount}–${draft.amountMax}` : String(draft.amount);
-  return valueWords(draft);
-}
-
 const UNIT_ADJ: Record<Unit, string> = { business_days: "business-day", calendar_days: "day", hours: "hour" };
 
 /** "4 business days" → "4-business-day" (for "The 4-business-day reply never reached Ayesha."). */
 export function valueAdjective(v: Value): string | null {
-  if (!v) return null;
+  if (!v || !("amount" in v)) return null;
   const n = v.amountMax !== undefined && v.amountMax !== v.amount ? `${v.amount}–${v.amountMax}` : String(v.amount);
   return `${n}-${UNIT_ADJ[v.unit]}`;
 }
@@ -70,7 +58,6 @@ export interface Summary {
 const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
   CHANGE_SIGNALLED: "Right today, changing soon",
   WEAK_BASIS: "The doc behind this changed",
-  EXTRACTION_GAP: "Couldn't confirm the timing",
   OUTSIDE_COVERAGE: "Outside what we can check",
   SOURCE_UNREAD: "A doc couldn't be read",
   PROPOSAL_ONLY: "Only a proposal says this",
@@ -85,7 +72,13 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
   const gov = claim?.governing ?? null;
   const govEv = governingEvidence(claim);
   // Name the ticket's own transfer type when it is known (the governing rule applies to it); else the rule's scope.
-  const subject = scopeSubject(ticketRail !== "unknown" ? ticketRail : (govEv?.claim.scope.rail ?? "any"));
+  const rail = ticketRail !== "unknown" ? ticketRail : (govEv?.claim.scope.rail ?? "any");
+  const topic = claim && isCovered(claim.draftClaim.topic) ? topicDef(claim.draftClaim.topic) : null;
+  // The sentence is the topic's own wording (D-041).
+  const said = (verdict: "hold" | "allow") =>
+    topic && gov && claim
+      ? topic.sentence({ verdict, rail, governing: gov.value, draft: claim.draftClaim.value, draftText: claim.draftClaim.valueText })
+      : null;
   const base = { name: meta.name, tone: meta.tone };
 
   switch (result.decision) {
@@ -97,10 +90,8 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
         strong: null,
       };
     case "HOLD": {
-      if (gov && claim) {
-        const says = draftShort(claim.draftClaim.value, gov.value, claim.draftClaim.valueText);
-        return { ...base, headline: "Don't send this yet", sentence: `${subject} now reverse in ${valueWords(gov.value)}. Your reply says ${says}.`, strong: valueWords(gov.value) };
-      }
+      const s = said("hold");
+      if (s) return { ...base, headline: "Don't send this yet", ...s };
       return { ...base, headline: "Don't send this yet", sentence: firstUpper(result.headline.replace(/^Hold:\s*/i, "")), strong: null };
     }
     case "ESCALATE": {
@@ -119,11 +110,16 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
       if (result.reasonCode === "NO_POLICY_CLAIM" || !claim) {
         return { ...base, headline: "Your reply is right", sentence: "There's no policy promise in this reply, so there's nothing to contradict.", strong: null };
       }
-      if (gov) return { ...base, headline: "Your reply is right", sentence: `${subject} reverse in ${valueWords(gov.value)}. Your reply matches.`, strong: valueWords(gov.value) };
+      const s = said("allow");
+      if (s) return { ...base, headline: "Your reply is right", ...s };
       return { ...base, headline: "Your reply is right", sentence: "Your reply matches your docs.", strong: null };
     }
     case "CAUTION": {
-      const headline = CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending";
+      // EXTRACTION_GAP names what the detector found: "Couldn't confirm the timing".
+      const headline =
+        result.reasonCode === "EXTRACTION_GAP"
+          ? `Couldn't confirm ${patternNoun(result.patternMatches)}`
+          : (CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending");
       return { ...base, headline, sentence: cautionSentence(result, claim), strong: null };
     }
   }
@@ -137,7 +133,7 @@ function conflictPair(claim: ClaimResult | null): { a: string; av: string; b: st
   if (!claim) return null;
   const cands = claim.evidence.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value);
   const a = cands[0];
-  const b = cands.find((e) => a && e.source.id !== a.source.id && (e.claim.value?.amount !== a.claim.value?.amount || e.claim.value?.unit !== a.claim.value?.unit));
+  const b = cands.find((e) => a && e.source.id !== a.source.id && !!e.claim.value && !!a.claim.value && !sameValue(e.claim.value, a.claim.value));
   if (!a || !b) return null;
   return { a: docName(a), av: valueWords(a.claim.value), b: docName(b), bv: valueWords(b.claim.value) };
 }
@@ -163,7 +159,8 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     }
     case "EXTRACTION_GAP": {
       const hits = result.patternMatches.map((m) => `“${m.text}”`).join(", ");
-      return `SureSend found a timing${hits ? ` (${hits})` : ""} but couldn't confirm it. Check it manually.`;
+      const noun = patternNoun(result.patternMatches);
+      return hits ? `SureSend found ${hits} but couldn't confirm ${noun}. Check it manually.` : `SureSend couldn't confirm ${noun}. Check it manually.`;
     }
     case "SOURCE_UNREAD": {
       const ids = result.caps.map((c) => c.sourceId).join(", ");
@@ -241,7 +238,7 @@ export function whyModel(result: CheckResult): WhyModel {
     for (const w of govEv.weakeners) tags.push({ text: WEAKENER_WORDS[w], tone: "amber" });
     if (gov.via === "EXPLICIT_SUPERSESSION") {
       const target = claim?.evidence.find(
-        (e) => e.standing === "CANDIDATE" && e.source.id !== govEv.source.id && e.claim.value && (e.claim.value.amount !== gov.value.amount || e.claim.value.unit !== gov.value.unit),
+        (e) => e.standing === "CANDIDATE" && e.source.id !== govEv.source.id && !!e.claim.value && !sameValue(e.claim.value, gov.value),
       );
       tags.push({ text: `Replaces ${target ? target.source.title : "the older doc"} for ${govEv.claim.scope.rail === "any" ? "all" : govEv.claim.scope.rail}`, tone: "ask" });
     } else if (gov.via === "SPECIFIC_EXCEPTION") {
@@ -255,7 +252,7 @@ export function whyModel(result: CheckResult): WhyModel {
     seen.add(ev.source.id);
     if (ev.standing === "CANDIDATE" && ev.applicability !== "NOT_APPLICABLE") {
       const v = ev.claim.value;
-      const differs = gov && v ? !(v.amount === gov.value.amount && v.unit === gov.value.unit && v.amountMax === gov.value.amountMax) : false;
+      const differs = gov && v ? !sameValue(v, gov.value) : false;
       const label = gov
         ? differs
           ? gov.via === "EXPLICIT_SUPERSESSION"
@@ -372,6 +369,8 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
   const V = g?.valueText ?? "";
   const govName = g ? ctx.name(g.sourceId) : "the governing doc";
   const draft = c.draftClaim.value ? valueWords(c.draftClaim.value) : c.draftClaim.valueText;
+  // A value kind without units (yes/no) reads "says … , the doc says …" rather than "outside" / "within" (D-041).
+  const unitless = g ? unitLabel(g.value) === null : false;
   const fallback = firstSentence(ctx.named(row.detail));
   const others = (pred: (e: Evidence) => boolean) => [...new Set(c.evidence.filter(pred).map((e) => ctx.name(e.source.id)))].join(" and ");
   switch (`${row.rule}:${row.outcome}`) {
@@ -406,11 +405,16 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
     case "D8:fired":
       return `Your reply and the docs use different units (${draft} vs ${V}).`;
     case "D9:fired":
+      if (unitless) {
+        return c.draftClaim.definitive
+          ? `Your reply says ${draft}, but ${govName} says ${V}: Hold.`
+          : `Your reply says ${draft}, but ${govName} says ${V}. It's hedged: Double-check.`;
+      }
       return c.draftClaim.definitive
         ? `Your reply's ${draft} is outside the governing ${V}: Hold.`
         : `Your reply's ${draft} is outside the governing ${V}, but it's hedged: Double-check.`;
     case "D9:pass":
-      return `Your reply's ${draft} is within the governing ${V}.`;
+      return unitless ? `Your reply says ${draft}, as ${govName} does.` : `Your reply's ${draft} is within the governing ${V}.`;
     case "D10:fired":
       return `Your reply's ${draft} matches ${govName} (${V}).`;
     case "D11a:fired": {
@@ -443,7 +447,7 @@ function topSummary(row: TraceEntryLike, ctx: TraceCtx): string {
       return `The reply was read: ${result.claims.length} claim${result.claims.length === 1 ? "" : "s"} found.`;
     case "D0b:fired": {
       const said = [...new Set(result.patternMatches.map((m) => `“${m.text}”`))].join(", ");
-      return `No timeline was extracted, but the reply mentions ${said || "a timing"}. Check it by hand.`;
+      return `No claim SureSend checks was extracted, but the reply mentions ${said || patternNoun(result.patternMatches)}. Check it by hand.`;
     }
     case "D0c:fired":
       return "The reply makes a claim outside the topics checked here. Check it by hand.";

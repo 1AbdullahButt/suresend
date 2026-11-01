@@ -1,6 +1,6 @@
 // "Fix the doc" (D-037), part 1: which visible doc taught the agent the wrong value. Pure: reads a CheckResult only, so the
 // browser (to show the link) and the server (to draft the fix) agree. Never decides anything; the engine already has.
-import { sameValue } from "@/lib/engine/normalize";
+import { sameValue } from "@/lib/engine/values";
 import type { CheckResult, Evidence, Value } from "@/lib/engine/types";
 
 type DefinedValue = NonNullable<Value>;

@@ -1,11 +1,13 @@
 // The decision function (SPEC §6.1: "The AI never decides the outcome"). Pure: no I/O, time is passed in.
 // decide(extractions, sources, ticket, now) applies rules S, A and D0a–D11, writing every step to the trace.
 import { RAIL_LABEL, applicability } from "./applicability";
-import { amountWithin, formatDate, formatValue, normalizeText, sameValue } from "./normalize";
-import { detectPolicyPatterns } from "./patterns";
+import { formatDate, normalizeText } from "./normalize";
+import { detectPolicyPatterns, patternNoun } from "./patterns";
 import { resolve, skip } from "./resolve";
 import { mostSevere } from "./severity";
 import { claimStanding, weakeners } from "./standing";
+import { formatValue, sameValue, unitLabel, unitsMatch, valueWithin } from "./values";
+import { isCovered, topicDef } from "@/lib/topics";
 import type {
   Applicability,
   Cap,
@@ -108,7 +110,8 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     }
   }
 
-  const reversal = draft.claims.filter((c) => c.topic === "reversal_window");
+  // Claims on a covered topic go through rules D1–D11; the taxonomy registry says which topics are covered (D-041).
+  const covered = draft.claims.filter((c) => isCovered(c.topic));
   const outside = draft.claims.filter((c) => c.topic === "other" && c.value !== null);
   const outsideResults = outside.map((c) => outsideCoverage(c));
 
@@ -116,7 +119,8 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   let decision: OverallDecision;
   let reasonCode: ReasonCode;
 
-  if (reversal.length === 0) {
+  let gapNoun = "";
+  if (covered.length === 0) {
     // D0b / D0c / D0d: "nothing found" is never proof of safety (SPEC §6.6.2)
     const uncovered = patternMatches.filter(
       (m) => !outside.some((o) => normalizeText(o.span).toLowerCase().includes(normalizeText(m.text).toLowerCase())),
@@ -126,16 +130,17 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     if (uncovered.length > 0) {
       decision = "CAUTION";
       reasonCode = "EXTRACTION_GAP";
+      gapNoun = patternNoun(uncovered);
       trace.push({
         rule: "D0b",
         outcome: "fired",
-        detail: `No reversal-window claim was extracted, but the policy-pattern detector found ${quoted(uncovered)}. SureSend couldn't confirm the timing; check it manually.`,
+        detail: `No claim on a checked topic was extracted, but the policy-pattern detector found ${quoted(uncovered)}. SureSend couldn't confirm ${gapNoun}; check it manually.`,
       });
     } else if (outside.length > 0) {
       decision = "CAUTION";
       reasonCode = "OUTSIDE_COVERAGE";
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted out-of-topic claim." });
-      trace.push({ rule: "D0c", outcome: "fired", detail: `${outside.length} claim(s) outside the reversal-window topic. Check them manually.` });
+      trace.push({ rule: "D0c", outcome: "fired", detail: `${outside.length} claim(s) outside the topics SureSend checks. Check them manually.` });
     } else {
       decision = "ALLOW";
       reasonCode = "NO_POLICY_CLAIM";
@@ -143,7 +148,7 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
       trace.push({ rule: "D0d", outcome: "fired", detail: "No policy claims in this reply." });
     }
   } else {
-    claims = [...reversal.map((dc) => decideClaim(dc, pool, ticket, draftText)), ...outsideResults];
+    claims = [...covered.map((dc) => decideClaim(dc, pool, ticket, draftText)), ...outsideResults];
     const worst = mostSevere(claims)!;
     decision = worst.decision;
     reasonCode = worst.reasonCode;
@@ -180,7 +185,7 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   return {
     decision,
     reasonCode,
-    headline: headlineFor(decision, reasonCode, claims, caps, byId, ticket),
+    headline: headlineFor(decision, reasonCode, claims, caps, byId, ticket, gapNoun),
     claims,
     caps,
     patternMatches,
@@ -209,7 +214,7 @@ function outsideCoverage(dc: DraftClaim): ClaimResult {
       {
         rule: "D0c",
         outcome: "fired",
-        detail: `"${dc.span}" makes a claim (${dc.value ? formatValue(dc.value) : dc.valueText}) outside the reversal-window topic this demo covers. Check it manually.`,
+        detail: `"${dc.span}" makes a claim (${dc.value ? formatValue(dc.value) : dc.valueText}) outside the topics this demo covers. Check it manually.`,
       },
     ],
     governing: null,
@@ -218,7 +223,7 @@ function outsideCoverage(dc: DraftClaim): ClaimResult {
 
 function relationTo(dc: DraftClaim, claim: SourceClaim): Relation {
   if (!dc.value || !claim.value) return "n/a";
-  return dc.value.unit === claim.value.unit && amountWithin(dc.value, claim.value) ? "supports" : "contradicts";
+  return unitsMatch(dc.value, claim.value) && valueWithin(dc.value, claim.value) ? "supports" : "contradicts";
 }
 
 function toEvidence(e: EvaluatedClaim, dc: DraftClaim): Evidence {
@@ -264,7 +269,7 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
   trace.push({
     rule: "D0",
     outcome: "pass",
-    detail: `Draft read: "${dc.span}" is a ${dc.definitive ? "definitive" : "hedged"} reversal-window claim (${dc.valueText}).${
+    detail: `Draft read: "${dc.span}" is a ${dc.definitive ? "definitive" : "hedged"} ${topicDef(dc.topic).label} claim (${dc.valueText}).${
       draftText.includes(dc.span) ? "" : " Span matched after whitespace normalization."
     }`,
   });
@@ -340,8 +345,8 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
   const { governing, basis } = resolution;
   const V = governing.value;
 
-  // D8: units
-  if (draftValue.unit !== V.unit) {
+  // D8: units (the comparator for the value kind decides; a kind without units always matches)
+  if (!unitsMatch(draftValue, V)) {
     trace.push({
       rule: "D8",
       outcome: "fired",
@@ -350,12 +355,13 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
     skip(trace, ["D9", "D10", "D11a", "D11b"], "Unit mismatch.");
     return result("CAUTION", "UNIT_MISMATCH", governing);
   }
-  trace.push({ rule: "D8", outcome: "pass", detail: `Units match (${V.unit.replace("_", " ")}).` });
+  const unit = unitLabel(V);
+  trace.push({ rule: "D8", outcome: "pass", detail: unit ? `Units match (${unit}).` : "No units to compare." });
 
   // D9 / D10
   let decision: Decision;
   let reasonCode: ReasonCode;
-  if (!amountWithin(draftValue, V)) {
+  if (!valueWithin(draftValue, V)) {
     if (dc.definitive) {
       trace.push({ rule: "D9", outcome: "fired", detail: `The draft's ${formatValue(draftValue)} is outside V = ${formatValue(V)}.` });
       decision = "HOLD";
@@ -396,10 +402,8 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
 
   // D11(b): a proposal or future-effective change that applies contradicts V
   if (decision === "ALLOW") {
-    const contradicting = signals.filter((e) => e.applicability === "APPLIES" && !amountWithin(e.claim.value!, V));
-    const unitOnly = signals.filter(
-      (e) => e.applicability === "APPLIES" && amountWithin(e.claim.value!, V) && e.claim.value!.unit !== V.unit,
-    );
+    const contradicting = signals.filter((e) => e.applicability === "APPLIES" && !valueWithin(e.claim.value!, V));
+    const unitOnly = signals.filter((e) => e.applicability === "APPLIES" && valueWithin(e.claim.value!, V) && !unitsMatch(e.claim.value!, V));
     if (contradicting.length > 0) {
       trace.push({
         rule: "D11b",
@@ -433,8 +437,10 @@ function headlineFor(
   caps: Cap[],
   byId: Map<string, Source>,
   ticket: DecideTicket,
+  gapNoun: string,
 ): string {
   const lead = claims.find((c) => c.reasonCode === reasonCode) ?? claims[0];
+  const topic = lead && isCovered(lead.draftClaim.topic) ? topicDef(lead.draftClaim.topic) : null;
   const g = lead?.governing ?? null;
   const gSource = g ? byId.get(g.sourceId) : undefined;
   const gClaimEffective = lead?.evidence.find((e) => e.source.id === g?.sourceId && e.claim.quote === g?.quote)?.claim.effectiveFrom;
@@ -445,11 +451,13 @@ function headlineFor(
 
   switch (reasonCode) {
     case "CONTRADICTS_GOVERNING":
-      return `Hold: ${railTransfers} reverse in ${g?.valueText} (${cite}). The draft says ${draftVal}.`;
+      return topic
+        ? topic.holdHeadline({ railTransfers, governing: g?.valueText ?? "", cite, draft: draftVal })
+        : `Hold: the draft contradicts ${cite}.`;
     case "SUPPORTED":
       return `Allow: matches ${cite} (${g?.valueText}).`;
     case "SCOPE_UNKNOWN":
-      return "Escalate: the reversal timeline depends on the payment rail, and this ticket's rail is unknown.";
+      return `Escalate: ${topic?.subject ?? "the answer"} depends on the payment rail, and this ticket's rail is unknown.`;
     case "CONFLICT_UNRESOLVED":
       return "Escalate: applicable sources disagree and no rule can pick a winner. Newer or verified doesn't win on its own.";
     case "WEAK_BASIS":
@@ -465,7 +473,7 @@ function headlineFor(
     case "UNSUPPORTED":
       return "Caution: no source supports this claim. Check it manually.";
     case "EXTRACTION_GAP":
-      return "Caution: SureSend couldn't confirm the timing in this draft. Check it manually.";
+      return `Caution: SureSend couldn't confirm ${gapNoun || "a policy claim"} in this draft. Check it manually.`;
     case "OUTSIDE_COVERAGE":
       return "Caution: the draft makes a claim outside the topics SureSend covers. Check it manually.";
     case "NO_POLICY_CLAIM":

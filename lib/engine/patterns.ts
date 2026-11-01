@@ -1,18 +1,15 @@
 // Deterministic policy-pattern detector (SPEC §6.6.2). "Nothing found" by the AI is never proof of safety:
 // if this detector fires on a draft the AI returned no in-scope claim for, the result is EXTRACTION_GAP.
+// Each covered topic brings its own patterns (lib/topics, D-041); a currency amount is checked for every draft.
+import { TOPICS } from "@/lib/topics";
 import type { PatternMatch } from "./types";
 
-const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same)`;
-
-const DETECTORS: Array<{ kind: PatternMatch["kind"]; re: RegExp }> = [
-  {
-    kind: "duration",
-    re: new RegExp(String.raw`\b${NUMBER}[\s-]*(?:business |working |calendar )?(?:day|days|hour|hours|week|weeks)\b`, "gi"),
-  },
-  { kind: "relative_time", re: /\b(?:same day|today|tomorrow|within|by end of)\b/gi },
+const DETECTORS: ReadonlyArray<{ kind: string; re: RegExp; noun: string }> = [
+  ...TOPICS.flatMap((t) => t.patterns),
   {
     kind: "currency",
     re: /(?:[$€£₹]\s?\d[\d,]*(?:\.\d+)?|\b(?:usd|eur|gbp|pkr|rs\.?)\s?\d[\d,]*(?:\.\d+)?|\b\d[\d,]*(?:\.\d+)?\s?(?:usd|eur|gbp|pkr|dollars?|euros?|pounds?|rupees?)\b)/gi,
+    noun: "an amount",
   },
 ];
 
@@ -25,6 +22,12 @@ export function detectPolicyPatterns(text: string): PatternMatch[] {
     }
   }
   return out.sort((a, b) => a.index - b.index || b.text.length - a.text.length);
+}
+
+/** What the hits are about, for "couldn't confirm the timing": one noun when they agree, else "a policy claim". */
+export function patternNoun(matches: ReadonlyArray<Pick<PatternMatch, "kind">>): string {
+  const nouns = new Set(matches.map((m) => DETECTORS.find((d) => d.kind === m.kind)?.noun ?? "a policy claim"));
+  return nouns.size === 1 ? [...nouns][0]! : "a policy claim";
 }
 
 /** Digits or day/hour words: the ESCALATE template must contain none of these (SPEC §6.7). */

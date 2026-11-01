@@ -1,7 +1,8 @@
 // Builder-owned unit tests for rule paths the locked acceptance tests don't reach directly.
 import { describe, expect, it } from "vitest";
 import { decide, type Extractions } from "./decide";
-import { isVerbatim, namesSource, formatValue } from "./normalize";
+import { isVerbatim, namesSource } from "./normalize";
+import { formatValue } from "./values";
 import { detectPolicyPatterns, hasTimelineWords } from "./patterns";
 import type { DraftClaim, Source, SourceClaim } from "./types";
 import { ESCALATE_TEMPLATE } from "@/lib/replies/templates";

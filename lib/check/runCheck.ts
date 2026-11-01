@@ -3,7 +3,8 @@
 // safe reply (rechecked). Hidden sources are removed before extraction, so they never reach the AI or the response.
 import { createHash } from "node:crypto";
 import { decide, type DecideTicket, type Extractions } from "@/lib/engine/decide";
-import { formatValue, isVerbatim } from "@/lib/engine/normalize";
+import { isVerbatim } from "@/lib/engine/normalize";
+import { formatValue } from "@/lib/engine/values";
 import { detectPolicyPatterns, hasTimelineWords } from "@/lib/engine/patterns";
 import type {
   AiRunInfo,
@@ -172,8 +173,8 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   let suggestion: CheckedSuggestion | null = null;
   if (out.decision === "HOLD") {
-    const governing = out.claims.find((c) => c.decision === "HOLD" && c.governing)?.governing;
-    if (governing) suggestion = await holdSuggestion(input.draft, governing, extractions, sources, ticket, now, deps, infos);
+    const held = out.claims.find((c) => c.decision === "HOLD" && c.governing);
+    if (held?.governing) suggestion = await holdSuggestion(input.draft, held.draftClaim.topic, held.governing, extractions, sources, ticket, now, deps, infos);
   } else if (out.decision === "ESCALATE") {
     suggestion = escalateSuggestion(extractions, sources, ticket, now);
   }
@@ -221,6 +222,7 @@ const isAcceptable = (r: { decision: string; reasonCode: string }) =>
 
 async function holdSuggestion(
   draft: string,
+  topic: DraftClaim["topic"],
   governing: Governing,
   extractions: Extractions,
   sources: Source[],
@@ -247,11 +249,11 @@ async function holdSuggestion(
     }
   }
   // Template, rechecked with a deterministic draft claim: we authored the span, so no AI call is needed (D-005).
-  const text = holdTemplate(governing.value);
+  const text = holdTemplate(topic, governing.value);
   const valueText = formatValue(governing.value);
   const re = recheck(
     text,
-    [{ claimId: "template#1", topic: "reversal_window", value: governing.value, valueText, span: valueText, definitive: true }],
+    [{ claimId: "template#1", topic, value: governing.value, valueText, span: valueText, definitive: true }],
     extractions,
     sources,
     ticket,

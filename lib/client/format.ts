@@ -1,6 +1,7 @@
 // Presentation helpers shared by the v2 UI: dates, values, quote location, diffs, the AI mode line.
 // Pure functions; no I/O.
 import type { CheckResult, ClaimResult, OverallDecision, Value, Weakener } from "@/lib/engine/types";
+import { valueWords as wordsFor } from "@/lib/engine/values";
 
 export const WEAKENER_WORDS: Record<Weakener, string> = {
   UNVERIFIED: "Unverified",
@@ -29,17 +30,9 @@ export function shortDate(iso: string | null | undefined): string {
   return `${MONTHS[d.getMonth()] ?? ""} ${d.getDate()}`;
 }
 
-const UNIT_WORDS: Record<NonNullable<Value>["unit"], [string, string]> = {
-  business_days: ["business day", "business days"],
-  calendar_days: ["day", "days"],
-  hours: ["hour", "hours"],
-};
-
+/** "4 business days", "5–7 days": the comparator's reply wording for the value's kind (D-041). */
 export function valueWords(v: Value): string {
-  if (!v) return "no value";
-  const [one, many] = UNIT_WORDS[v.unit];
-  if (v.amountMax !== undefined && v.amountMax !== v.amount) return `${v.amount}–${v.amountMax} ${many}`;
-  return `${v.amount} ${v.amount === 1 ? one : many}`;
+  return v ? wordsFor(v) : "no value";
 }
 
 // ---- quote location (mirrors the engine's normalization: whitespace, dashes, smart quotes) ------------

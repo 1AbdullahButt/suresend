@@ -1,7 +1,8 @@
 // Why a suggested reply's recheck came back Double-check, in a few plain words (D-034), e.g. "a Slack note proposes 1 day".
 // It reads the recheck's own decision output (reason code, governing value, evidence); it never re-decides anything.
 import type { DecideOutput } from "@/lib/engine/decide";
-import { amountWithin, formatDate } from "@/lib/engine/normalize";
+import { formatDate } from "@/lib/engine/normalize";
+import { valueWithin } from "@/lib/engine/values";
 import type { Evidence, Source, Suggestion, Weakener } from "@/lib/engine/types";
 
 export interface CheckedSuggestion extends Suggestion {
@@ -40,7 +41,7 @@ export function recheckNote(re: DecideOutput, sources: Source[]): string | undef
                 (e.standing === "PROPOSAL" || e.standing === "NOT_YET_EFFECTIVE") &&
                 e.applicability === "APPLIES" &&
                 e.claim.value !== null &&
-                !amountWithin(e.claim.value, g.value),
+                !valueWithin(e.claim.value, g.value),
             )
           : undefined;
       return signal ? signalNote(signal) : "a change is signalled";

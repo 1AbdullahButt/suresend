@@ -1,7 +1,8 @@
 // D4 to D7 (SPEC §6.6, §6.6.1): settle the governing value V among the candidates C.
 // Recency and verification are never used to break a tie.
 import { RAIL_LABEL } from "./applicability";
-import { formatValue, isVerbatim, namesSource, parseTime, sameValue } from "./normalize";
+import { isVerbatim, namesSource, parseTime } from "./normalize";
+import { formatValue, sameValue } from "./values";
 import type { EvaluatedClaim } from "./decide";
 import type { Governing, Rail, TraceEntry } from "./types";
 
