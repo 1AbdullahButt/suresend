@@ -1,9 +1,9 @@
 ## groq · `openai/gpt-oss-120b`
 
-- Runs per case: 3 · started: 2026-11-02T07:30:00.953Z · finished: 2026-11-02T07:46:23.494Z · throttled
+- Runs per case: 3 · started: 2026-11-02T08:52:30.283Z · finished: 2026-11-02T09:08:37.290Z · throttled
 - Decision accuracy: **100.0%** (57/57)
-- Quote validity: **100.0%** (81/81 extracted quotes/spans verbatim; 0 rejected)
-- Extraction field accuracy (vs hand-written fixtures): **96.1%** (173/180)
+- Quote validity: **100.0%** (80/80 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **97.2%** (175/180)
 - Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
 
 | Case |  | Expected | Runs | Correct |

@@ -141,8 +141,8 @@ refunded when a transfer fails?", yes or no, scoped by rail like the timeline) w
 | `lib/ai/prompts.ts` | The prompt version bumped (the prompt text comes from the topic file) |
 
 The rule files (`decide.ts`, `resolve.ts`, `standing.ts`, `applicability.ts`, `severity.ts`) are not in that commit.
-[`lib/engine/topicAgnostic.test.ts`](lib/engine/topicAgnostic.test.ts) fails if a rule file names a topic or compares
-amounts or units itself.
+[`lib/engine/topicAgnostic.test.ts`](lib/engine/topicAgnostic.test.ts) fails if a rule file names a topic or reads a value's
+amount, unit or flag itself.
 
 The groundwork came first. A [refactor](https://github.com/1AbdullahButt/suresend/commit/4a411e55963564e740c8703e1d745fa45b2633ad) moved the duration comparison into the registry unchanged and
 made the rules ask the registries; every saved decision stayed the same. Then suggested replies and the UI learned to
@@ -152,7 +152,9 @@ coverage, not missed), and values got their topic's wording.
 QA then found that the refactor had generalised the "nothing found" net too coarsely: one claim on any topic switched it
 off for the others, so a fee claim could let a missed 4-day promise through as Good to send.
 [The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3b50c916eed89e781c9118963c0fd50c50) makes the net per topic, as the spec states it for one topic. That was a one-time correction to how
-the rules were generalised, in `decide.ts`, and nothing in it names a topic. With one topic it's the old rule exactly.
+the rules were generalised, in `decide.ts`, and nothing in it names a topic. With one topic it's the old rule exactly. A
+second QA round found the same gap in one more place: a claim whose span was the whole sentence still vouched for the
+other topic in that sentence. [That fix](https://github.com/1AbdullahButt/suresend/commit/d8a9d61da69be3080ec0c8725f3155d86230bda5) closes it, again in `decide.ts` and again naming no topic.
 
 So the next topic needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
 versions bumped. Only a new kind of value (not a duration, an amount or a yes/no) also needs a comparator in `values.ts`
@@ -222,12 +224,12 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 230 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 240 passed |
 | `snapshot-results.ts` | Every saved path's decision and reason code, before and after the fee topic: golden, tour, doc fix | 68 of 68 identical |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 19 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases) × 3 runs × 2 providers | see below |
-| `pnpm eval --heldout` | 14 clean held-out cases, and 5 exposed ones reported apart, × 3 runs × 2 providers | see below |
+| `pnpm eval --heldout` | 13 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
 **Regression on the 19-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
@@ -235,7 +237,7 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (57/57) | 100% (81/81) | 96.1% (173/180) | PASS |
+| Groq · `openai/gpt-oss-120b` | 100% (57/57) | 100% (80/80) | 97.2% (175/180) | PASS |
 | Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | | | |
 
 Field accuracy is below 100% because Groq read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say
@@ -244,38 +246,42 @@ Field accuracy is below 100% because Groq read DOC-101 and DOC-104 as "in force"
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
 
-**Held-out set (14 clean cases).** A case seen while the prompts or golden set were being written doesn't count, even after
-its wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
+**Held-out set (13 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
+wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
+
+| Provider · model | All clean cases | Fee cases only (H12, H17–H19) | Quote validity |
+|---|---|---|---|
+| Groq · `openai/gpt-oss-120b` | 100% (39/39) | 100% (12/12) | 100% (82/82) |
+| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | | |
+| Groq, first session (same prompts, before the D0b fix) | 92.3% (36/39) | 75% (9/12) | 100% (89/89, with H5) |
+
+- **The fee cases are the real evidence for the new topic.** H12 was written before any fee prompt text existed. H17–H19 were
+  written after the final freeze: two claims after a doc edit, a hedge, and an amount outside coverage.
+  [A test](lib/ai/heldoutIntegrity.test.ts) fails if any of the four shares a three-word phrase with the prompts, schema,
+  golden set or presets, or if the prompts change after the freeze.
+- **The timeline cases** (H1–H4, H6–H10) were written after an earlier freeze: reworded drafts ("working days", a number word, a
+  hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the draft and
+  a no-claim reply. They were in the repo while the fee prompts were written and already passed on earlier prompts, so they
+  show nothing broke, not that the new topic works. H1 reuses phrases that older prompt already had.
+
+**Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On the
+same frozen prompts, Groq returned Hold on all 3 runs of the first session and Double-check on all 3 of the second. The rule
+fix between them doesn't touch this path, so that's model variance, not an improvement. H14, its exposed twin, went 3/3 then
+2/3. Runs in one session agree with each other more than sessions do, so "3 runs" isn't three independent samples. A miss here
+errs strict: the reply is stopped, not let through. The first session is in commit
+[1db5346](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md), and nothing was tuned between them.
+
+**Exposed cases (6): regression only, not held-out.** H5, H11, H13, H14, H15 and H16. Their wording reached the prompts or the
+golden set, or shares a phrase with drafts written after them. Where it could be removed, it was, and they still don't count
+(D-041). They're shown so nothing is hidden, not as evidence. H14 tests the same behaviour as H18 and was the one that leaked.
 
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
-| Groq · `openai/gpt-oss-120b` | 92.9% (39/42) | 100% (89/89) |
+| Groq · `openai/gpt-oss-120b` | 94.4% (17/18) | 100% (38/38) |
 | Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | |
 
-- **H1–H10** (the timeline) were written after an earlier freeze: reworded drafts ("working days", a number word, calendar
-  days, a hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the
-  draft and a no-claim reply. H1 and H5 reuse phrases that older prompt already had, so they're easier than they look.
-- **H12** (the fee) was written before any fee prompt text existed.
-- **H17–H19** (the fee) were written after the final freeze: two claims after a doc edit, a hedge, and an amount outside
-  coverage.
-- For H12 and H17–H19, [a test](lib/ai/heldoutIntegrity.test.ts) fails if their wording appears in the prompts, schema, golden
-  set or presets, or if the prompts change after the freeze.
-
-**The miss.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). Groq returned
-Hold on all 3 runs, not Double-check, because that hedge isn't in the prompt's list. It errs strict: the reply is stopped, not
-let through. The prompts were frozen before this run, so it wasn't tuned away.
-
-**Exposed cases (5): regression only, not held-out.** H11, H13, H14, H15 and H16 were written before the fee prompts, but their
-wording then reached the prompts or the golden set. The wording was removed, and they still don't count (D-041). They're
-shown so nothing is hidden, not as evidence. H14 tests the same behaviour as H18 and was the one that leaked.
-
-| Provider · model | Decision accuracy | Quote validity |
-|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (15/15) | 100% (34/34) |
-| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | |
-
-Read it for what it is: 14 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
-conventions the project adopted: "4 days" without "business" means calendar days (H5); a signalled change is compared on the
+Read it for what it is: 13 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
+conventions the project adopted: "4 days" without "business" means calendar days (H5, now exposed); a signalled change is compared on the
 amount only, so a proposed "1 day" doesn't contradict "1 business day" (H3); and the exception supersedes the SOP by naming
 its title, even after the SOP is reworded (H7).
 
@@ -295,6 +301,7 @@ pnpm dev
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
 | | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit (exit code 3) without changing a report. Re-running an eval continues it with the same answers |
+| | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit or an outage (exit code 3) without changing that provider's report. Re-running an eval continues it: finished cases keep their results, and a provider that already finished isn't run again (`--fresh` forces it) |
 | `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc. Built aside; replaces the folder only if it finishes with nothing unexpected |
 | `pnpm record --resume` | Continues a recording that stopped on a quota limit |
 | `pnpm record --tour-edits` | Adds only what the tour's step-6 doc edit needs; never clears existing saved responses |
@@ -314,9 +321,14 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - Two topics (`reversal_window`, `fee_refund`) plus `other`: any other factual claim, such as a fee amount or a limit, is
   "outside coverage" (Caution). The rules are topic-agnostic; the next topic needs a file in `lib/topics` with its
   examples, and a comparator only for a new kind of value (see Adding a topic).
-- The "nothing found" detector works per topic: it flags a topic's pattern that no extracted claim covers when no claim on
-  that topic was extracted. If a reply makes two claims on the same topic and the AI catches only one, the other isn't
-  flagged.
+- The "nothing found" detector works per topic: it flags a topic's pattern when no claim on that topic was extracted, unless
+  an out-of-topic claim already covers those words. If a reply makes two claims on the same topic and the AI catches only
+  one, the other isn't flagged.
+- The detector only knows common wording. A fee statement in unusual words, such as "we also repay the service charge", gets
+  past it, so if the AI misses that too, the reply reads as Good to send. Its words aren't added, since those come from the
+  held-out cases.
+- A fee statement with a timing word in it ("refunded within the same transfer") gets a Double-check even when it's right,
+  because a claim on one topic never vouches for another. That's the safe direction.
 - Fix the doc covers timeline holds. A fee Hold gets no doc fix proposal.
 - Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
   could submit edited docs; in a real deployment the docs would come from Slite, not the browser.
@@ -328,8 +340,8 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
-- The eval is small and built around one scenario; the held-out set (14 clean cases) is a first check on generalisation, not proof.
-- A hedge the prompt doesn't list can read as definite: "As far as I can tell" came back Hold, not Double-check (H18).
+- The eval is small and built around one scenario; the held-out set (13 clean cases) is a first check on generalisation, not proof.
+- A hedge the prompt doesn't list can read as definite: "As far as I can tell" came back Hold, not Double-check, on 3 of 6 Groq runs (H18).
 
 ## What not to claim
 

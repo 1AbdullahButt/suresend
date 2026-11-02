@@ -690,8 +690,9 @@ An independent-style review before sharing with Slite (security, correctness, UX
   - Why shows one card per claim, Trace a header per claim, and the decision card lists each claim's verdict.
 - **Safe-reply prompt version.** The safe-reply prompt has its own version (`REPLY_PROMPT_VERSION`), like `doc_fix`, so
   changing it never invalidates saved extractions. Its cache identity includes the claims it is given.
-- **Detector.** `fee_refund` brings a fee pattern, so a fee statement the AI misses is EXTRACTION_GAP, not "no claims".
-  D0b works per topic (after QA, below).
+- **Detector.** `fee_refund` brings a fee pattern, so a fee statement in wording it knows is EXTRACTION_GAP if the AI misses
+  it, not "no claims". Other wording gets past it ("we also repay the service charge"); those words aren't added, since they
+  come from held-out cases. D0b works per topic (after QA, below).
 - **Demo.** "Try another reply" presets in the composer (3 per ticket), recorded and replay-tested. No new tickets, and the
   tour is unchanged.
 - **Re-record.** Schema and prompt versions are bumped, so `pnpm record` re-records every saved response: golden, presets,
@@ -705,7 +706,7 @@ An independent-style review before sharing with Slite (security, correctness, UX
        with only the fee claim extracted. It came back Good to send; on main it was Double-check.
      - Fixed in `decide.ts` (576a6b3), the one rule-file change after the refactor. D0b now follows the spec per topic: a
        topic's detector hit counts when no claim on that topic was extracted and no extracted claim's span covers it. A
-       currency amount counts only when no covered claim exists, as before.
+       currency amount counts only when no covered claim exists, as before. (Round 2 below narrows the span part.)
      - With one topic this is SPEC D0b exactly, and the snapshot stayed 68/68 identical. When covered claims exist, the
        gap is its own Double-check entry.
      - It names no topic, so a third topic needs no rule change. The fee_refund commit itself still touches no rule file.
@@ -734,17 +735,45 @@ An independent-style review before sharing with Slite (security, correctness, UX
   - New: H17, H18 and H19, committed in 8e68016 before any further eval, with wording used nowhere in the prompts, schema,
     golden set or presets. Their expected outcomes were checked with hand-written extractions, with no AI call.
   - Clean fee cases: H12, H17, H18, H19.
-  - H1–H10 stay clean: they were written after the `2026-10-30.2` freeze. H1 and H5 reuse phrases that older prompt already
-    had, so they're easier than they look. The report says so.
+  - The timeline cases stay clean: they were written after the `2026-10-30.2` freeze. H1 reuses phrases that older prompt
+    already had, so it's easier than it looks. The report says so. H5 became exposed in QA round 2 (below).
   - The prompts are frozen at `2026-11-02.4` (reply `2026-11-02.2`, fix `2026-11-01.1`, schema `2026-11-02.3`).
-    `lib/ai/heldoutIntegrity.test.ts` fails if those change, or if a clean fee case's wording appears in those files.
+    `lib/ai/heldoutIntegrity.test.ts` fails if those or a fingerprint of the prompts and schemas change, or if a clean fee
+    case shares a three-word phrase with those files.
 - **Quota (after a re-record and an eval ran out halfway).** Groq's real limit is 200,000 tokens a day, refilling at about
   8,300 an hour. Its headers don't report it, so it stayed hidden behind 900+ requests left. Gemini's is 500 requests a day.
   - `pnpm record` and `pnpm eval` check the provider first and stop on the first daily limit (exit code 3).
   - A full recording is built in `data/.ai-cache-recording` and replaces `data/ai-cache` only if it finishes with nothing
     unexpected. `pnpm record --resume` continues one that stopped.
   - An eval writes its report files only when all its runs finish. Until then its responses and scores stay in
-    `evals/.in-progress`, and re-running continues with the same responses and scores, so nothing gets a second attempt.
+    `evals/.in-progress`. Re-running continues: finished cases keep their results, and only the case that was interrupted
+    runs again, reusing the answers it already got. A provider that already finished isn't run again unless `--fresh`.
+- **QA round 2: CHANGES_REQUIRED, three majors.** All fixed in d8a9d61.
+  1. *D0b could still be switched off by another topic.* Hits inside another covered topic's span were exempt. The model
+     often gives a whole sentence as a span, so a claim on one topic could vouch for the other topic in that sentence:
+     "Your money will be back in 1 business day, but the transfer fee isn't refundable" with only the timeline extracted came
+     back Good to send. Now only an out-of-topic claim's span can account for a hit. With one topic that's SPEC D0b exactly,
+     and the snapshot stayed 68/68 identical. Cost: a right fee statement with a timing word in it gets a Double-check, which
+     is the safe direction. This is the second and last rule-file change after the refactor, and it names no topic.
+  2. *Re-running after a stop repeated a provider that had finished* and replaced its report. A provider whose report
+     matches these prompts, rules, cases and model is now skipped unless `--fresh`.
+  3. *The resume stamp left out the model.* It now holds the model, the rule files and a fingerprint of the prompts and
+     schemas, so an edit with no version bump also counts as a change.
+  - *H5 is exposed too.* It shares "be back within" with golden and preset drafts written after it, the same rule that
+    exposed H13. QA called this Abdullah's decision; I applied the rule because it's the cautious reading and it only lowers
+    the published score. Undo it by removing `exposed` from H5 in `evals/heldout.json`.
+  - *Because the rules changed, Groq's evals were rerun from scratch* on the same frozen prompts. Golden stayed 57/57. On the
+    same 13 clean cases, held-out went from 36/39 to 39/39 and the fee cases from 9/12 to 12/12, because H18 flipped from 0/3 to
+    3/3. The rule fix doesn't touch H18's path and nothing was tuned, so that's model variance. H14 went the other way, 3/3 to
+    2/3. The README shows both sessions, not only the better one, and says runs in one session aren't independent samples.
+  - *Minors fixed:* the report scores the fee cases on their own; a stop inside the first case keeps its responses; the
+    guard stops on a long unnamed wait, a spend limit or 5 provider errors in a row; no organization id in provider errors;
+    a missing header isn't read as zero; the integrity test watches `variants.ts`; the guard test catches `.of`; the gap
+    card and trace name only what was missed; one unreachable saved response removed (40 now); the recording swap can't leave
+    a partial folder; the free-tier note shows only on the free tier.
+  - *Left as they are:* a step that failed in the case a stop interrupts gets another attempt on resume (one case at most,
+    and the wording above says so). The integrity test checks three-word phrases, not two: two-word terms like "the fee" are
+    the domain's own.
 
 ### D-042 · Groq moves to the paid Developer tier, with a spend limit (Abdullah's decision, 2026-11-02)
 Groq's free tier allows 200,000 tokens a day, so the Phase 10 re-record and 3-run evals would have taken about 2 days. Abdullah
