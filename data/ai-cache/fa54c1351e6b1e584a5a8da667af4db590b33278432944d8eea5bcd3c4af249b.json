@@ -1,0 +1,27 @@
+{
+  "key": "fa54c1351e6b1e584a5a8da667af4db590b33278432944d8eea5bcd3c4af249b",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.4",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "For transfers on this payment type, the current policy gives a reversal window of 2 business days."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 2,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "2 business days",
+        "span": "the current policy gives a reversal window of 2 business days",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T07:37:38.488Z"
+}

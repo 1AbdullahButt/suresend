@@ -1,0 +1,36 @@
+{
+  "key": "22be95a21db73857b39fa4c97876bfad1bd6a7772106eb88b69a2e77d67ca6f9",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.4",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Your money will be back within 4 business days, and the transfer fee is refunded with the principal."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 4,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "4 business days",
+        "span": "Your money will be back within 4 business days",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded with the principal",
+        "span": "the transfer fee is refunded with the principal",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T07:37:03.922Z"
+}

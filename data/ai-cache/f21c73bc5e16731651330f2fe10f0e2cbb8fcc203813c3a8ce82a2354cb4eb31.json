@@ -1,0 +1,33 @@
+{
+  "key": "f21c73bc5e16731651330f2fe10f0e2cbb8fcc203813c3a8ce82a2354cb4eb31",
+  "identity": {
+    "task": "safe_reply",
+    "promptVersion": "2026-11-02.2",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Failed transfers are reversed within 4 business days.",
+    "governing": {
+      "value": {
+        "amount": 1,
+        "unit": "business_days"
+      },
+      "quote": "For instant-rail transfers only, failed transfers are reversed within 1 business day.",
+      "decision": "HOLD"
+    },
+    "claims": [
+      {
+        "span": "Failed transfers are reversed within 4 business days.",
+        "topic": "reversal_window",
+        "correct": "1 business day",
+        "quote": "For instant-rail transfers only, failed transfers are reversed within 1 business day.",
+        "sourceId": "DOC-103",
+        "wrong": true
+      }
+    ]
+  },
+  "output": {
+    "reply": "Failed transfers are reversed within 1 business day."
+  },
+  "recordedAt": "2026-11-02T07:31:01.909Z"
+}

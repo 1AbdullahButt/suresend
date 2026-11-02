@@ -1,0 +1,26 @@
+{
+  "key": "e07cda6cd29ee97aec1b045e9a0ddf3c8487d9e47bb60cd19c5ddbb081ca1351",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.4",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "There's a PKR 25 fee on every transfer."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "other",
+        "value": {
+          "quantity": 25,
+          "of": "PKR"
+        },
+        "valueText": "PKR 25",
+        "span": "There's a PKR 25 fee on every transfer.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T07:35:39.392Z"
+}

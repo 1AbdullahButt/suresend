@@ -1,0 +1,34 @@
+{
+  "key": "c21af5db80d0095c1904be886017f4f967957224ce91f455877511a3a761c899",
+  "identity": {
+    "task": "source_extraction",
+    "promptVersion": "2026-11-02.4",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "# Instant Rail – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n",
+    "sourceKind": "policy"
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "1 business day",
+        "rail": "instant",
+        "effectiveFrom": null,
+        "statusWording": "pending_approval",
+        "supersedes": {
+          "targetText": "section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers",
+          "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers."
+        },
+        "quote": "For instant-rail transfers only, failed transfers are reversed within 1 business day."
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T07:32:15.477Z"
+}
