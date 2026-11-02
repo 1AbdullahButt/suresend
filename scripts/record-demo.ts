@@ -63,7 +63,7 @@ async function demo(page: Page) {
   await page.getByRole("button", { name: "Use this reply", exact: true }).click();
   await pause(page, 900);
   await page.getByRole("button", { name: "Send", exact: true }).click();
-  await page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" }).waitFor();
+  await page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" }).waitFor();
   await pause(page, 2200);
 
   // 4. Ambiguity: TCK-9002 (rail unknown) → Ask first

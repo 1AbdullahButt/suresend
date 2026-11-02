@@ -32,7 +32,7 @@ export const PRESETS: Record<string, Preset[]> = {
   ],
   "TCK-9002": [
     { id: "usman-4-days", label: "The 4-day reply", draft: FOUR_DAYS, expect: "ESCALATE" },
-    { id: "usman-fee-only", label: "Only the fee (any rail)", draft: "Your transfer fee will be refunded with the money.", expect: "ALLOW" },
+    { id: "usman-fee-only", label: "Only the fee (any rail)", draft: "Your transfer fee will be refunded with the money.", expect: "CAUTION" },
     {
       id: "usman-both",
       label: "Timeline and fee",

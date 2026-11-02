@@ -5,6 +5,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { ReactNode } from "react";
 import type { Metadata } from "next";
+import Link from "next/link";
 import s from "./page.module.css";
 
 export const metadata: Metadata = { title: "How it works · SureSend" };
@@ -162,9 +163,9 @@ export default function HowItWorks() {
   return (
     <div className={s.page}>
       <header className={s.top}>
-        <a href="/" className={s.back}>
+        <Link href="/" className={s.back}>
           ← Back to the demo
-        </a>
+        </Link>
       </header>
       <main className={s.doc}>{render(md)}</main>
       <footer className={s.footer}>Independent concept for Slite Agent · synthetic data · not affiliated with Slite</footer>

@@ -137,12 +137,20 @@ describe("fee_refund: the detector", () => {
 });
 
 describe("fee_refund through the unchanged rules", () => {
-  it("refunded: Good to send on every rail, including the unknown one (the fee rule covers all rails)", async () => {
+  it("refunded: the claim passes on every rail, including the unknown one (the fee rule covers all rails)", async () => {
     for (const [id, rail] of [["TCK-9001", "instant"], ["TCK-9002", "unknown"], ["TCK-9003", "standard"]] as const) {
       const r = await check(id, rail, "The transfer fee is refunded with your money.", [fee(true, "The transfer fee is refunded")]);
-      expect(r.decision, id).toBe("ALLOW");
-      expect(r.reasonCode, id).toBe("SUPPORTED");
-      expect(r.headline).toBe("Allow: matches Outgoing Transfers: Reversal SOP (refunded).");
+      expect(r.claims[0]?.decision, id).toBe("ALLOW");
+      expect(r.claims[0]?.reasonCode, id).toBe("SUPPORTED");
+      // Every seed customer asks when the money comes back, and this reply doesn't say (D-045).
+      expect(r.decision, id).toBe("CAUTION");
+      expect(r.reasonCode, id).toBe("TOPIC_GAP");
+      const alone = await runCheck(
+        { ticketId: id, rail, draft: "The transfer fee is refunded with your money.", role: "support_agent", overrides: [], decisionTime: NOW, noCustomerMessage: true },
+        deps([fee(true, "The transfer fee is refunded")]),
+      );
+      expect(alone.decision, id).toBe("ALLOW");
+      expect(alone.headline).toBe("Allow: matches Outgoing Transfers: Reversal SOP (refunded).");
     }
   });
 
@@ -154,7 +162,9 @@ describe("fee_refund through the unchanged rules", () => {
       "Hold: the transfer fee is refunded for standard-rail transfers (Outgoing Transfers: Reversal SOP). The draft says it's not refunded.",
     );
     expect(r.suggestion?.text).toBe("The transfer fee is refunded.");
-    expect(r.suggestion?.recheckDecision).toBe("ALLOW");
+    // Right about the fee; the customer's own question is still open, and the recheck says so (D-045).
+    expect(r.suggestion?.recheckDecision).toBe("CAUTION");
+    expect(r.suggestion).toMatchObject({ recheckNote: "it doesn't answer what the customer asked" });
   });
 
   it("hedged and wrong: Double-check, not Hold", async () => {
@@ -171,7 +181,8 @@ describe("fee_refund through the unchanged rules", () => {
     expect([instant.decision, instant.reasonCode]).toEqual(["HOLD", "CONTRADICTS_GOVERNING"]);
     expect(instant.claims[0]?.trace.find((t) => t.outcome === "fired" && t.rule === "D6")).toBeDefined();
     const standard = await check("TCK-9003", "standard", draft, claims, edited);
-    expect([standard.decision, standard.reasonCode]).toEqual(["ALLOW", "SUPPORTED"]);
+    expect([standard.claims[0]?.decision, standard.claims[0]?.reasonCode]).toEqual(["ALLOW", "SUPPORTED"]);
+    expect([standard.decision, standard.reasonCode]).toEqual(["CAUTION", "TOPIC_GAP"]);
     const unknown = await check("TCK-9002", "unknown", draft, claims, edited);
     expect([unknown.decision, unknown.reasonCode]).toEqual(["ESCALATE", "SCOPE_UNKNOWN"]);
     expect(unknown.headline).toBe("Escalate: whether the transfer fee is refunded depends on the payment rail, and this ticket's rail is unknown.");

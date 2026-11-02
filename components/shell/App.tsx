@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { X } from "lucide-react";
 import { useSureSend } from "@/lib/client/useSureSend";
-import { readJson, writeJson } from "@/lib/client/storage";
+import { canPersist, readJson, writeJson } from "@/lib/client/storage";
 import { mostSevereClaim } from "@/lib/client/format";
 import { cx, ui } from "@/components/ui/atoms";
 import { LeftColumn } from "@/components/inbox/LeftColumn";
@@ -109,15 +109,25 @@ export function App() {
   }, [actions]);
 
   // Under 1100 px the agent card is a slide-over / bottom sheet: open it whenever Send starts a check or one finishes.
+  // Changing the conversation closes it, since what it shows belongs to the other ticket; a tour step opens it itself.
   const sendKind = ag.sendState.kind;
   const checkingNow = ag.checking !== null;
+  const ticketId = ag.ticket?.id;
+  const touring = tour?.mode === "tour";
+  const panelTicket = useRef(ticketId);
   useEffect(() => {
+    const changed = panelTicket.current !== ticketId;
+    panelTicket.current = ticketId;
     if (!overlay) return;
+    if (changed) {
+      if (!touring) actions.setPanelOpen(false);
+      return;
+    }
     if (checkingNow || sendKind === "blocked" || sendKind === "ack_required" || sendKind === "unavailable" || sendKind === "sent") {
       actions.setPanelOpen(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [overlay, checkingNow, sendKind]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reacts to these changes only; touring is read, not watched
+  }, [overlay, checkingNow, sendKind, ticketId]);
 
   useEffect(() => {
     if (!ag.toast) return;
@@ -125,12 +135,13 @@ export function App() {
     return () => window.clearTimeout(t);
   }, [ag.toast]);
 
-  // Guided tour: offered once on first visit, never to automated browsers (navigator.webdriver).
+  // Guided tour: offered once on first visit, never to automated browsers (navigator.webdriver). Only when the answer can be
+  // remembered: with storage blocked, "Not now" wouldn't survive a reload. The tour button and Demo menu still start it.
   const seedReady = Boolean(ag.seed);
   useEffect(() => {
     if (!seedReady) return;
     if (typeof navigator !== "undefined" && navigator.webdriver) return;
-    if (readJson<boolean>(TOUR_SEEN_KEY, false)) return;
+    if (readJson<boolean>(TOUR_SEEN_KEY, false) || !canPersist()) return;
     writeJson(TOUR_SEEN_KEY, true);
     tourReturnRef.current = tourBtnRef.current;
     setTour({ mode: "offer", step: 0 });

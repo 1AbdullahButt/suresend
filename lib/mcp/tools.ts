@@ -224,7 +224,8 @@ export async function checkReply(
   const ticket = resolveTicket(input.ticket_id, input.rail);
   if (!ticket.ok) return ticket;
   const { checkOn, reported } = ticket.value;
-  const res = await handleCheck({ ticketId: checkOn, rail: reported.rail, draft: input.reply, role: MCP_ROLE }, deps);
+  // No ticket_id: the seed ticket only supplies the rail, so its customer's question isn't this reply's (D-045).
+  const res = await handleCheck({ ticketId: checkOn, rail: reported.rail, draft: input.reply, role: MCP_ROLE }, deps, { noCustomerMessage: reported.id === null });
   if (res.status !== 200) return { ok: false, error: errorText(res.body) };
   return { ok: true, value: present(res.body as CheckResult, reported) };
 }

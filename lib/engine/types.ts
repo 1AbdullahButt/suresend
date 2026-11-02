@@ -103,6 +103,7 @@ export type ReasonCode =
   | "EXTRACTION_GAP"
   | "OUTSIDE_COVERAGE"
   | "NO_POLICY_CLAIM"
+  | "TOPIC_GAP"
   | "SCOPE_UNKNOWN"
   | "PROPOSAL_ONLY"
   | "UNSUPPORTED"
@@ -216,6 +217,8 @@ export interface CheckInput {
   role: Role;
   overrides?: SourceOverride[];
   decisionTime?: string; // ISO; defaults to deps.now()
+  /** The check has no real customer behind it (MCP without a ticket_id), so rule D0e has no question to compare the reply with. */
+  noCustomerMessage?: boolean;
 }
 
 export interface SendInput extends Omit<CheckInput, "decisionTime"> {

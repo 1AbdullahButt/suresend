@@ -20,6 +20,10 @@ export interface TopicDef {
   coverage: string;
   /** For the Ask-first template: "I'm confirming the exact reversal timeline for your transfer". No detector words. */
   confirming: string;
+  /** A customer's message asks about this topic (rule D0e, D-045). Deterministic, like the detector patterns. */
+  asks: RegExp;
+  /** How a reply falls short when it gives no value: "gives no number" (D-046). */
+  noValue: string;
   /** Extraction prompt lines (lib/ai/prompts.ts). */
   prompt: {
     /** The taxonomy line: `- "reversal_window": …`. */
@@ -28,6 +32,8 @@ export interface TopicDef {
     about: string;
     /** The draft-side rule that maps a customer promise to this topic. */
     draftRule: string;
+    /** The draft-side rule for vague wording: still a claim on this topic, with no value (D-045). */
+    vagueRule: string;
     /** Value examples, for a value kind the shared rules don't explain. */
     values?: string;
     /** Extra guidance for reading documents. */

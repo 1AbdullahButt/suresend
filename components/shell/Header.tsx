@@ -3,7 +3,7 @@ import { forwardRef } from "react";
 import { cx, Mark, ui } from "@/components/ui/atoms";
 import s from "./shell.module.css";
 
-/** Design v2 header: the mark and name, "Concept for Slite Agent", Demo menu and Guided tour. Nothing else. */
+/** Design v2 header: the mark and name, Demo menu and Guided tour. Nothing else; the footer carries the concept tag (D-047). */
 export const Header = forwardRef<
   HTMLButtonElement,
   { menuOpen: boolean; onMenu: () => void; onTour: () => void; tourOpen: boolean; children?: React.ReactNode }
@@ -13,7 +13,6 @@ export const Header = forwardRef<
       <div className={s.brand}>
         <Mark />
         <span className={s.name}>SureSend</span>
-        <span className={s.concept}>Concept for Slite Agent</span>
       </div>
       <div className={s.headBtns}>
         <button

@@ -31,15 +31,6 @@
   letter-spacing: -0.01em;
   white-space: nowrap;
 }
-.concept {
-  background: var(--ask-bg);
-  color: var(--ask);
-  border-radius: 999px;
-  padding: 4px 12px;
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-}
 .headBtns {
   display: flex;
   gap: 8px;
@@ -338,7 +329,6 @@
     padding: 14px 12px 0;
     gap: 12px;
   }
-  .concept,
   .tourBtn {
     display: none !important;
   }

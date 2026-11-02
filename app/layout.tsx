@@ -8,7 +8,7 @@ import "./globals.css";
 const figtree = Figtree({ subsets: ["latin"], weight: ["400", "500", "600", "700"], display: "swap", variable: "--font-figtree" });
 const jbmono = JetBrains_Mono({ subsets: ["latin"], weight: ["400", "500"], display: "swap", variable: "--font-jbmono" });
 
-const TAGLINE = "SureSend · a concept for Slite Agent";
+const TAGLINE = "SureSend · independent concept for Slite Agent";
 const DESCRIPTION = "Checks a support reply against messy team docs before it reaches the customer. Synthetic data only.";
 
 export const metadata: Metadata = {

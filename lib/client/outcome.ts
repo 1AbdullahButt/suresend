@@ -4,7 +4,7 @@ import type { CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch,
 import { patternNoun, patternTopic } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
 import { isCovered, topicDef, wordsFor } from "@/lib/topics";
-import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
+import { mostSevereClaim, shortDate, WEAKENER_WORDS } from "./format";
 
 export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
 
@@ -77,7 +77,22 @@ const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
   UNSUPPORTED: "No doc backs this up",
   UNIT_MISMATCH: "Check the units",
   HEDGED_CONTRADICTION: "Your hedge differs from the policy",
+  TOPIC_GAP: "Your reply doesn't answer this",
 };
+
+const candidatesIn = (claim: ClaimResult) => claim.evidence.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value);
+
+/** A claim with no value, where the docs do have something to say (D-046). */
+const isVague = (claim: ClaimResult | null | undefined): boolean =>
+  !!claim && claim.reasonCode === "UNSUPPORTED" && claim.draftClaim.value === null && isCovered(claim.draftClaim.topic) && candidatesIn(claim).length > 0;
+
+/** The sent card (D-045): what happened, never that the reply was right. Past a Double-check, the docs may well have disagreed. */
+export function sentCopy({ decision, payoff }: { decision: OverallDecision; payoff: { heldValue: string | null } | null }): { headline: string; sentence: string } {
+  const held = payoff ? (payoff.heldValue ? `The ${payoff.heldValue} reply was held and not sent.` : "The held reply was not sent.") : null;
+  return decision === "ALLOW"
+    ? { headline: "Sent. Nothing in the docs contradicted it.", sentence: held ?? "SureSend checked it against your docs before it went out." }
+    : { headline: "Sent with your OK.", sentence: held ?? "SureSend asked you to double-check it, and you chose to send it." };
+}
 
 export function summarize(result: CheckResult, ticketRail: "instant" | "standard" | "unknown"): Summary {
   const meta = OUTCOME[result.decision];
@@ -121,7 +136,7 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
     }
     case "ALLOW": {
       if (result.reasonCode === "NO_POLICY_CLAIM" || !claim) {
-        return { ...base, headline: "Your reply is right", sentence: "There's no policy promise in this reply, so there's nothing to contradict.", strong: null };
+        return { ...base, headline: "No policy promise here", sentence: "There's no policy promise in this reply, so there's nothing to contradict.", strong: null };
       }
       const s = said("allow");
       if (s) return { ...base, headline: "Your reply is right", ...s };
@@ -132,7 +147,9 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
       const headline =
         result.reasonCode === "EXTRACTION_GAP"
           ? `Couldn't confirm ${patternNoun(gapMatches(result))}`
-          : (CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending");
+          : isVague(claim)
+            ? "Your reply is vague on this"
+            : (CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending");
       return { ...base, headline, sentence: cautionSentence(result, claim), strong: null };
     }
   }
@@ -182,8 +199,15 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     }
     case "PROPOSAL_ONLY":
       return `Only a proposal mentions ${saidValue(claim)}. Don't promise it until a policy confirms it.`;
-    case "UNSUPPORTED":
-      return `No doc supports ${saidValue(claim)}. Check it with the policy owner.`;
+    case "UNSUPPORTED": {
+      if (!claim || !isVague(claim)) return `No doc supports ${saidValue(claim)}. Check it with the policy owner.`;
+      const short = topicDef(claim.draftClaim.topic).noValue;
+      return gov ? `Your docs say ${wordsFor(claim.draftClaim.topic, gov.value)}; your reply ${short}.` : `Your docs don't give one answer for this ticket; your reply ${short}.`;
+    }
+    case "TOPIC_GAP": {
+      const topic = claim && isCovered(claim.draftClaim.topic) ? topicDef(claim.draftClaim.topic) : null;
+      return gov && claim ? `Your docs say ${wordsFor(claim.draftClaim.topic, gov.value)}; your reply doesn't say.` : `The customer asked about ${topic?.coverage ?? "this"}; your reply doesn't say.`;
+    }
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
     case "HEDGED_CONTRADICTION":
@@ -238,10 +262,11 @@ function railShort(rail: "instant" | "standard" | "any"): string {
 /** One claim of a reply that makes several (D-041): what it says and its own verdict. */
 export interface ClaimLine {
   key: string;
-  /** "Claim 1 of 2". */
+  /** "Claim 1 of 2", or "Not answered" for a question the reply leaves open. */
   label: string;
-  /** The words of the reply that make the claim. */
+  /** The words of the reply that make the claim, or what's missing when `quoted` is false. */
   says: string;
+  quoted: boolean;
   name: string;
   tone: OutcomeTone;
 }
@@ -249,10 +274,13 @@ export interface ClaimLine {
 /** The reply's claims in the order it makes them, each with its own verdict; empty for a reply with one claim or none. */
 export function claimLines(result: CheckResult): ClaimLine[] {
   if (result.claims.length < 2) return [];
+  const made = result.claims.filter((c) => c.reasonCode !== "TOPIC_GAP").length;
+  let n = 0;
   return result.claims.map((c, i) => ({
     key: c.draftClaim.claimId || String(i),
-    label: `Claim ${i + 1} of ${result.claims.length}`,
+    label: c.reasonCode === "TOPIC_GAP" ? "Not answered" : made > 1 ? `Claim ${++n} of ${made}` : "Your reply",
     says: c.draftClaim.span,
+    quoted: c.reasonCode !== "TOPIC_GAP",
     name: OUTCOME[c.decision].name,
     tone: OUTCOME[c.decision].tone,
   }));
@@ -375,7 +403,11 @@ function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evide
           ? "But it changed after it was verified, so double-check before sending."
           : code === "CHANGE_SIGNALLED"
             ? "A change is signalled, so double-check before sending."
-            : "The rules can't confirm it, so double-check before sending.";
+            : code === "TOPIC_GAP"
+              ? "Your reply doesn't answer what the customer asked, so double-check before sending."
+              : isVague(claim)
+                ? "Your reply gives nothing to compare with them, so double-check before sending."
+                : "The rules can't confirm it, so double-check before sending.";
       break;
     default:
       second = "The AI didn't answer, so nothing was decided.";
@@ -524,6 +556,10 @@ function topSummary(row: TraceEntryLike, ctx: TraceCtx): string {
       return "The reply makes a claim outside the topics checked here. Check it by hand.";
     case "D0d:fired":
       return "No policy claims in this reply.";
+    case "D0e:fired":
+      return firstSentence(ctx.named(row.detail));
+    case "D0e:pass":
+      return row.detail;
     case "Cap:fired":
       return `${unread} couldn't be read, so Good to send is capped at Double-check.`;
     case "Cap:pass":

@@ -1,6 +1,6 @@
 // Builder-owned tests for the localStorage migration from the pre-rename "answerguard.*" keys (D-031).
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { readJson } from "./storage";
+import { canPersist, readJson } from "./storage";
 
 let store: Map<string, string>;
 
@@ -16,6 +16,30 @@ beforeEach(() => {
 
 afterEach(() => {
   delete (globalThis as { window?: unknown }).window;
+});
+
+describe("canPersist", () => {
+  it("is true when localStorage works, and leaves nothing behind", () => {
+    const store = new Map<string, string>();
+    (globalThis as { window?: unknown }).window = {
+      localStorage: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    };
+    expect(canPersist()).toBe(true);
+    expect(store.size).toBe(0);
+  });
+
+  it("is false when the browser blocks it", () => {
+    (globalThis as { window?: unknown }).window = {
+      get localStorage(): never {
+        throw new Error("denied");
+      },
+    };
+    expect(canPersist()).toBe(false);
+  });
 });
 
 describe("readJson legacy migration", () => {

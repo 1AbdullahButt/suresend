@@ -72,7 +72,7 @@ const STEPS: Step[] = [
     body: (
       <>
         The suggested reply was already checked against your docs. Use it and press Send: this time the check passes and the reply goes out.
-        The held one never reached Ayesha.
+        The held one was not sent.
       </>
     ),
     target: (ag) => (ag.sendState.kind === "sent" ? ['[data-tour="payoff"]'] : ['[data-tour="suggested"]', '[data-tour="decision"]']),
@@ -86,7 +86,7 @@ const STEPS: Step[] = [
     title: "Ask first: no guessing",
     body: (
       <>
-        Usman&apos;s rail is <b>unknown</b>, and instant and standard transfers have different timelines. Slite Agent asks you to confirm
+        Usman&apos;s rail is <b>unknown</b>, and instant and standard transfers have different timelines. SureSend asks you to confirm
         instead of guessing, and its holding reply contains no timeline at all.
       </>
     ),
@@ -600,7 +600,7 @@ export function GuidedTour({
             {sent ? (
               <span className={s.done}>
                 <CircleCheck aria-hidden="true" />
-                Sent · checked by Slite Agent. The Demo menu now shows one wrong reply stopped.
+                Sent · checked by SureSend. The Demo menu now shows one wrong reply stopped.
               </span>
             ) : hasHold && ag.stored?.result.suggestion ? (
               <button

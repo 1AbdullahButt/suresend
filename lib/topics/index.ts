@@ -28,6 +28,16 @@ export function topicDef(topic: string): TopicDef {
 
 export const topicIds = (): TopicId[] => TOPICS.map((t) => t.id);
 
+/** The covered topics a customer's message asks about (rule D0e, D-045). */
+export function topicsAsked(message: string): TopicId[] {
+  return TOPICS.filter((t) => t.asks.test(message)).map((t) => t.id);
+}
+
+/** The reply says this topic's answer is being confirmed, in the Ask-first template's own words. */
+export function acknowledges(topic: string, reply: string): boolean {
+  return reply.toLowerCase().includes(topicDef(topic).confirming.toLowerCase());
+}
+
 const custom = (topic: string) => (byId.get(topic) as TopicDef | undefined)?.valueWords;
 
 /** A value as the engine words it (traces, headlines, the governing value): the topic's words, else the comparator's. */

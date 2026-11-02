@@ -376,6 +376,8 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     let total = 0;
     let feeOk = 0;
     let feeTotal = 0;
+    let vagueOk = 0;
+    let vagueTotal = 0;
     const rows = cases.map((c) => {
       const rs = p.results[c.id] ?? [];
       const okCount = rs.filter((r) => r.ok).length;
@@ -385,6 +387,10 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
         feeOk += okCount;
         feeTotal += rs.length;
       }
+      if (c.id.includes("-vague-")) {
+        vagueOk += okCount;
+        vagueTotal += rs.length;
+      }
       const label = heldOutMode ? (c.note ?? "") : gate.includes(c.id) ? "gate" : "";
       return `| ${c.id} | ${label} | ${c.expect.decision} / ${c.expect.reasonCode} | ${rs
         .map((r) => (r.ok ? "✓" : `✗ ${r.decision}/${r.reasonCode}`))
@@ -392,7 +398,7 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     });
     const quoteRejections = t.quotesTotal - t.quotesValid;
     return {
-      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}
+      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}${feeLine && vagueTotal ? `\n- Vague replies only: **${pct(vagueOk, vagueTotal)}** (${vagueOk}/${vagueTotal})` : ""}
 - Quote validity: **${pct(t.quotesValid, t.quotesTotal)}** (${t.quotesValid}/${t.quotesTotal} extracted quotes/spans verbatim; ${quoteRejections} rejected)`,
       table: `| Case | ${heldOutMode ? "What it probes" : ""} | Expected | Runs | Correct |
 |---|---|---|---|---|
@@ -503,13 +509,15 @@ ${clean.length} clean held-out cases (\`evals/heldout.json\`), run with prompt \
 
 - **The timeline cases** (H1–H4, H6–H10) were written after the prompts were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a hedge, an unknown rail, an injection inside the draft and a no-claim reply. They were in the repo, with published results, while the fee prompts were written, and they already passed on earlier prompts. H1 reuses phrases that older prompt already had, so it's easier than it looks.
 - **H12** (the fee) was written before any fee prompt text existed. It shares no three-word phrase with the prompts, schema, golden set or presets.
-- **H17–H19** (the fee) were written after the prompts were frozen at \`${PROMPT_VERSION}\`, and share no three-word phrase with those files: two claims after a doc edit, a hedge, and an amount outside coverage.
+- **H17–H19** (the fee) were written after the prompts were frozen at \`2026-11-02.4\`, and share no three-word phrase with those files: two claims after a doc edit, a hedge, and an amount outside coverage.
+- **H20–H22** (vague replies) were written and committed before any prompt work on valueless claims, and share no three-word phrase with those files (D-045). They're scored against the expected reason, so a reply the AI misses but rule D0e catches is still Double-check, and still counts as a miss here.
+- **H10, H12 and H13** changed their expected result when rule D0e arrived (D-045): each is a reply that leaves the customer's question open, so each is now Double-check. The rule changed, not the case.
 
-The four fee cases are the real evidence for the new topic; the fee-only line below scores them on their own.
+The four fee cases are the real evidence for the second topic, and the three vague cases for valueless claims; a line below scores each group on its own.
 
 ${exposed.length} exposed cases (${exposed.map((c) => c.id.split("-")[0]).join(", ")}) no longer count as held-out and are reported separately as regression cases. Their wording reached the prompts or the golden set, or came from them, even where it was later removed (D-041).
 
-Groq's section below is its second session on these prompts. Its first session, before a rule fix that doesn't touch this path, scored 36/39 on the same clean cases and 9/12 on the fee cases: H18 was 0/3, where it's 3/3 below. Its report is in commit 1db5346. Treat H18 and H14 as unstable, not as fixed (D-041).`;
+Sessions on earlier prompts are in commits 1db5346 and 5a0b026. H18 and H14 have flipped between sessions on one prompt: treat them as unstable, not as fixed (D-041).`;
   const body = `${reports.map((r) => r.markdown).join("\n")}
 `;
   const out = `${md}${missing.length ? `\n\nNot finished on this prompt: ${missing.join(", ")}.` : ""}\n\n${body}`;

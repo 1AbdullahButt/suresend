@@ -50,10 +50,10 @@ async function openConversation(page: Page, name: RegExp) {
   await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name }).click();
 }
 
-/** Under 1100 px the Slite Agent card is a slide-over / bottom sheet; open it if it's closed. */
+/** Under 1100 px the SureSend card is a slide-over / bottom sheet; open it if it's closed. */
 async function openAgent(page: Page) {
   const tab = page.getByRole("tab", { name: "Check", exact: true });
-  const toggle = page.getByRole("button", { name: /Slite Agent$/ }).first();
+  const toggle = page.getByRole("button", { name: /SureSend$/ }).first();
   // Wait for whichever renders first (the card itself on desktop, or the slide-over/sheet toggle); on a deployed site
   // hydration can take longer than locally.
   await Promise.race([tab.waitFor({ timeout: 15_000 }), toggle.waitFor({ timeout: 15_000 })]).catch(() => undefined);
@@ -142,14 +142,14 @@ const states: Array<{ name: string; localOnly?: boolean; run: (page: Page) => Pr
       await held(page);
       await page.getByRole("button", { name: "Use this reply", exact: true }).click();
       await page.getByRole("button", { name: "Send", exact: true }).click();
-      await page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" }).waitFor({ timeout: 20_000 });
+      await page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" }).waitFor({ timeout: 20_000 });
     },
   },
   {
     name: "demo-menu",
     run: async (page) => {
       await held(page);
-      const close = page.getByRole("button", { name: "Close Slite Agent" });
+      const close = page.getByRole("button", { name: "Close SureSend" });
       if (await close.isVisible().catch(() => false)) await close.click();
       await page.getByRole("button", { name: "Demo menu", exact: true }).click();
       await page.getByRole("dialog", { name: "Demo menu" }).waitFor();

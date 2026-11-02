@@ -2,7 +2,7 @@
 // Client state for the demo shell: seed, tickets, drafts, rails, workspace overrides, checks, sends, metrics.
 // The server is the source of truth for decisions; this hook only orchestrates requests and remembers results.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import type { CheckResult, Rail, Role, Source, Ticket } from "@/lib/engine/types";
+import type { CheckResult, OverallDecision, Rail, Role, Source, Ticket } from "@/lib/engine/types";
 import { mergeOverrides } from "@/lib/workspace/merge";
 import { doc103Variant } from "@/lib/workspace/variantBodies";
 import { findFixSource } from "@/lib/fix/source";
@@ -40,7 +40,7 @@ export type SendState =
   | { kind: "blocked"; result: CheckResult }
   | { kind: "ack_required"; result: CheckResult }
   | { kind: "unavailable"; result: CheckResult }
-  | { kind: "sent"; customer: string; payoff: Payoff | null };
+  | { kind: "sent"; customer: string; decision: OverallDecision; payoff: Payoff | null };
 
 /** Design v2 "Sent" payoff: shown when a successful send followed a held draft (real values only). */
 export interface Payoff {
@@ -331,7 +331,7 @@ export function useSureSend() {
         setDrafts((d) => ({ ...d, [ticketId]: "" }));
         ref.current.drafts = { ...ref.current.drafts, [ticketId]: "" };
         setAcks((a) => ({ ...a, [ticketId]: false }));
-        setSendStates((s) => ({ ...s, [ticketId]: { kind: "sent", customer, payoff } }));
+        setSendStates((s) => ({ ...s, [ticketId]: { kind: "sent", customer, decision: out.result.decision, payoff } }));
       } else if (out.kind === "blocked") {
         updateMetrics(recordIntercept);
         // D-037: attribute the held reply to the doc it copied, for "Docs causing held replies".
@@ -470,7 +470,7 @@ export function useSureSend() {
       const because = `${source.id} v${version} ${mode === "verify" ? "saved and verified (simulated)" : "saved as a draft"}`;
       void runCheck({ overrides: next, because });
     },
-    [commitOverrides, runCheck],
+    [commitOverrides, forgetFix, runCheck],
   );
 
   /**
@@ -516,7 +516,7 @@ export function useSureSend() {
       setTab("check");
       void runCheck({ overrides: next, because: `${source.id} removed from the workspace` });
     },
-    [commitOverrides, runCheck],
+    [commitOverrides, forgetFix, runCheck],
   );
 
   const restoreSource = useCallback(
@@ -527,7 +527,7 @@ export function useSureSend() {
       commitOverrides(next);
       void runCheck({ overrides: next, because: `${id} restored to its seed version` });
     },
-    [commitOverrides, runCheck],
+    [commitOverrides, forgetFix, runCheck],
   );
 
   /** AI unavailable → "Restore seed versions": clears overrides so saved responses can replay. */
@@ -537,7 +537,7 @@ export function useSureSend() {
     setOverrides({});
     ref.current.overrides = {};
     void runCheck({ overrides: {}, because: "seed versions restored" });
-  }, [runCheck]);
+  }, [forgetFix, runCheck]);
 
   /** Reset workspace: clears overrides AND metrics (SPEC §9). */
   const resetWorkspace = useCallback(() => {

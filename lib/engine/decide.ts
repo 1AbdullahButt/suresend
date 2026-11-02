@@ -7,7 +7,7 @@ import { resolve, skip } from "./resolve";
 import { mostSevere } from "./severity";
 import { claimStanding, weakeners } from "./standing";
 import { sameValue, unitLabel, unitsMatch, valueWithin } from "./values";
-import { describeValue, isCovered, topicDef } from "@/lib/topics";
+import { acknowledges, describeValue, isCovered, topicDef, topicsAsked } from "@/lib/topics";
 import type {
   Applicability,
   Cap,
@@ -37,6 +37,8 @@ export interface Extractions {
 export interface DecideTicket {
   id: string;
   rail: Rail;
+  /** What the customer asked, when a real ticket is behind the check: rule D0e compares the reply with it (D-045). */
+  message?: string;
 }
 
 export interface DecideOutput {
@@ -132,10 +134,23 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   });
   const quoted = (ms: PatternMatch[]) => ms.map((m) => `"${m.text}"`).join(", ");
 
+  // D0e (D-045, amends SPEC D0d): the customer asked about a covered topic and the reply makes no claim on it. A detector hit
+  // on that topic is D0b's. A reply that says the answer is being confirmed, as the Ask-first template does, isn't a gap.
+  const flagged = new Set(uncovered.map((m) => patternTopic(m.kind)));
+  const asked = ticket.message ? topicsAsked(ticket.message) : [];
+  const unanswered = asked.filter((t) => !claimed.has(t) && !flagged.has(t) && !acknowledges(t, draftText));
+  const topicGaps = unanswered.map((t, i) => topicGap(t, i, pool, ticket));
+  const d0e: TraceEntry =
+    topicGaps.length > 0
+      ? { rule: "D0e", outcome: "fired", detail: topicGaps.map((g) => g.trace[0]!.detail).join(" ") }
+      : ticket.message
+        ? { rule: "D0e", outcome: "pass", detail: asked.length > 0 ? "The reply addresses every checked topic the customer asked about." : "The customer's message asks about no checked topic." }
+        : { rule: "D0e", outcome: "skipped", detail: "No customer message behind this check, so there's no question to compare the reply with." };
+
   let gapNoun = "";
   if (covered.length === 0) {
-    // D0b / D0c / D0d
-    claims = outsideResults;
+    // D0b / D0c / D0e / D0d
+    claims = [...outsideResults, ...topicGaps];
     if (uncovered.length > 0) {
       decision = "CAUTION";
       reasonCode = "EXTRACTION_GAP";
@@ -145,15 +160,23 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
         outcome: "fired",
         detail: `No claim on a checked topic was extracted, but the policy-pattern detector found ${quoted(uncovered)}. SureSend couldn't confirm ${gapNoun}; check it manually.`,
       });
+      trace.push(d0e);
     } else if (outside.length > 0) {
       decision = "CAUTION";
       reasonCode = "OUTSIDE_COVERAGE";
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted out-of-topic claim." });
       trace.push({ rule: "D0c", outcome: "fired", detail: `${outside.length} claim(s) outside the topics SureSend checks. Check them manually.` });
+      trace.push(d0e);
+    } else if (topicGaps.length > 0) {
+      decision = "CAUTION";
+      reasonCode = "TOPIC_GAP";
+      trace.push({ rule: "D0b", outcome: "pass", detail: "The policy-pattern detector found no timing, amount or deadline in the draft." });
+      trace.push(d0e);
     } else {
       decision = "ALLOW";
       reasonCode = "NO_POLICY_CLAIM";
       trace.push({ rule: "D0b", outcome: "pass", detail: "The policy-pattern detector found no timing, amount or deadline in the draft." });
+      trace.push(d0e);
       trace.push({ rule: "D0d", outcome: "fired", detail: "No policy claims in this reply." });
     }
   } else {
@@ -170,6 +193,8 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     } else {
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted claim on its topic." });
     }
+    claims.push(...topicGaps);
+    trace.push(d0e);
     const worst = mostSevere(claims)!;
     decision = worst.decision;
     reasonCode = worst.reasonCode;
@@ -268,6 +293,58 @@ function extractionGaps(hits: PatternMatch[]): ClaimResult[] {
   });
 }
 
+/** One CAUTION entry for a covered topic the customer asked about and the reply leaves unanswered (D0e, D-045). */
+function topicGap(topic: string, i: number, pool: EvaluatedClaim[], ticket: DecideTicket): ClaimResult {
+  const def = topicDef(topic);
+  const span = `Nothing on ${def.subject}`;
+  const dc: DraftClaim = { claimId: `ask#${i + 1}`, topic: topic as DraftClaim["topic"], value: null, valueText: span, span, definitive: true };
+  const governing = docsValue(topic, pool, ticket);
+  return {
+    draftClaim: dc,
+    decision: "CAUTION",
+    reasonCode: "TOPIC_GAP",
+    evidence: pool.filter((e) => e.claim.topic === topic).map((e) => toEvidence(e, dc)),
+    trace: [
+      {
+        rule: "D0e",
+        outcome: "fired",
+        detail: `The customer asked about ${def.coverage}, and the reply makes no claim on it.${governing ? ` The docs say ${governing.valueText} (${governing.sourceId}).` : ""} Check it manually.`,
+      },
+    ],
+    governing,
+  };
+}
+
+/** In-force, applicable claims with a value: the candidates C (SPEC §6.6). */
+function candidates(onTopic: EvaluatedClaim[]): EvaluatedClaim[] {
+  return dedupeBySourceValue(onTopic.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value !== null));
+}
+
+/** D1's question: C has a scope-unresolved claim whose value differs from another, or only scope-unresolved claims. */
+function scopeUnsettled(C: EvaluatedClaim[]) {
+  const unresolved = C.filter((e) => e.applicability === "SCOPE_UNRESOLVED");
+  return {
+    unresolved,
+    scopeMatters: unresolved.some((u) => C.some((o) => o !== u && !sameValue(o.claim.value!, u.claim.value!))),
+    // D-012.1: also escalate when every candidate is scoped to a rail we can't confirm; a rail-specific rule must not
+    // govern a ticket whose rail is unknown.
+    onlyUnresolved: C.length > 0 && unresolved.length === C.length,
+  };
+}
+
+/**
+ * The value the docs give on this ticket, for a reply that gives none, so the reader sees it (D-046). It names a value and
+ * decides nothing, so D4 to D7's own trace stays out; the caller's trace entry names the value. Null when they give no one value.
+ */
+function docsValue(topic: string, pool: EvaluatedClaim[], ticket: DecideTicket): Governing | null {
+  const C = candidates(pool.filter((e) => e.claim.topic === topic));
+  if (C.length === 0) return null;
+  const { scopeMatters, onlyUnresolved } = scopeUnsettled(C);
+  if (ticket.rail === "unknown" && (scopeMatters || onlyUnresolved)) return null;
+  const r = resolve(C, { ticketId: ticket.id, rail: ticket.rail }, []);
+  return r.kind === "governed" ? r.governing : null;
+}
+
 function relationTo(dc: DraftClaim, claim: SourceClaim): Relation {
   if (!dc.value || !claim.value) return "n/a";
   return unitsMatch(dc.value, claim.value) && valueWithin(dc.value, claim.value) ? "supports" : "contradicts";
@@ -324,9 +401,7 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
 
   // Repeated claims from one source with the same value count once (DECISIONS D-012.2); prefer the one carrying a
   // supersedes sentence so an extractor that splits a doc into two claims can't make it compete with itself.
-  const C = dedupeBySourceValue(
-    onTopic.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value !== null),
-  );
+  const C = candidates(onTopic);
   const signals = onTopic.filter(
     (e) => (e.standing === "PROPOSAL" || e.standing === "NOT_YET_EFFECTIVE") && e.applicability !== "NOT_APPLICABLE" && e.claim.value !== null,
   );
@@ -334,24 +409,22 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
     list.length === 0 ? "none" : list.map((e) => `${e.source.id} (${formatValue(e.claim.value!)}, ${RAIL_LABEL[e.claim.scope.rail]})`).join(", ");
 
   if (!dc.value) {
-    // No checkable value: no candidate can support it, so it is treated as unsupported (DECISIONS D-012.4).
+    // No checkable value: no candidate can support it, so it is treated as unsupported (DECISIONS D-012.4). The docs' value
+    // is named for the reader, and changes no decision (D-046).
+    const docs = docsValue(dc.topic, pool, ticket);
     skip(trace, ["D1", "D2"], "The draft claim states no checkable value.");
     trace.push({
       rule: "D3",
       outcome: "fired",
-      detail: `"${dc.span}" states no value that a source could support, so it is treated as unsupported. Check it manually.`,
+      detail: `"${dc.span}" states no value that a source could support, so it is treated as unsupported.${docs ? ` The docs say ${docs.valueText} (${docs.sourceId}).` : ""} Check it manually.`,
     });
     skip(trace, ["D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11a", "D11b"], "Nothing to compare.");
-    return result("CAUTION", "UNSUPPORTED");
+    return result("CAUTION", "UNSUPPORTED", docs);
   }
   const draftValue = dc.value;
 
   // D1: scope unknown and it matters
-  const unresolved = C.filter((e) => e.applicability === "SCOPE_UNRESOLVED");
-  const scopeMatters = unresolved.some((u) => C.some((o) => o !== u && !sameValue(o.claim.value!, u.claim.value!)));
-  // D-012.1: also escalate when every candidate is scoped to a rail we can't confirm; a rail-specific rule must not
-  // govern a ticket whose rail is unknown.
-  const onlyUnresolved = C.length > 0 && unresolved.length === C.length;
+  const { unresolved, scopeMatters, onlyUnresolved } = scopeUnsettled(C);
   if (ticket.rail === "unknown" && (scopeMatters || onlyUnresolved)) {
     trace.push({
       rule: "D1",
@@ -519,7 +592,9 @@ function headlineFor(
     case "PROPOSAL_ONLY":
       return "Caution: only proposals or not-yet-effective changes cover this. Nothing in force governs it.";
     case "UNSUPPORTED":
-      return "Caution: no source supports this claim. Check it manually.";
+      return g ? `Caution: the policy says ${g.valueText} (${cite}), and the draft gives no checkable value.` : "Caution: no source supports this claim. Check it manually.";
+    case "TOPIC_GAP":
+      return `Caution: the customer asked about ${topic?.coverage ?? "a checked topic"}, and the draft doesn't say.${g ? ` The policy says ${g.valueText} (${cite}).` : ""}`;
     case "EXTRACTION_GAP":
       return `Caution: SureSend couldn't confirm ${gapNoun || "a policy claim"} in this draft. Check it manually.`;
     case "OUTSIDE_COVERAGE":

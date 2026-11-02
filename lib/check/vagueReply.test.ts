@@ -6,7 +6,7 @@ import { handleSend } from "@/lib/check/handlers";
 import { runCheck } from "@/lib/check/runCheck";
 import { decide } from "@/lib/engine/decide";
 import { sentCopy, summarize, traceRows, whyModel } from "@/lib/client/outcome";
-import { checkReply, present } from "@/lib/mcp/tools";
+import { checkReply } from "@/lib/mcp/tools";
 import { ESCALATE_TEMPLATE } from "@/lib/replies/templates";
 import { seedBody } from "@/lib/workspace/variants";
 import type { AiRunInfo, CheckDeps, DraftClaim, Rail, Source, SourceClaim } from "@/lib/engine/types";
@@ -143,13 +143,14 @@ describe("the AI finds nothing in a vague reply: the customer's question is stil
   it.each(CASES)("$id: Double-check, never Good to send", async (c) => {
     const r = await runCheck(input(c), depsFor([]));
     expect(r.decision).toBe("CAUTION");
-    expect(r.reasonCode).toBe("TOPIC_GAP");
+    // "return on their own by Monday, less the small charge" also trips the fee detector, so D0b gives the reason there.
+    expect(r.reasonCode).toBe(c.id === "monday-less-charge" ? "EXTRACTION_GAP" : "TOPIC_GAP");
     expect(r.trace.find((t) => t.rule === "D0e")?.outcome).toBe("fired");
+    expect(r.claims.some((x) => x.reasonCode === "TOPIC_GAP" && x.governing?.valueText === (c.docs ?? undefined)) || c.docs === null).toBe(true);
   });
 
   it.each(CASES)("$id: Send needs a person's OK", async (c) => {
-    const { decisionTime: _unused, ...body } = input(c);
-    const send = await handleSend(body, depsFor([]));
+    const send = await handleSend({ ticketId: c.ticketId, rail: c.rail, draft: c.draft, role: "support_agent", overrides: [] }, depsFor([]));
     expect(send.status).toBe(428);
   });
 
@@ -157,6 +158,7 @@ describe("the AI finds nothing in a vague reply: the customer's question is stil
     const r = await runCheck(input(c), depsFor([]));
     const { headline, sentence } = summarize(r, c.rail);
     expect(headline).not.toMatch(/right/i);
+    if (c.id === "monday-less-charge") return expect(sentence).toMatch(/couldn't confirm the fee refund/);
     if (c.docs) expect(sentence).toContain(c.docs);
     expect(sentence).toMatch(/your reply doesn't/i);
   });
@@ -221,7 +223,7 @@ describe("the topic gap stays narrow", () => {
     owner: { name: "Sana", active: true },
     flaggedOutdated: false,
     flagNote: null,
-    visibility: "all",
+    visibility: "everyone",
   } as Source;
   const ex = (text: string, claims: DraftClaim[]) => ({
     draft: { ok: true as const, text, claims, rejectedCount: 0 },
@@ -293,31 +295,30 @@ describe("the topic gap stays narrow", () => {
     expect(out.ok && out.value.engine_decision).toBe("CAUTION");
     expect(out.ok && out.value.reason_code).toBe("TOPIC_GAP");
     expect(out.ok && out.value.governing?.value).toBe("4 business days");
-    expect(typeof present).toBe("function");
   });
 });
 
 describe("the sent card never claims correctness", () => {
   it("a reply that passed: nothing in the docs contradicted it", () => {
-    expect(sentCopy({ customer: "Ayesha K.", decision: "ALLOW", payoff: null }).headline).toBe("Sent. Nothing in the docs contradicted it.");
+    expect(sentCopy({ decision: "ALLOW", payoff: null }).headline).toBe("Sent. Nothing in the docs contradicted it.");
   });
 
   it("a reply sent after a Hold says what was held, as a plain fact", () => {
-    const copy = sentCopy({ customer: "Ayesha K.", decision: "ALLOW", payoff: { customer: "Ayesha K.", heldValue: "4-business-day" } });
+    const copy = sentCopy({ decision: "ALLOW", payoff: { heldValue: "4-business-day" } });
     expect(copy.headline).toBe("Sent. Nothing in the docs contradicted it.");
     expect(copy.sentence).toBe("The 4-business-day reply was held and not sent.");
   });
 
   it("a reply sent past a Double-check doesn't say nothing contradicted it: a hedged one may have been contradicted", () => {
-    const copy = sentCopy({ customer: "Ayesha K.", decision: "CAUTION", payoff: null });
+    const copy = sentCopy({ decision: "CAUTION", payoff: null });
     expect(copy.headline).toBe("Sent with your OK.");
     expect(copy.headline + copy.sentence).not.toMatch(/contradicted/);
   });
 
   it("no copy path claims the reply was right", () => {
     for (const decision of ["ALLOW", "CAUTION"] as const) {
-      for (const payoff of [null, { customer: "A", heldValue: null }, { customer: "A", heldValue: "4-day" }]) {
-        const { headline, sentence } = sentCopy({ customer: "A", decision, payoff });
+      for (const payoff of [null, { heldValue: null }, { heldValue: "4-day" }]) {
+        const { headline, sentence } = sentCopy({ decision, payoff });
         expect(`${headline} ${sentence}`).not.toMatch(/right answer|never reached|correct/i);
       }
     }

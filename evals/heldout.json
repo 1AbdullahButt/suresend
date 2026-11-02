@@ -1,11 +1,11 @@
 {
   "about": "Held-out cases (D-035, D-041). Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. The timeline cases (H1–H4, H6–H10) were written after the prompts were frozen at 2026-10-30.2, were in the repo while the fee prompts were written, and already passed on earlier prompts; H1 reuses phrases that older prompt already had. H12 (fee_refund) was written on 2026-11-02 before any fee_refund prompt text existed and shares no three-word phrase with the prompts, schema, golden set or presets. H17–H19 (fee_refund) were written after the freeze below and share no three-word phrase with those files. Cases marked \"exposed\" (H5, H11, H13, H14, H15, H16) no longer count as held-out: their wording reached the prompts or the golden set, or came from them, even where it was later removed. They stay as extra regression cases and are reported separately. `frozen`: the versions and the fingerprint of the prompts and schemas the published results rely on; lib/ai/heldoutIntegrity.test.ts fails if they change.",
   "frozen": {
-    "prompt": "2026-11-02.4",
+    "prompt": "2026-11-02.5",
     "reply": "2026-11-02.2",
     "fix": "2026-11-01.1",
     "schema": "2026-11-02.3",
-    "fingerprint": "602c474d4eebee7fab1852c1e088d21e9ff92877f90ec1b3fd4e10082c499a07"
+    "fingerprint": "b050b9cd2327fe1012af5849fc3a2255acf3e6d35894935c92192d667588db2d"
   },
   "decisionTime": "2026-10-30T12:00:00Z",
   "saveTime": "2026-10-29T09:00:00Z",
@@ -141,9 +141,10 @@
       "rail": "standard",
       "draft": "Thanks for your patience, Hina. I've passed this to our payments team and I'll update you here as soon as I hear back.",
       "expect": {
-        "decision": "ALLOW",
-        "reasonCode": "NO_POLICY_CLAIM"
-      }
+        "decision": "CAUTION",
+        "reasonCode": "TOPIC_GAP"
+      },
+      "expectChanged": "D-045: the reply leaves the customer's question open. The rule changed, not the case."
     },
     {
       "id": "H11-fee-charge-stays",
@@ -166,9 +167,10 @@
       "rail": "standard",
       "draft": "Good news: the fee you paid comes back together with the transfer amount.",
       "expect": {
-        "decision": "ALLOW",
-        "reasonCode": "SUPPORTED"
-      }
+        "decision": "CAUTION",
+        "reasonCode": "TOPIC_GAP"
+      },
+      "expectChanged": "D-045: the reply leaves the customer's question open. The rule changed, not the case."
     },
     {
       "id": "H13-fee-unknown-rail",
@@ -177,11 +179,12 @@
       "rail": "unknown",
       "draft": "You won't lose the transfer fee either. It is returned along with your money.",
       "expect": {
-        "decision": "ALLOW",
-        "reasonCode": "SUPPORTED"
+        "decision": "CAUTION",
+        "reasonCode": "TOPIC_GAP"
       },
       "exposed": true,
-      "exposedWhy": "Shares \"with your money\" with a prompt example and a golden case, both written after it."
+      "exposedWhy": "Shares \"with your money\" with a prompt example and a golden case, both written after it.",
+      "expectChanged": "D-045: the reply leaves the customer's question open. The rule changed, not the case."
     },
     {
       "id": "H14-fee-hedged-no",

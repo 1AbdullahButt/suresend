@@ -72,8 +72,6 @@ export function ChatCard({
     threadRef.current?.scrollTo({ top: threadRef.current.scrollHeight });
   }, [sent.length]);
 
-  const railLabel = rail === "unknown" ? "rail unknown" : `${rail} rail`;
-
   return (
     <main className={cx(s.card, s.chat)} aria-label="Conversation">
       <div className={s.chatHead}>
@@ -97,7 +95,7 @@ export function ChatCard({
                 <OutcomeTag decision={stored.result.decision} label={OUTCOME[stored.result.decision].name} />
               </span>
             ) : null}
-            <span>Slite Agent</span>
+            <span>SureSend</span>
           </button>
         ) : null}
       </div>
@@ -111,12 +109,12 @@ export function ChatCard({
             {i === sent.length - 1 ? (
               <p className={s.sentNote} role="status">
                 <Check aria-hidden="true" strokeWidth={2.4} />
-                Sent · checked by Slite Agent
+                Sent · checked by SureSend
               </p>
             ) : (
               <p className={s.sentNote}>
                 <Check aria-hidden="true" strokeWidth={2.4} />
-                Checked by Slite Agent
+                Checked by SureSend
               </p>
             )}
           </div>
@@ -132,7 +130,7 @@ export function ChatCard({
         {held ? (
           <p className={s.heldTag} role="status">
             <Lock aria-hidden="true" strokeWidth={2.2} />
-            Held by Slite Agent: see the panel
+            Held by SureSend: see the panel
           </p>
         ) : null}
         <div className={s.composeRow}>

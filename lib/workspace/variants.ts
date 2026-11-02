@@ -18,7 +18,7 @@ export function seedBody(id: string): string {
 export const DOC103_BODIES = {
   B1: () => doc103Variant.B1(seedBody("DOC-103")),
   B2: () => doc103Variant.B2(seedBody("DOC-103")),
-  B3: () => doc103Variant.B3(seedBody("DOC-103")),
+  B3: () => doc103Variant.B3(),
   B5: () => doc103Variant.B5(seedBody("DOC-103")),
 };
 

@@ -57,6 +57,8 @@ export function createSureSendMcpServer(depsFor: () => CheckDeps & FixDeps): Mcp
       title: "Check a reply before sending",
       description: `Check a customer-support reply against the team's docs BEFORE you send it. Call this before sending any customer reply that states a policy (${topicList.join(", or ")}), and send nothing until it returns.
 
+Pass ticket_id when there is one: a reply that leaves the customer's question unanswered comes back Double-check, and without a ticket there's no question to compare it with.
+
 It returns a decision and a next_step; follow the next_step:
 - Good to send: no doc contradicts the reply.
 - Double-check: show the reason to a human; send only if they confirm.

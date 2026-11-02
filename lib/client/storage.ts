@@ -52,6 +52,19 @@ export function writeJson(key: string, value: unknown): void {
   }
 }
 
+/** Whether a write here outlives this page: false when the browser blocks localStorage, so only the memory fallback holds it. */
+export function canPersist(): boolean {
+  const probe = "suresend.probe";
+  try {
+    window.localStorage.setItem(probe, "1");
+    const ok = window.localStorage.getItem(probe) === "1";
+    window.localStorage.removeItem(probe);
+    return ok;
+  } catch {
+    return false;
+  }
+}
+
 export function removeKey(key: string): void {
   memory.delete(key);
   try {

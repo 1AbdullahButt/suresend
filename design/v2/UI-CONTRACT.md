@@ -12,9 +12,9 @@ unless marked "exact".
 | Composer | `textbox` | "Your reply" |
 | Send (ready) | `button` | "Send" (exact). Pressing it runs the server check via `POST /api/send`. |
 | Send (held) | `button`, disabled | "Send (held)" (exact) |
-| Held tag (composer) | `status` | text contains "Held by Slite Agent" |
-| Sent confirmation (thread) | `status` | text contains "Sent · checked by Slite Agent" |
-| Slite Agent card | `complementary` | "Slite Agent" |
+| Held tag (composer) | `status` | text contains "Held by SureSend" |
+| Sent confirmation (thread) | `status` | text contains "Sent · checked by SureSend" |
+| SureSend card | `complementary` | "SureSend" |
 | Agent tabs | `tab` | "Check", "Docs" (exact) |
 | Outcome card | `region` | "Decision"; its text contains one of "Good to send", "Double-check", "Hold", "Ask first", "Not sent" |
 | Suggested reply | `region` | "Suggested reply" |
@@ -29,7 +29,7 @@ unless marked "exact".
 | Impact tiles (in Demo menu) | `group` | "Replies checked", "Wrong ones stopped", "False alarms"; each contains its value as text |
 | AI mode line (in Demo menu) | `status` | name starts with "AI mode:" |
 | Reset (in Demo menu) | `button` | "Reset demo" |
-| Footer | `contentinfo` | text contains "Independent concept for Slite Agent" |
+| Footer | `contentinfo` | text contains "Independent concept for SureSend" |
 
 Behaviour the e2e relies on (SPEC §5, §6.8, §11; REDESIGN_PROMPT items 1, 5, 6):
 - Selecting a conversation loads its draft into the composer.

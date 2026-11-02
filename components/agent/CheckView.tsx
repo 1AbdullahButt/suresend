@@ -3,7 +3,7 @@ import { Check, CircleCheck, RefreshCw } from "lucide-react";
 import type { Rail, Suggestion } from "@/lib/engine/types";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
-import { claimLines, summarize } from "@/lib/client/outcome";
+import { claimLines, sentCopy, summarize } from "@/lib/client/outcome";
 import { findFixSource } from "@/lib/fix/source";
 import { cx, OutcomeTag, Tag, ui } from "@/components/ui/atoms";
 import { TraceView } from "./TraceView";
@@ -112,20 +112,13 @@ export function CheckView({
   if (checking) return <CheckingSteps checking={checking} />;
 
   if (sendState.kind === "sent") {
-    const p = sendState.payoff;
-    const first = sendState.customer.split(/\s+/)[0] ?? sendState.customer;
+    const copy = sentCopy({ decision: sendState.decision, payoff: sendState.payoff });
     return (
       <div className={s.stack}>
         <section className={cx(s.outcome, s.oGood)} aria-label="Sent" data-tour="payoff">
           <OutcomeTag decision="ALLOW" label="Sent" />
-          <h3 className={s.headline}>{p ? `${first} got the right answer` : `Sent to ${first}`}</h3>
-          <p className={s.sentence}>
-            {p
-              ? p.heldValue
-                ? `The ${p.heldValue} reply never reached ${first}.`
-                : `The held reply never reached ${first}.`
-              : "Slite Agent checked it against your docs before it went out."}
-          </p>
+          <h3 className={s.headline}>{copy.headline}</h3>
+          <p className={s.sentence}>{copy.sentence}</p>
         </section>
         <div className={s.stopped}>
           <span>Wrong replies stopped today</span>
@@ -139,7 +132,7 @@ export function CheckView({
   if (!stored) {
     return (
       <div className={s.empty}>
-        <h3 className={s.emptyTitle}>Slite Agent checks your reply when you press Send</h3>
+        <h3 className={s.emptyTitle}>SureSend checks your reply when you press Send</h3>
         <ol className={s.emptySteps}>
           <li>
             <span className={s.num} aria-hidden="true">
@@ -197,7 +190,7 @@ export function CheckView({
           <ul className={s.claimList} aria-label="Claims in this reply">
             {lines.map((l) => (
               <li key={l.key}>
-                <span className={s.claimSays}>“{l.says}”</span>
+                <span className={s.claimSays}>{l.quoted ? `“${l.says}”` : l.says}</span>
                 <span className={s.claimTag}>
                   <span className={cx(s.claimDot, DOT[l.tone])} aria-hidden="true" />
                   {l.name}

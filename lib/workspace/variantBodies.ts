@@ -25,6 +25,6 @@ export const tourStep5Edits = {
 export const doc103Variant = {
   B1: (seed: string) => replaceOnce(seed, "1 business day", "2 business days"),
   B2: (seed: string) => replaceOnce(seed, B2_FROM, B2_TO),
-  B3: (_seed: string) => B3_BODY,
+  B3: () => B3_BODY,
   B5: (seed: string) => replaceOnce(seed, "Effective 27 Oct 2026.", "Effective 1 Jan 2030."),
 };

@@ -62,11 +62,11 @@ export async function handleSeed(query: { role?: string | null }): Promise<Handl
 }
 
 /** POST /api/check */
-export async function handleCheck(body: unknown, deps: CheckDeps): Promise<HandlerResponse> {
+export async function handleCheck(body: unknown, deps: CheckDeps, opts: { noCustomerMessage?: boolean } = {}): Promise<HandlerResponse> {
   const parsed = CheckBody.safeParse(body);
   if (!parsed.success) return badRequest(parsed.error);
   try {
-    return { status: 200, body: await runCheck(parsed.data, deps) };
+    return { status: 200, body: await runCheck({ ...parsed.data, ...opts }, deps) };
   } catch (e) {
     return failure(e);
   }

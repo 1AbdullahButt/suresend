@@ -24,10 +24,13 @@ export const reversalWindow = {
   subject: "the reversal timeline",
   confirming: "the exact reversal timeline",
   coverage: "when the money from a failed transfer comes back",
+  asks: /\b(?:money|funds?|cash|amount|balance)\b[^.!?\n]{0,40}\b(?:back|return(?:ed|s)?|gone)\b|\b(?:come|comes|coming|get|getting|got|be) (?:it )?back\b|\brefund|\brevers(?:e|ed|al)\b|\bhow long\b|\bwhen (?:will|do|can|does|is)\b/i,
+  noValue: "gives no number",
   prompt: {
     taxonomy: `- "reversal_window": how long it takes for a FAILED transfer's money to be reversed/refunded/returned to the customer.`,
     about: "the reversal window",
     draftRule: `A promise about when money from a failed transfer comes back (refund, reversal, "back in your wallet", "your money will be back") is "reversal_window".`,
+    vagueRule: `A vague promise about when that money comes back, with no number ("after the weekend", "before the week is out"), is still "reversal_window": value null, valueText the words as written.`,
   },
   patterns: [
     {

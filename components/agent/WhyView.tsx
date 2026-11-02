@@ -113,7 +113,7 @@ export function WhyView({ result, onBack, onTrace }: { result: CheckResult; onBa
           <section key={c.key} className={s.claimCard} aria-labelledby={`why-claim-${i}`}>
             <div className={s.claimCardHead}>
               <h4 id={`why-claim-${i}`} className={s.claimCardTitle}>
-                {c.label}: “{c.says}”
+                {c.label}: {c.quoted ? `“${c.says}”` : c.says}
               </h4>
               <span className={cx(s.replyPill, PILL[c.tone])}>{c.name}</span>
             </div>

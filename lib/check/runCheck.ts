@@ -122,7 +122,7 @@ function combineInfo(infos: AiRunInfo[], draftFailed: boolean): AiRunInfo {
 export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<CheckResult> {
   const ticketSeed = seedTickets().find((t) => t.id === input.ticketId);
   if (!ticketSeed) throw new CheckInputError(`Unknown ticket ${input.ticketId}`, 404);
-  const ticket: DecideTicket = { id: ticketSeed.id, rail: input.rail };
+  const ticket: DecideTicket = { id: ticketSeed.id, rail: input.rail, ...(input.noCustomerMessage ? {} : { message: ticketSeed.message }) };
   const now = input.decisionTime ? new Date(input.decisionTime) : (deps.now?.() ?? new Date());
   if (Number.isNaN(now.getTime())) throw new CheckInputError("Invalid decisionTime", 400);
 
@@ -215,9 +215,10 @@ function recheck(
 
 /**
  * SPEC §6.7 says the AI reply's recheck must be ALLOW or CAUTION. A CAUTION that means "couldn't understand the reply"
- * (EXTRACTION_GAP, OUTSIDE_COVERAGE, UNSUPPORTED, UNIT_MISMATCH, HEDGED_CONTRADICTION) is not accepted (D-012.6).
+ * (EXTRACTION_GAP, OUTSIDE_COVERAGE, UNSUPPORTED, UNIT_MISMATCH, HEDGED_CONTRADICTION) is not accepted (D-012.6). TOPIC_GAP is:
+ * the reply was understood, and the customer's other question was missing from the draft too (D-045).
  */
-const ACCEPTED_CAUTION = new Set(["WEAK_BASIS", "CHANGE_SIGNALLED", "SOURCE_UNREAD"]);
+const ACCEPTED_CAUTION = new Set(["WEAK_BASIS", "CHANGE_SIGNALLED", "SOURCE_UNREAD", "TOPIC_GAP"]);
 const isAcceptable = (r: { decision: string; reasonCode: string }) =>
   r.decision === "ALLOW" || (r.decision === "CAUTION" && ACCEPTED_CAUTION.has(r.reasonCode));
 
@@ -227,12 +228,13 @@ interface GovernedClaim {
   wrong: boolean;
 }
 
-/** Contradicts the governing value: Hold, a hedged contradiction, or other units. These are the claims a reply fixes. */
-const WRONG = new Set<ReasonCode>(["CONTRADICTS_GOVERNING", "HEDGED_CONTRADICTION", "UNIT_MISMATCH"]);
+/** Contradicts the governing value (Hold, a hedged contradiction, other units) or gives none (D-046). These are the claims a reply fixes. */
+const WRONG = new Set<ReasonCode>(["CONTRADICTS_GOVERNING", "HEDGED_CONTRADICTION", "UNIT_MISMATCH", "UNSUPPORTED"]);
 
 function governedClaims(claims: ClaimResult[]): GovernedClaim[] {
   return claims
-    .filter((c): c is GovernedClaim["claim"] => c.governing !== null && isCovered(c.draftClaim.topic))
+    // A topic-gap entry isn't words in the reply, so there's nothing in it to fix or keep (D-045).
+    .filter((c): c is GovernedClaim["claim"] => c.governing !== null && isCovered(c.draftClaim.topic) && c.reasonCode !== "TOPIC_GAP")
     .map((c) => ({ claim: c, wrong: WRONG.has(c.reasonCode) }));
 }
 

@@ -11,7 +11,7 @@ const TABS: Array<{ id: Tab; label: string }> = [
 ];
 
 /**
- * The Slite Agent card (design v2): two tabs, Check and Docs. A normal card at ≥1100 px, a slide-over below that and a
+ * The SureSend card (design v2): two tabs, Check and Docs. A normal card at ≥1100 px, a slide-over below that and a
  * bottom sheet under 700 px. In overlay modes focus moves in when it opens, Tab is trapped and Esc closes it.
  */
 export function AgentCard({
@@ -77,15 +77,15 @@ export function AgentCard({
   };
 
   return (
-    <aside ref={ref} className={cx(s.agent, open && s.agentOpen)} aria-label="Slite Agent" onKeyDown={onKey} data-tour="agent">
+    <aside ref={ref} className={cx(s.agent, open && s.agentOpen)} aria-label="SureSend" onKeyDown={onKey} data-tour="agent">
       <div className={s.head}>
         <span className={s.grab} aria-hidden="true" />
         <h2 className={s.who}>
           <Mark small check={false} />
-          Slite Agent
+          SureSend
         </h2>
         <div className={s.headActions}>
-          <div className={s.tabs} role="tablist" aria-label="Slite Agent views">
+          <div className={s.tabs} role="tablist" aria-label="SureSend views">
             {TABS.map((t, i) => (
               <button
                 key={t.id}
@@ -106,7 +106,7 @@ export function AgentCard({
               </button>
             ))}
           </div>
-          <button type="button" className={cx(ui.round, s.close)} aria-label="Close Slite Agent" onClick={onClose}>
+          <button type="button" className={cx(ui.round, s.close)} aria-label="Close SureSend" onClick={onClose}>
             <X aria-hidden="true" />
           </button>
         </div>

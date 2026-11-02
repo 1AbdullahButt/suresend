@@ -55,6 +55,8 @@ export function recheckNote(re: DecideOutput, sources: Source[]): string | undef
       const title = sources.find((s) => s.id === id)?.title;
       return title ? `${title} couldn't be read` : "a doc couldn't be read";
     }
+    case "TOPIC_GAP":
+      return "it doesn't answer what the customer asked";
     default:
       return "the rules can't fully confirm it";
   }
