@@ -3,7 +3,7 @@
 //   pnpm build && pnpm tsx scripts/record-demo.ts
 import { chromium, type Page } from "@playwright/test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { copyFileSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const PORT = 3400;

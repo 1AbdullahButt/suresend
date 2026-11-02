@@ -1515,3 +1515,84 @@ vague-monday-less-charge [TCK-9001 instant] HOLD/CONTRADICTS_GOVERNING (Hold, AI
 vague-unknown-rail [TCK-9002 unknown] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
 vague-next-week [TCK-9003 standard] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
 ```
+
+**The same tests after the fix.**
+```
+$ pnpm vitest run lib/check/vagueReply.test.ts lib/client/copyRules.test.ts
+ Test Files  2 passed (2)
+      Tests  50 passed (50)
+```
+**The repro after the fix, live on Groq, new prompt.** Two claims, each with the docs' value; the rule D0e net sits under it for a reading with 0 claims.
+```
+vague-repro [TCK-9001 instant] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: Nothing to do on your side: the reversal is automatic and you'll see it reflected after the weekend, minus the processing charge.
+  claim: reversal_window "you'll see it reflected after the weekend" value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  claim: fee_refund "minus the processing charge" value=null → CAUTION/UNSUPPORTED, docs say refunded
+  card:  Your reply is vague on this. Your docs say 1 business day; your reply gives no number.
+vague-week-out [TCK-9001 instant] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: No action needed from you. The money lands back in your wallet before the week is out.
+  claim: reversal_window "The money lands back in your wallet before the week is out." value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  card:  Your reply is vague on this. Your docs say 1 business day; your reply gives no number.
+vague-very-soon [TCK-9003 standard] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: All sorted on our end, the refund is on its way and will show up very soon.
+  claim: reversal_window "the refund is on its way and will show up very soon" value=null → CAUTION/UNSUPPORTED, docs say 4 business days
+  card:  Your reply is vague on this. Your docs say 4 business days; your reply gives no number.
+vague-monday-less-charge [TCK-9001 instant] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: You can relax, the funds return on their own by Monday, less the small charge for the transfer.
+  claim: reversal_window "the funds return on their own by Monday" value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  claim: fee_refund "less the small charge for the transfer" value=null → CAUTION/UNSUPPORTED, docs say refunded
+  card:  Your reply is vague on this. Your docs say 1 business day; your reply gives no number.
+vague-unknown-rail [TCK-9002 unknown] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: Hang tight, the bank sends these back on its own schedule and it never takes long.
+  claim: reversal_window "the bank sends these back on its own schedule and it never takes long" value=null → CAUTION/UNSUPPORTED
+  card:  Your reply is vague on this. Your docs don't give one answer for this ticket; your reply gives no number.
+vague-next-week [TCK-9003 standard] CAUTION/UNSUPPORTED (Double-check, AI live)
+  reply: Your balance gets topped up again early next week.
+  claim: reversal_window "Your balance gets topped up again early next week." value=null → CAUTION/UNSUPPORTED, docs say 4 business days
+  card:  Your reply is vague on this. Your docs say 4 business days; your reply gives no number.
+```
+**The 68 saved results**, against Phase 10's snapshot, on the re-recorded responses. The 12 extra rows are the vague cases, which have no earlier value.
+```
+80 results → evals/snapshots/phase11.json (0 not on saved responses)
+Compared with evals/snapshots/after.json: 66 identical, 2 different, 0 missing.
+golden no-claim (support_agent)
+  before: ALLOW/NO_POLICY_CLAIM [] suggestion none
+  after:  CAUTION/TOPIC_GAP [reversal_window:CAUTION/TOPIC_GAP] suggestion none
+golden no-claim (ops_lead)
+  before: ALLOW/NO_POLICY_CLAIM [] suggestion none
+  after:  CAUTION/TOPIC_GAP [reversal_window:CAUTION/TOPIC_GAP] suggestion none
+```
+Outside those 68 (`record` checks them against their expected results): the fee cases `fee-correct` and `fee-unknown-rail` and the preset `usman-fee-only` also go from Good to send to
+Double-check, for the same reason. `pnpm record`: 46 saved responses, Unexpected: 0.
+
+**Browser, on a saved-mode build at http://127.0.0.1:3100.** Scratch checks; the Phase 10 scripts had their strings updated for the rename and nothing else.
+```
+p11-ui-check (repro, sent card, actor, slide-over at 700/900/1099): pass=26 fail=0
+p11-offer (Not now at 1440/900/390, X, blocked storage): pass=25 fail=0
+p10-ui: pass=46 fail=0
+step5-ayesha: pass=43 fail=0
+mcp-menu: pass=31 fail=0
+step6-phone-fix: pass=12 fail=0
+tour-step6: pass=29 fail=0
+tour-menu: pass=231 fail=0
+$ pnpm mcp:e2e http://127.0.0.1:3100/api/mcp
+ALL PASS
+$ pnpm tsx scripts/ui-audit.ts
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+```
+**The tour offer before the fix, on production.** It held everywhere except with storage blocked.
+```
+PASS storage blocked: gone after Not now
+FAIL storage blocked: stays gone after a reload
+FAIL storage blocked: stays gone after leaving and coming back
+2 FAILED
+```
+**Evals on Groq, 3 runs, prompt `2026-11-02.5`, published as they came.** Golden 75/75, quotes 105/105, fields 170/180, gate PASS. Held-out clean 46/48, fee 10/12, vague 9/9, quotes 98/98.
+Exposed 16/18. Misses: H18 1/3 (the known unstable hedge, errs strict), H14 2/3, H11 1/3. H11 is new: "the transfer charge stays with us" read as vague on 2 of 3, so Double-check, not Hold.
+The first held-out run stopped at 29 of 66 on four Groq timeouts in a row; the guard scored nothing from that call and the rerun continued.
+
+**Locked paths and the e2e.** `e2e/demo.spec.ts` asserts "Held by Slite Agent" and "Sent · checked by Slite Agent", which P0-3 removes. `e2e/` is locked, so it hasn't been touched. A scratch
+copy with only those 3 lines changed passes (1 passed). The change needs Abdullah's one-time unlock, as in D-026.
+
+**How the loop ran.** Builder and tester work was done in this session. QA is an independent subagent.
+

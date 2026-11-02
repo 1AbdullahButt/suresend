@@ -859,7 +859,7 @@ the sent card said "Ayesha got the right answer."
   gap entry is never in the facts a reply is built from. So a corrected fee-only reply on these tickets rechecks as Double-check, and the UI and MCP
   say why ("it doesn't answer what the customer asked").
 - **Prompt `2026-11-02.5`, draft side only.** Vague wording on a covered topic is a claim with no value, with the three examples from the brief.
-  Follow-up promises stay non-claims even when they name the topic. Rewritten in the topic files; `SOURCE_SYSTEM` is unchanged.
+  Follow-up promises stay non-claims even when they name the topic. The wording is in the topic files; `SOURCE_SYSTEM` is unchanged.
 - **Copy.** The sent card says "Sent. Nothing in the docs contradicted it." and "got the right answer" and "never reached" are gone, enforced by
   `lib/client/copyRules.test.ts`. Two additions the brief didn't name, same reason: a send past a Double-check says "Sent with your OK." because the
   docs may well have disagreed (a hedged contradiction is a Double-check), and a no-claim Allow says "No policy promise here", not "Your reply is right".

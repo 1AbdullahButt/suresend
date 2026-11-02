@@ -5,9 +5,11 @@ import { describe, expect, it } from "vitest";
 import { handleSend } from "@/lib/check/handlers";
 import { runCheck } from "@/lib/check/runCheck";
 import { decide } from "@/lib/engine/decide";
+import { topicsAsked } from "@/lib/topics";
 import { sentCopy, summarize, traceRows, whyModel } from "@/lib/client/outcome";
 import { checkReply } from "@/lib/mcp/tools";
 import { ESCALATE_TEMPLATE } from "@/lib/replies/templates";
+import { seedTickets } from "@/lib/workspace/seed";
 import { seedBody } from "@/lib/workspace/variants";
 import type { AiRunInfo, CheckDeps, DraftClaim, Rail, Source, SourceClaim } from "@/lib/engine/types";
 
@@ -230,6 +232,13 @@ describe("the topic gap stays narrow", () => {
     sources: { "DOC-101": { ok: true as const, claims: sourceClaims("DOC-101") } },
   });
   const now = new Date(NOW);
+
+  it("what a customer is asking: every seed ticket asks about the timeline; timing words alone don't count", () => {
+    for (const t of seedTickets()) expect(topicsAsked(t.message), t.id).toEqual(["reversal_window"]);
+    expect(topicsAsked("When will my card arrive?")).toEqual([]);
+    expect(topicsAsked("How long is the app down for?")).toEqual([]);
+    expect(topicsAsked("Do I get the transfer fee back?")).toContain("fee_refund");
+  });
 
   it("a question on no covered topic asks nothing of the reply", () => {
     const out = decide(ex("Thanks, updated.", []), [doc], t("Can I change the email on my account?"), now);
