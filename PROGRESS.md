@@ -1820,3 +1820,37 @@ D:/Project/slite [phase-11]
 ```
 GATE: PASSED
 
+**Deployed, second round, live checks.** Merged to `main` at 899f58d.
+```
+repro /api/check: 200 HOLD/CONTRADICTS_GOVERNING, ai saved, prompt 2026-11-02.6
+  reversal_window "you'll see it reflected after the weekend" value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  fee_refund "minus the processing charge" value={"flag":false} → HOLD/CONTRADICTS_GOVERNING, docs say refunded
+  headline: Hold: the transfer fee is refunded for instant-rail transfers (Outgoing Transfers: Reversal SOP). The draft says it's not refunded.
+repro /api/send, no OK: 409 
+repro /api/send, with OK: 409 sent=undefined
+noCustomerMessage in the body: 200 CAUTION/UNSUPPORTED
+Usman's preset: 200 ESCALATE, suggestion check ALLOW: "Thanks for your patience. I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it. The transfe
+Usman's holding reply /api/send: 200 sent=true, recorded: ["OWN_HOLDING_SENTENCE"]
+
+404 page: 404, 1 line(s) with the disclaimer
+p11-ui-check (live): exit 1 pass=41 fail=2
+FAIL 404 at 1440: the link goes back to the demo
+FAIL 404 at 390: the link goes back to the demo
+p11-offer (live): exit 0 pass=27 fail=0
+p10-ui (live): exit 0 pass=46 fail=0
+step5-ayesha (live): exit 0 pass=43 fail=0
+mcp-menu (live): exit 0 pass=31 fail=0
+step6-phone-fix (live): exit 0 pass=12 fail=0
+tour-step6 (live): exit 0 pass=29 fail=0
+tour-menu (live): exit 0 pass=231 fail=0
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+PASS check_reply two claims on TCK-9001: Hold [reversal window: Good to send; fee refund: Hold], suggestion keeps "1 business day" (ai_mode saved)
+ALL PASS
+```
+The 2 fails above were my check, not the page: it waited for the footer, which the 404 page already has, so it looked before the navigation finished. Waiting for the navigation itself:
+```
+PASS 1440: status 404, disclaimer ×1, the link lands on https://suresend-demo.vercel.app/
+PASS 390: status 404, disclaimer ×1, the link lands on https://suresend-demo.vercel.app/
+```
+**Still open:** Gemini's rerun on `2026-11-02.6`, scheduled for 08:07 UTC on 3 Nov, in its own commit.
+
