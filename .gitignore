@@ -23,3 +23,6 @@ evals/.in-progress/
 .agents/
 .codex/
 AGENTS.md
+
+# Claude Code scheduling lock, local to this machine
+.claude/scheduled_tasks.lock
