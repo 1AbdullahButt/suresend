@@ -1741,3 +1741,17 @@ property="og:image" content="https://suresend-demo.vercel.app/og.png"
 | H18-fee-hedged-no | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 6<br>Hold (CONTRADICTS_GOVERNING): 4 | 6/10 | 4 | 0 |
 | H20-vague-mid-month | Double-check (UNSUPPORTED) | Double-check (UNSUPPORTED): 10 | 10/10 | 0 | 0 |
 
+QA on this addendum: CHANGES_REQUIRED, then APPROVED at 6aacd6c. Its major: Abdullah's sentence wasn't true as written, since `decide()` also takes the ticket and the time. "On the same ticket at the same time" was added, and D-051 says that's his to overrule. Left as is: the tour's "SureSend reads your docs live" (from before this work, and not this claim).
+
+**Deployed, live:**
+```
+PASS how-it-works has: on the same ticket at the same time, the same AI findings and the same docs always produce the same decision
+PASS how-it-works has: gave the expected verdict on 36 of 40 runs
+PASS how-it-works has: That the same reply always gets the same verdict
+PASS how-it-works no longer has: demo path is stable
+PASS MCP tool description says the AI reads the reply and the docs
+PASS MCP tool description asks for ticket_id
+PASS the repro on production: CAUTION/UNSUPPORTED
+```
+**Still open:** Gemini's rerun on the final rules (its daily limit, retry after about 08:00 UTC on 3 Nov), in its own commit, with `--provider gemini`.
+
