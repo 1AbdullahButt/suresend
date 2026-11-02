@@ -935,3 +935,12 @@ DECISIONS.md with the before/after diff, and show me that e2e/ is re-locked befo
 ```
 - **The re-lock, proven:** a real edit attempt on the file blocked by the hook, with the output in PROGRESS.md.
 
+### D-051 · What determinism actually covers, and how often hedged verdicts move (Abdullah's request, 2026-11-02)
+- **The accurate claim:** the same AI findings and the same docs always produce the same decision. Not "same reply, same verdict": the AI reads the reply, and it can read the same words differently on another run, even at
+  temperature 0. H18 shows it, and D-045's repro does too, read as 0 claims on production and as a contradiction on 5 fresh calls.
+- **Wording.** Nothing said "same reply, same verdict" outright, so I fixed what implied it. "The AI only read the docs" (tour, panel, MCP tool description, the private video script) now says it reads the reply and the docs. README states the claim at
+  step 3 and under "AI vs rules", and "the demo path is stable" became "works". `copyRules.test.ts` bans the old phrase. `SPEC.md` and the brief are locked and weren't checked for this; decisions and progress logs stay as written.
+- **The rate.** `scripts/hedge-runs.ts`, separate from the eval so it can't overwrite the held-out report. It refuses to run if the prompts differ from the freeze. "Hedged held-out case" means H2, H14, H18 and H20: the ones whose expected reason is
+  HEDGED_CONTRADICTION, plus H20, whose "normally… around" is hedged and has no number. `fee-hedged` is in the golden set, so it's out. A miss counts as strict if it's still Hold or Double-check, unsafe if it's Good to send.
+- **Result, Groq, 10 runs each:** 36 of 40 as expected, 4 strict (all H18, a Hold, because the AI read the hedge as definite), 0 unsafe. The README gives the limit with the rate: four sentences in one sitting, and 0 of 40 can't rule out a rate of about 7% (the rule of three, 3/40), even if runs are independent, which they may not be.
+

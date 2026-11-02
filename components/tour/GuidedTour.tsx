@@ -56,7 +56,7 @@ const STEPS: Step[] = [
     title: "Why it's on hold",
     body: (
       <>
-        The AI only read the docs and quoted them. <b>Fixed rules</b> made the call: the instant-rail exception says it replaces the SOP for
+        The AI read the reply and the docs, and quoted them. <b>Fixed rules</b> made the call: the instant-rail exception says it replaces the SOP for
         instant transfers, so its 1 business day applies. The SOP is verified too, but verified or newer never breaks a tie.
       </>
     ),

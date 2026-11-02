@@ -1,0 +1,107 @@
+{
+  "provider": "groq",
+  "model": "openai/gpt-oss-120b",
+  "promptVersion": "2026-11-02.5",
+  "runs": 10,
+  "startedAt": "2026-11-02T17:22:09.310Z",
+  "finishedAt": "2026-11-02T17:38:04.220Z",
+  "providerRetries": 0,
+  "rows": [
+    {
+      "id": "H2-hedged",
+      "exposed": false,
+      "expected": "Double-check (HEDGED_CONTRADICTION)",
+      "total": 10,
+      "right": 10,
+      "unsafe": 0,
+      "couldnt": 0,
+      "strict": 0,
+      "verdicts": [
+        {
+          "verdict": "Double-check (HEDGED_CONTRADICTION)",
+          "count": 10
+        }
+      ],
+      "readings": [
+        {
+          "reading": "reversal_window {\"amount\":4,\"unit\":\"business_days\"} hedged",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "H14-fee-hedged-no",
+      "exposed": true,
+      "expected": "Double-check (HEDGED_CONTRADICTION)",
+      "total": 10,
+      "right": 10,
+      "unsafe": 0,
+      "couldnt": 0,
+      "strict": 0,
+      "verdicts": [
+        {
+          "verdict": "Double-check (HEDGED_CONTRADICTION)",
+          "count": 10
+        }
+      ],
+      "readings": [
+        {
+          "reading": "fee_refund {\"flag\":false} hedged",
+          "count": 10
+        }
+      ]
+    },
+    {
+      "id": "H18-fee-hedged-no",
+      "exposed": false,
+      "expected": "Double-check (HEDGED_CONTRADICTION)",
+      "total": 10,
+      "right": 6,
+      "unsafe": 0,
+      "couldnt": 0,
+      "strict": 4,
+      "verdicts": [
+        {
+          "verdict": "Double-check (HEDGED_CONTRADICTION)",
+          "count": 6
+        },
+        {
+          "verdict": "Hold (CONTRADICTS_GOVERNING)",
+          "count": 4
+        }
+      ],
+      "readings": [
+        {
+          "reading": "fee_refund {\"flag\":false} hedged",
+          "count": 6
+        },
+        {
+          "reading": "fee_refund {\"flag\":false} definite",
+          "count": 4
+        }
+      ]
+    },
+    {
+      "id": "H20-vague-mid-month",
+      "exposed": false,
+      "expected": "Double-check (UNSUPPORTED)",
+      "total": 10,
+      "right": 10,
+      "unsafe": 0,
+      "couldnt": 0,
+      "strict": 0,
+      "verdicts": [
+        {
+          "verdict": "Double-check (UNSUPPORTED)",
+          "count": 10
+        }
+      ],
+      "readings": [
+        {
+          "reading": "reversal_window null hedged",
+          "count": 10
+        }
+      ]
+    }
+  ]
+}

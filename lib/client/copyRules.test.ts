@@ -25,7 +25,8 @@ function visible(file: string): string {
 }
 
 describe("copy rules", () => {
-  it.each(["got the right answer", "never reached", "your reply is right"])("nothing says %s", (phrase) => {
+  // "The AI only read the docs" implies the same reply always gets the same verdict; the AI reads the reply too (D-051).
+  it.each(["got the right answer", "never reached", "your reply is right", "only read the docs"])("nothing says %s", (phrase) => {
     expect(FILES.filter((f) => visible(f).toLowerCase().includes(phrase)).map(rel)).toEqual([]);
   });
 

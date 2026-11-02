@@ -1728,3 +1728,16 @@ og.png 200, demo.gif 200
 property="og:image" content="https://suresend-demo.vercel.app/og.png"
 ```
 
+**After the merge: hedged cases × 10 on Groq, and the determinism wording (D-051).** Abdullah's request, on the frozen prompts. Full report: `evals/hedge-runs.md`.
+
+**All 4 cases:** 36 of 40 as expected · 4 strict misses (Hold or Double-check, wrong reason) · 0 unsafe (Good to send) · 0 couldn't be checked.
+
+**Clean cases only (3; H14 is exposed):** 26 of 30 as expected · 4 strict misses (Hold or Double-check, wrong reason) · 0 unsafe (Good to send) · 0 couldn't be checked.
+
+| Case | Expected | Verdicts | As expected | Strict misses | Unsafe |
+|---|---|---|---|---|---|
+| H2-hedged | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 10 | 10/10 | 0 | 0 |
+| H14-fee-hedged-no (exposed) | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 10 | 10/10 | 0 | 0 |
+| H18-fee-hedged-no | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 6<br>Hold (CONTRADICTS_GOVERNING): 4 | 6/10 | 4 | 0 |
+| H20-vague-mid-month | Double-check (UNSUPPORTED) | Double-check (UNSUPPORTED): 10 | 10/10 | 0 | 0 |
+

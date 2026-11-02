@@ -125,7 +125,7 @@ export function WhyView({ result, onBack, onTrace }: { result: CheckResult; onBa
       )}
 
       <div className={s.whyFoot}>
-        <p className={s.note}>AI read the docs. Fixed rules made the call.</p>
+        <p className={s.note}>AI read the reply and the docs. Fixed rules made the call.</p>
         <button type="button" className={s.linkBtn} onClick={onTrace}>
           See the full rule trace
         </button>

@@ -24,7 +24,7 @@ A support agent writes a reply. When they press Send, SureSend checks it first:
 
 1. It pulls the factual claims out of the draft (live AI).
 2. It finds the matching claims in the team's messy docs and Slack (live AI, every quote validated as verbatim).
-3. It weighs those sources with transparent, deterministic rules.
+3. It weighs those sources with transparent, deterministic rules: the same AI findings and the same docs always produce the same decision.
 4. It returns **Good to send** (Allow), **Double-check** (Caution), **Hold** or **Ask first** (Escalate), plus a rechecked
    suggested reply and the full reasoning.
 
@@ -116,6 +116,8 @@ proposal over MCP with `propose_doc_fix`, which applies nothing.
 
 **The AI never decides the outcome.** The decision is a pure function, `decide(extractions, sources, ticket, now)` in
 [`lib/engine/decide.ts`](lib/engine/decide.ts). Every rule writes a trace entry, shown in the SureSend card's Why and Trace views.
+The same AI findings and the same docs always produce the same decision. That isn't the same as "same reply, same verdict": the AI can read the
+same words differently from one run to the next, even at temperature 0, and a different reading can get a different verdict (see Limitations).
 "The AI found nothing" is never treated as "safe": a deterministic policy-pattern detector catches timelines the AI missed,
 an unreadable source caps the result at Caution, and a reply that leaves the customer's question open is a Double-check, because
 staying silent isn't the same as being right. Sending says what happened ("Sent. Nothing in the docs contradicted it."), never
@@ -241,16 +243,17 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 355 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 356 passed |
 | `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 66 of 68 identical. The other 2 are the no-claim reply (both personas), now a Double-check by rule D0e |
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs × 2 providers | see below |
 | `pnpm eval --heldout` | 16 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
+| `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the frozen prompts | 36/40 as expected; 4 strict misses; 0 Good to send |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
-**Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
+**Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path works, not
 that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.5`):
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
@@ -299,8 +302,8 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 
 **Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On one
 frozen prompt, Groq returned Hold on all 3 runs of one session and Double-check on all 3 of the next, and nothing was tuned between them
-([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On this prompt it's 1 of 3, then 2 of 3. H14, its
-exposed twin, has gone 3/3, 2/3, 3/3 and 3/3. A miss here errs strict: the reply is stopped, not let through.
+([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On this prompt it's 1 of 3, then 2 of 3, then 6 of 10
+([hedge runs](evals/hedge-runs.md)). H14, its exposed twin, has gone 3/3, 2/3, 3/3, 3/3 and 10/10. A miss here errs strict: the reply is stopped, not let through.
 
 **Marking vague fee wording as valueless has a cost.** H11 says "the transfer charge stays with us", a plain "not refunded". On the earlier
 prompt Groq held it on all 3 runs of its last session. On this one it read the charge as vague on 2 of 6 runs (1 of 3 right, then 3 of 3), so those get a Double-check, not a
@@ -339,6 +342,7 @@ pnpm dev
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
+| `pnpm tsx scripts/hedge-runs.ts` | The hedged held-out cases, 10 runs each on Groq: verdict distribution, strict and unsafe misses → `evals/hedge-runs.md` (report only) |
 | | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit or an outage (exit code 3) without changing that provider's report. A provider error gives no answer, so it's retried and never scored. Re-running an eval continues it: finished cases keep their results, and a provider that already finished isn't run again (`--fresh` forces it) |
 | `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc. Built aside; replaces the folder only if it finishes with nothing unexpected |
 | `pnpm record --resume` | Continues a recording that stopped on a quota limit |
@@ -390,7 +394,10 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
 - The eval is small and built around one scenario; the held-out set (16 clean cases) is a first check on generalisation, not proof.
-- A hedge the prompt doesn't list can read as definite: "As far as I can tell" came back Hold, not Double-check, on 6 of 12 Groq runs (H18).
+- **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq with the frozen prompts, the four hedged held-out cases gave the expected verdict on 36 of
+  40 runs. The other 4 were strict and none was Good to send: all 4 are H18, whose "As far as I can tell" the AI read as definite, so it got a Hold, not a Double-check. H2, H14 and H20
+  were right 10 of 10. That's four sentences at temperature 0 in one sitting, so 0 unsafe in 40 doesn't prove never: even if the runs were independent, a rate up to about 7% could go unseen. See
+  [evals/hedge-runs.md](evals/hedge-runs.md). Over every Groq session on the last two prompts, H18 is a Hold on 10 of 22 runs.
 
 ## What not to claim
 

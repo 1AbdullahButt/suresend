@@ -68,7 +68,7 @@ It returns a decision and a next_step; follow the next_step:
 
 ${COVERAGE}
 
-Pass ticket_id from list_tickets; its payment rail is used unless you pass rail. With neither, the rail is treated as unknown. The AI reads the docs and drafts the suggested reply; fixed rules make every decision and recheck that reply, and governing and rules_that_mattered show why. ${DEMO_NOTE}`,
+Pass ticket_id from list_tickets; its payment rail is used unless you pass rail. With neither, the rail is treated as unknown. The AI reads the reply and the docs, and drafts the suggested reply; fixed rules make every decision and recheck that reply, and governing and rules_that_mattered show why. ${DEMO_NOTE}`,
       inputSchema: CheckReplyInput,
       outputSchema: CheckReplyOutput,
       annotations: READ_ONLY,
