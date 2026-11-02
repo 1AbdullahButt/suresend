@@ -4,7 +4,9 @@
 a no-claim draft and the fee cases), each run 3× per provider, prompt version `2026-11-02.4`. The gate is the canonical tickets plus
 B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this prompt version are listed and used for selection.
 
-**Selection:** `AI_PROVIDER=groq`. Only groq passed the gate.
+**Selection:** `AI_PROVIDER=groq`. Only groq has a complete report on this prompt so far.
+
+Not finished on this prompt: gemini.
 
 ## groq · `openai/gpt-oss-120b`
 

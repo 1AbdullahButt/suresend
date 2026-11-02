@@ -82,8 +82,11 @@ function publishRecording(used: Set<string>): void {
   }
   // Moved aside first, so a failed swap leaves the old folder in place, never a partial one.
   const old = `${AI_CACHE_DIR}.old`;
-  rmSync(old, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
-  renameSync(AI_CACHE_DIR, old);
+  // If the folder is missing, a killed swap left the good copy in .old: keep it until the new one is in place.
+  if (existsSync(AI_CACHE_DIR)) {
+    rmSync(old, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+    renameSync(AI_CACHE_DIR, old);
+  }
   try {
     renameSync(RECORDING_DIR, AI_CACHE_DIR);
   } catch (e) {

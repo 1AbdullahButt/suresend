@@ -11,8 +11,8 @@ export const QUOTA_STOP_EXIT = 3;
 const MINUTE_RETRIES = 6;
 /** A longer wait than this isn't a per-minute limit, whatever the message calls it. */
 const MAX_WAIT_MS = 5 * 60_000;
-/** This many provider errors in a row is an outage or a spend limit, not a bad call: a report from it would mean nothing. */
-const OUTAGE_STREAK = 5;
+/** A provider error gives no answer to score, so the call gets these retries, then the run stops: an outage never becomes a score. */
+const PROVIDER_RETRY_WAITS_MS = [30_000, 60_000, 120_000];
 /** What one real call costs on Groq, measured on the saved-response runs. */
 const TOKENS_PER_CALL = 1_600;
 const GROQ_DAILY_TOKENS = 200_000;
@@ -27,37 +27,47 @@ function waitText(ms: number): string {
 }
 
 export function describeQuota(provider: string, hit: QuotaHit | undefined): string {
-  const limit = hit?.window === "day" ? "daily limit" : hit?.window === "minute" ? "per-minute limit" : "rate limit";
+  const limit = hit?.window === "day" ? "daily limit" : hit?.window === "minute" ? "per-minute limit" : hit?.window === "spend" ? "spend limit" : "rate limit";
   const figures = hit?.detail ? ` (${hit.detail})` : "";
   const wait = hit?.retryAfterMs ? `; the provider says to retry in ${waitText(hit.retryAfterMs)}` : "";
   return `${provider} ${limit} reached${figures}${wait}`;
 }
 
 /**
- * Wraps a script's AI steps. A per-minute limit waits and retries. A daily limit, a limit that outlasts the retries, or an
- * outage calls `stop` at once. Other AI errors are logged and rethrown: they count as that step's real result.
+ * Wraps a script's AI steps. A per-minute limit waits and retries. A provider error (an outage, a timeout) has no answer to
+ * score, so it retries a few times and then stops, and a daily or spend limit stops at once: the step in progress is never
+ * recorded. Only an answer the model actually gave, even an invalid one, comes back as that step's result.
  */
 export function createGuard(
   provider: string,
   stop: (why: string) => never,
   sleep: (ms: number) => Promise<unknown> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  onProviderRetry?: () => void,
 ) {
-  let failures = 0;
   return async function guard<T>(fn: () => Promise<T>): Promise<T> {
-    for (let attempt = 0; ; attempt++) {
+    let limitWaits = 0;
+    let providerRetries = 0;
+    for (;;) {
       try {
-        const out = await fn();
-        failures = 0;
-        return out;
+        return await fn();
       } catch (e) {
         if (!(e instanceof AiTaskError)) throw e;
+        if (e.kind === "provider_error") {
+          process.stderr.write(`  AI error (${e.kind}): ${e.message}\n`);
+          const wait = PROVIDER_RETRY_WAITS_MS[providerRetries];
+          if (wait === undefined) return stop(`${provider} kept failing on one call, so nothing from it was scored (${e.message})`);
+          providerRetries++;
+          onProviderRetry?.();
+          await sleep(wait);
+          continue;
+        }
         if (e.kind !== "paused") {
           process.stderr.write(`  AI error (${e.kind}): ${e.message}\n`);
-          if (e.kind === "provider_error" && ++failures >= OUTAGE_STREAK) stop(`${provider} failed ${failures} calls in a row (${e.message})`);
           throw e;
         }
-        const wait = e.quota?.retryAfterMs ?? 20_000 * (attempt + 1);
-        if (e.quota?.window === "day" || attempt >= MINUTE_RETRIES || wait > MAX_WAIT_MS) stop(describeQuota(provider, e.quota));
+        const wait = e.quota?.retryAfterMs ?? 20_000 * (limitWaits + 1);
+        if (e.quota?.window === "day" || e.quota?.window === "spend" || limitWaits >= MINUTE_RETRIES || wait > MAX_WAIT_MS) return stop(describeQuota(provider, e.quota));
+        limitWaits++;
         process.stderr.write(`  rate limited, waiting ${Math.ceil(wait / 1000)}s…\n`);
         await sleep(wait + 500);
       }

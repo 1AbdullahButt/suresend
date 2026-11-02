@@ -151,7 +151,7 @@ coverage, not missed), and values got their topic's wording.
 
 QA then found that the refactor had generalised the "nothing found" net too coarsely: one claim on any topic switched it
 off for the others, so a fee claim could let a missed 4-day promise through as Good to send.
-[The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3b50c916eed89e781c9118963c0fd50c50) makes the net per topic, as the spec states it for one topic. That was a one-time correction to how
+[The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3b50c916eed89e781c9118963c0fd50c50) makes the net per topic, as the spec states it for one topic. That was a one-time logic correction to how
 the rules were generalised, in `decide.ts`, and nothing in it names a topic. With one topic it's the old rule exactly. A
 second QA round found the same gap in one more place: a claim whose span was the whole sentence still vouched for the
 other topic in that sentence. [That fix](https://github.com/1AbdullahButt/suresend/commit/d8a9d61da69be3080ec0c8725f3155d86230bda5) closes it, again in `decide.ts` and again naming no topic.
@@ -224,7 +224,7 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 240 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 245 passed |
 | `snapshot-results.ts` | Every saved path's decision and reason code, before and after the fee topic: golden, tour, doc fix | 68 of 68 identical |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
@@ -238,7 +238,7 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 100% (57/57) | 100% (80/80) | 97.2% (175/180) | PASS |
-| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | | | |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | partial — paused during a Google overload on 2 Nov: 18/57 case runs so far, all correct | | | not complete |
 
 Field accuracy is below 100% because Groq read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say
 "unstated". No decision changed.
@@ -252,13 +252,13 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 | Provider · model | All clean cases | Fee cases only (H12, H17–H19) | Quote validity |
 |---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 100% (39/39) | 100% (12/12) | 100% (82/82) |
-| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | | |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | partial — paused during a Google overload on 2 Nov: not started | | |
 | Groq, first session (same prompts, before the D0b fix) | 92.3% (36/39) | 75% (9/12) | 100% (89/89, with H5) |
 
 - **The fee cases are the real evidence for the new topic.** H12 was written before any fee prompt text existed. H17–H19 were
   written after the final freeze: two claims after a doc edit, a hedge, and an amount outside coverage.
   [A test](lib/ai/heldoutIntegrity.test.ts) fails if any of the four shares a three-word phrase with the prompts, schema,
-  golden set or presets, or if the prompts change after the freeze.
+  golden set or presets, or if the system prompts or schemas change after the freeze.
 - **The timeline cases** (H1–H4, H6–H10) were written after an earlier freeze: reworded drafts ("working days", a number word, a
   hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the draft and
   a no-claim reply. They were in the repo while the fee prompts were written and already passed on earlier prompts, so they
@@ -267,7 +267,7 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 **Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On the
 same frozen prompts, Groq returned Hold on all 3 runs of the first session and Double-check on all 3 of the second. The rule
 fix between them doesn't touch this path, so that's model variance, not an improvement. H14, its exposed twin, went 3/3 then
-2/3. Runs in one session agree with each other more than sessions do, so "3 runs" isn't three independent samples. A miss here
+2/3. H18 gave the same answer on all 3 runs in each session, so those runs may not be three independent samples. A miss here
 errs strict: the reply is stopped, not let through. The first session is in commit
 [1db5346](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md), and nothing was tuned between them.
 
@@ -278,7 +278,7 @@ golden set, or shares a phrase with drafts written after them. Where it could be
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
 | Groq · `openai/gpt-oss-120b` | 94.4% (17/18) | 100% (38/38) |
-| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | partial — paused during a Google overload on 2 Nov: not started | |
 
 Read it for what it is: 13 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
 conventions the project adopted: "4 days" without "business" means calendar days (H5, now exposed); a signalled change is compared on the
@@ -300,8 +300,7 @@ pnpm dev
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
-| | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit (exit code 3) without changing a report. Re-running an eval continues it with the same answers |
-| | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit or an outage (exit code 3) without changing that provider's report. Re-running an eval continues it: finished cases keep their results, and a provider that already finished isn't run again (`--fresh` forces it) |
+| | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit or an outage (exit code 3) without changing that provider's report. A provider error gives no answer, so it's retried and never scored. Re-running an eval continues it: finished cases keep their results, and a provider that already finished isn't run again (`--fresh` forces it) |
 | `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc. Built aside; replaces the folder only if it finishes with nothing unexpected |
 | `pnpm record --resume` | Continues a recording that stopped on a quota limit |
 | `pnpm record --tour-edits` | Adds only what the tour's step-6 doc edit needs; never clears existing saved responses |
@@ -329,6 +328,10 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   held-out cases.
 - A fee statement with a timing word in it ("refunded within the same transfer") gets a Double-check even when it's right,
   because a claim on one topic never vouches for another. That's the safe direction.
+- A currency amount is flagged only when no claim on a checked topic was found. In "The transfer fee is refunded, all PKR 25 of
+  it", with only the fee claim extracted, the amount isn't checked.
+- The Gemini fallback can't answer within the 9-second timeout while Gemini is overloaded, as on 2 Nov (503 errors, and 20 to 30
+  seconds per call). A check that needs the fallback then gets saved responses, or can't be checked until Gemini recovers.
 - Fix the doc covers timeline holds. A fee Hold gets no doc fix proposal.
 - Send integrity holds against the workspace the client submits. In the demo the docs live in the browser, so a client
   could submit edited docs; in a real deployment the docs would come from Slite, not the browser.

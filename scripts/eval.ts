@@ -17,10 +17,12 @@
 //   pnpm eval ... --fresh           run again from the start, even a provider that already finished
 //
 // Checks the provider's quota first and stops on the first daily limit or an outage (lib/ai/quota.ts, exit code 3). A
+// provider error gives no answer to score, so it's retried and then stops the run: it never becomes a case's result. A
 // provider's report files are only written once all its runs finish. Until then its responses and scores are kept in
-// evals/.in-progress, and re-running the same command continues where it stopped: finished cases keep their results and
-// only the case that was interrupted runs again, reusing the answers it already got. A provider whose report already
-// matches these prompts, rules, cases and model isn't run again.
+// evals/.in-progress, and re-running continues where it stopped: finished cases keep their results and only the case that
+// was interrupted runs again, reusing the answers it already got. A provider whose report already matches these prompts,
+// rules, cases and model isn't run again. The stamp covers the system prompts, schemas, rules, cases and model; it doesn't
+// cover the user-message templates, the detector patterns or the variant docs, so those need a --fresh run after an edit.
 import { loadEnvConfig } from "@next/env";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -146,6 +148,8 @@ interface Progress {
   /** This run's scored inputs: each is scored once per run. */
   scoredSources: string[];
   scoredDrafts: string[];
+  /** Provider errors that were retried: no answer came back, so nothing was scored from them. */
+  providerRetries?: number;
 }
 
 /** The rules' own text: a changed rule means earlier scores no longer apply. */
@@ -168,6 +172,9 @@ function alreadyFinished(file: string, provider: ProviderName): boolean {
   if (args.includes("--fresh") || !existsSync(full)) return false;
   const report = JSON.parse(readFileSync(full, "utf8")) as ProviderReport;
   if (report.stamp !== stampFor(provider)) return false;
+  // A --fresh run that stopped is still unfinished: continue it rather than keep the older report.
+  const progress = path.join(progressDir(provider), "progress.json");
+  if (existsSync(progress) && (JSON.parse(readFileSync(progress, "utf8")) as Progress).stamp === report.stamp) return false;
   console.log(`${provider}: already finished on these prompts, rules, cases and model; keeping its report (--fresh runs it again).`);
   return true;
 }
@@ -220,10 +227,14 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
   saveProgress();
   const stop = (why: string): never => {
     console.error(`\n${provider}: stopped: ${why}.`);
-    console.error(`${caseRunsDone()} of ${caseRunsTotal} case runs are done and kept in evals/.in-progress. ${provider}'s report wasn't changed. Re-run the same command to continue; a provider that already finished isn't run again.`);
+    console.error(`${caseRunsDone()} of ${caseRunsTotal} case runs are done and kept in evals/.in-progress. ${provider}'s report wasn't changed. Re-run ${args.includes("--fresh") ? "without --fresh" : "the same command"} to continue; a provider that already finished isn't run again.`);
     process.exit(QUOTA_STOP_EXIT);
   };
-  const live = provider ? createGuard(provider, stop) : null;
+  const live = provider
+    ? createGuard(provider, stop, undefined, () => {
+        p.providerRetries = (p.providerRetries ?? 0) + 1;
+      })
+    : null;
   const guard = <T>(fn: () => Promise<T>): Promise<T> => (live ? live(fn) : fn());
 
   if (provider) {
@@ -393,7 +404,7 @@ ${rows.join("\n")}`,
   const fieldMisses = [...new Set(p.fieldMisses)];
   const markdown = `## ${providerName} · \`${model}\`${savedMode ? " (saved responses replay, AI_MODE=saved)" : ""}
 
-- Runs per case: ${runs} · started: ${p.startedAt} · finished: ${new Date().toISOString()}${savedMode ? "" : " · throttled"}
+- Runs per case: ${runs} · started: ${p.startedAt} · finished: ${new Date().toISOString()}${savedMode ? "" : " · throttled"}${p.providerRetries ? ` · provider errors retried, with no answer to score: ${p.providerRetries}` : ""}
 ${heldOutMode ? `\n**Clean held-out cases (${cleanCases.length})**\n\n` : ""}${clean.summary}
 - Extraction field accuracy (vs hand-written fixtures${heldOutMode ? "; seed docs only, the reworded texts have none" : ""}): **${pct(p.clean.fieldsCorrect, p.clean.fieldsTotal)}** (${p.clean.fieldsCorrect}/${p.clean.fieldsTotal})
 ${heldOutMode ? "" : `- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **${gatePass ? "PASS" : "FAIL"}**\n`}
@@ -430,7 +441,8 @@ function writeCombined() {
   const primary = passing[0];
   const runnerUp = passing[1];
   const fallback = reports.find((r) => r !== primary);
-  let why = primary ? `Only ${primary.provider} passed the gate.` : "";
+  const unfinished = (["groq", "gemini"] as const).filter((p) => !reports.some((r) => r.provider === p));
+  let why = primary ? (unfinished.length ? `Only ${primary.provider} has a complete report on this prompt so far.` : `Only ${primary.provider} passed the gate.`) : "";
   if (primary && runnerUp) {
     if (primary.quoteRejections !== runnerUp.quoteRejections) {
       why = `Both passed the gate; ${primary.provider} had fewer quote rejections (${primary.quoteRejections} vs ${runnerUp.quoteRejections}).`;
@@ -450,7 +462,7 @@ a no-claim draft and the fee cases), each run 3× per provider, prompt version \
 B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this prompt version are listed and used for selection.
 
 ${selection}
-
+${unfinished.length ? `\nNot finished on this prompt: ${unfinished.join(", ")}.\n` : ""}
 ${reports.map((r) => r.markdown).join("\n")}`;
   writeFileSync(path.join(dir, "results.md"), md, "utf8");
   console.log(md);
@@ -479,13 +491,21 @@ ${clean.length} clean held-out cases (\`evals/heldout.json\`), run with prompt \
 The four fee cases are the real evidence for the new topic; the fee-only line below scores them on their own.
 
 ${exposed.length} exposed cases (${exposed.map((c) => c.id.split("-")[0]).join(", ")}) no longer count as held-out and are reported separately as regression cases. Their wording reached the prompts or the golden set, or came from them, even where it was later removed (D-041).
-${missing.length ? `\nNot run yet on this prompt: ${missing.join(", ")}.\n` : ""}
-${reports.map((r) => r.markdown).join("\n")}`;
-  writeFileSync(path.join(dir, "heldout.md"), md, "utf8");
-  console.log(md);
+
+Groq's section below is its second session on these prompts. Its first session, before a rule fix that doesn't touch this path, scored 36/39 on the same clean cases and 9/12 on the fee cases: H18 was 0/3, where it's 3/3 below. Its report is in commit 1db5346. Treat H18 and H14 as unstable, not as fixed (D-041).`;
+  const body = `${reports.map((r) => r.markdown).join("\n")}
+`;
+  const out = `${md}${missing.length ? `\n\nNot finished on this prompt: ${missing.join(", ")}.` : ""}\n\n${body}`;
+  writeFileSync(path.join(dir, "heldout.md"), out, "utf8");
+  console.log(out);
 }
 
 async function main() {
+  if (heldOutMode && args.includes("--combine")) {
+    // Rebuild evals/heldout.md from the existing heldout-<provider>.json files without new model calls.
+    writeHeldOut();
+    process.exit(0);
+  }
   if (heldOutMode) {
     for (const p of providers) {
       if (alreadyFinished(`heldout-${p}.json`, p)) continue;

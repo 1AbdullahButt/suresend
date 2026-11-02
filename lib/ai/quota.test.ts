@@ -37,8 +37,8 @@ describe("reading a provider's limit message", () => {
   it("Gemini's per-minute requests", () => {
     expect(quotaHit(GEMINI_MINUTE)).toMatchObject({ window: "minute", retryAfterMs: 20000 });
   });
-  it("a spend limit counts as a daily stop", () => {
-    expect(quotaHit("Your organization has reached its spend limit.").window).toBe("day");
+  it("a spend limit is its own kind", () => {
+    expect(quotaHit("Your organization has reached its spend limit.").window).toBe("spend");
   });
   it("a message that names no limit", () => {
     expect(quotaHit("Too many requests")).toEqual({ window: "unknown", retryAfterMs: null, detail: null });
@@ -87,19 +87,40 @@ describe("guarded", () => {
     await expect(createGuard("groq", stop, noWait)(fn)).rejects.toThrow(/^STOP: groq rate limit reached/);
     expect(fn).toHaveBeenCalledTimes(1);
   });
-  it("stops after a run of provider errors, and a success clears the count", async () => {
+  it("a provider error has no answer to score: it retries, then stops, and never comes back as a result", async () => {
+    const down = new AiTaskError("groq: provider error: 500", "provider_error", INFO);
+    const retried = vi.fn();
+    const fn = vi.fn(async () => {
+      throw down;
+    });
+    await expect(createGuard("groq", stop, noWait, retried)(fn)).rejects.toThrow(/^STOP: groq kept failing on one call/);
+    expect(fn).toHaveBeenCalledTimes(4);
+    expect(retried).toHaveBeenCalledTimes(3);
+  });
+  it("a passing call between failures doesn't hide an outage", async () => {
     const down = new AiTaskError("groq: provider error: 500", "provider_error", INFO);
     const guard = createGuard("groq", stop, noWait);
-    const fail = async () => {
-      throw down;
-    };
-    for (let i = 0; i < 4; i++) await expect(guard(fail)).rejects.toBe(down);
-    await expect(guard(async () => "fine")).resolves.toBe("fine");
-    for (let i = 0; i < 4; i++) await expect(guard(fail)).rejects.toBe(down);
-    await expect(guard(fail)).rejects.toThrow(/^STOP: groq failed 5 calls in a row/);
+    await expect(guard(async () => "from the run's cache")).resolves.toBe("from the run's cache");
+    await expect(
+      guard(async () => {
+        throw down;
+      }),
+    ).rejects.toThrow(/^STOP/);
   });
-  it("lets other AI failures through as that step's real result", async () => {
-    const err = new AiTaskError("groq: provider error: timeout", "provider_error", INFO);
+  it("a short outage recovers on a retry", async () => {
+    const down = new AiTaskError("groq: provider error: 503", "provider_error", INFO);
+    const fn = vi.fn<() => Promise<string>>().mockRejectedValueOnce(down).mockResolvedValueOnce("answer");
+    await expect(createGuard("groq", stop, noWait)(fn)).resolves.toBe("answer");
+  });
+  it("a spend limit stops at once and says so", async () => {
+    const fn = vi.fn(async () => {
+      throw paused("Your organization has reached its spend limit.");
+    });
+    await expect(createGuard("groq", stop, noWait)(fn)).rejects.toThrow(/^STOP: groq spend limit reached/);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+  it("an invalid answer is the model's own result, so it comes through", async () => {
+    const err = new AiTaskError("groq: invalid AI output after one retry", "invalid_output", INFO);
     const fn = vi.fn(async () => {
       throw err;
     });

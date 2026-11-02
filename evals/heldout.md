@@ -10,7 +10,9 @@ The four fee cases are the real evidence for the new topic; the fee-only line be
 
 6 exposed cases (H5, H11, H13, H14, H15, H16) no longer count as held-out and are reported separately as regression cases. Their wording reached the prompts or the golden set, or came from them, even where it was later removed (D-041).
 
-Not run yet on this prompt: gemini.
+Groq's section below is its second session on these prompts. Its first session, before a rule fix that doesn't touch this path, scored 36/39 on the same clean cases and 9/12 on the fee cases: H18 was 0/3, where it's 3/3 below. Its report is in commit 1db5346. Treat H18 and H14 as unstable, not as fixed (D-041).
+
+Not finished on this prompt: gemini.
 
 ## groq · `openai/gpt-oss-120b`
 
@@ -57,3 +59,4 @@ Field misses:
 - DOC-101/seed reversal_window statusWording: want "unstated" got "in_force"
 - DOC-104/seed reversal_window statusWording: want "unstated" got "in_force"
 - DOC-104/seed other statusWording: want "unstated" got "in_force"
+

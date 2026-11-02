@@ -2,7 +2,7 @@
 // quotes are the seed docs' own sentences, so runCheck's quote validation runs for real.
 import { describe, expect, it } from "vitest";
 import { runCheck } from "@/lib/check/runCheck";
-import { summarize, traceRows } from "@/lib/client/outcome";
+import { claimCards, summarize, traceRows, whyModel } from "@/lib/client/outcome";
 import { detectPolicyPatterns } from "@/lib/engine/patterns";
 import { present } from "@/lib/mcp/tools";
 import { ESCALATE_TEMPLATE, escalateTemplate } from "@/lib/replies/templates";
@@ -229,6 +229,27 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
     expect(card.sentence).not.toContain("transfer fee");
     const row = traceRows(r).find((x) => x.rule === "D0b" && x.outcome === "fired");
     expect(row?.summary).toBe("No claim on the timing was extracted, but the reply mentions “4 business days”. Check it by hand.");
+  });
+
+  it("Why never says the docs are silent about something it didn't compare", async () => {
+    const draft = "The transfer fee is refunded with your money, and it will be back in 4 business days.";
+    const r = await check("TCK-9001", "instant", draft, [fee(true, "The transfer fee is refunded with your money")]);
+    const gap = claimCards(r).find((c) => c.model.replySays === "4 business days");
+    expect(gap?.model.governing).toBeNull();
+    expect(gap?.model.noDocs).toBe("SureSend didn't compare this with your docs, because the AI didn't pick it up as a claim. Check it by hand.");
+
+    const noClaims = await check("TCK-9001", "instant", "Your money will be back in 4 business days.", []);
+    expect(whyModel(noClaims).noDocs).toContain("didn't compare this with your docs");
+
+    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 25, of: "PKR" }, valueText: "PKR 25", span: "a PKR 25 fee", definitive: true };
+    const outside = await check("TCK-9003", "standard", "There's a PKR 25 fee on every transfer.", [amount]);
+    expect(whyModel(outside).noDocs).toBe("SureSend doesn't check this topic against your docs. Check it by hand.");
+  });
+
+  it("a detector hit inside another topic's hit doesn't change which topic the card names", async () => {
+    const draft = "The fee in 4 days is refunded, and your money will be back in 1 business day.";
+    const r = await check("TCK-9001", "instant", draft, [timeline(1, "your money will be back in 1 business day")]);
+    expect(summarize(r, "instant").headline).toBe("Couldn't confirm the fee refund");
   });
 
   it("a timeline word inside a fee claim's own words gets a Double-check: the safe direction", async () => {

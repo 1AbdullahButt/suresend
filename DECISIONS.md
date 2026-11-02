@@ -704,7 +704,7 @@ An independent-style review before sharing with Slite (security, correctness, UX
        covered topic". With two topics, one fee claim switched the net off for the timeline.
      - Repro: "The transfer fee is refunded with your money, and it will be back in 4 business days" on the instant rail,
        with only the fee claim extracted. It came back Good to send; on main it was Double-check.
-     - Fixed in `decide.ts` (576a6b3), the one rule-file change after the refactor. D0b now follows the spec per topic: a
+     - Fixed in `decide.ts` (576a6b3), a logic change after the refactor. D0b now follows the spec per topic: a
        topic's detector hit counts when no claim on that topic was extracted and no extracted claim's span covers it. A
        currency amount counts only when no covered claim exists, as before. (Round 2 below narrows the span part.)
      - With one topic this is SPEC D0b exactly, and the snapshot stayed 68/68 identical. When covered claims exist, the
@@ -732,8 +732,8 @@ An independent-style review before sharing with Slite (security, correctness, UX
   as held-out, even after its wording is removed.
   - Exposed: H11, H14, H15 and H16 (the leak above), and H13, which shares "with your money" with a prompt example and golden
     `fee-correct`, both written after it. They stay as regression cases and are reported apart.
-  - New: H17, H18 and H19, committed in 8e68016 before any further eval, with wording used nowhere in the prompts, schema,
-    golden set or presets. Their expected outcomes were checked with hand-written extractions, with no AI call.
+  - New: H17, H18 and H19, committed in 8e68016 before any further eval, sharing no three-word phrase with the prompts,
+    schema, golden set or presets. Their expected outcomes were checked with hand-written extractions, with no AI call.
   - Clean fee cases: H12, H17, H18, H19.
   - The timeline cases stay clean: they were written after the `2026-10-30.2` freeze. H1 reuses phrases that older prompt
     already had, so it's easier than it looks. The report says so. H5 became exposed in QA round 2 (below).
@@ -754,7 +754,7 @@ An independent-style review before sharing with Slite (security, correctness, UX
      "Your money will be back in 1 business day, but the transfer fee isn't refundable" with only the timeline extracted came
      back Good to send. Now only an out-of-topic claim's span can account for a hit. With one topic that's SPEC D0b exactly,
      and the snapshot stayed 68/68 identical. Cost: a right fee statement with a timing word in it gets a Double-check, which
-     is the safe direction. This is the second and last rule-file change after the refactor, and it names no topic.
+     is the safe direction. This is the second and last logic change to the rules after the refactor, and it names no topic. (ca12d5b also touched `decide.ts` and `resolve.ts`, but only to reword values.)
   2. *Re-running after a stop repeated a provider that had finished* and replaced its report. A provider whose report
      matches these prompts, rules, cases and model is now skipped unless `--fresh`.
   3. *The resume stamp left out the model.* It now holds the model, the rule files and a fingerprint of the prompts and
@@ -774,6 +774,24 @@ An independent-style review before sharing with Slite (security, correctness, UX
   - *Left as they are:* a step that failed in the case a stop interrupts gets another attempt on resume (one case at most,
     and the wording above says so). The integrity test checks three-word phrases, not two: two-word terms like "the fee" are
     the domain's own.
+- **QA round 3: CHANGES_REQUIRED, two majors.** Neither changed a published number. Rules, prompts, locked tests and seed
+  data weren't touched.
+  1. *An outage's failures could be published as the model's scores.* A success from the run's cache reset the guard's error
+     count, so a late outage never stopped the run, and failures recorded before a stop stayed in the score. Now a provider
+     error is retried (30, 60 and 120 s) and then stops the run, and that case is never recorded. Only an answer the model
+     gave, even an invalid one, counts. The report says how many provider errors were retried.
+  2. *Why said "No doc makes a claim about this" on a gap,* which is false: the docs were never compared. It now says so, and
+     an outside-coverage claim says the topic isn't checked.
+  - *Gemini's saved progress was repaired by hand once.* Its `fee-amount` run failed during the overload, so it isn't a model
+    answer. It came out and reruns, which takes the count from 19 to 18 of 57, all correct. The other 18 are untouched.
+  - *Minors fixed:* a spend limit reads as a spend limit; a `--fresh` run that stops can be continued; the recording swap
+    survives being killed between its two renames; `heldout.md` states Groq's first session; the gap card matches hits by topic;
+    the claims about independence and rule-file changes say only what's shown; the duplicate README row is gone; Limitations
+    says an amount isn't flagged once a checked claim exists.
+  - *Left as they are:* the stamp and the freeze cover system prompts and schemas, not user-message templates, detector patterns
+    or variant docs, so those need `--fresh` after an edit (the eval header and the README wording say so). H6 and H7 share
+    "the transfer fee", a plain noun phrase in timeline cases, so they stay clean. A card's quote can be the model's whole-sentence
+    span, sitting above the gap entry for the words it missed; the overall result is still Double-check.
 
 ### D-042 · Groq moves to the paid Developer tier, with a spend limit (Abdullah's decision, 2026-11-02)
 Groq's free tier allows 200,000 tokens a day, so the Phase 10 re-record and 3-run evals would have taken about 2 days. Abdullah
@@ -785,3 +803,13 @@ upgraded the account to the Developer tier. Production uses this same key.
 - **Limits read after the upgrade:** 250,000 tokens a minute, from Groq's response headers. The scripts' spacing (12 s per Groq
   call) is unchanged.
 - The README's spend line, its rate-limit line and its Limitations line now say this.
+
+### D-043 · Phase 10 ships on Groq's results; Gemini finishes later (Abdullah's decision, 2026-11-02)
+Phase 10's gate asked for both providers' evals. On 2 Nov Gemini's free tier was first out of quota, then overloaded (503 errors,
+20 to 30 seconds per call against the app's 9-second timeout). Abdullah decided not to block on it.
+- Merge, deploy and push go ahead once QA approves, with Groq's results. Gemini's rows in the README read "partial — paused during a
+  Google overload on 2 Nov", with the count so far.
+- The keep-the-timeout choice stands: Gemini's evals wait until it's fast, not for a longer eval timeout, so its numbers reflect the
+  app's real 9 seconds. A small call every 15 minutes checks this; the eval starts only on an answer in under 5 seconds.
+- When Gemini finishes, its results and the README update go in a separate commit.
+- Limitations says the fallback can't answer within the timeout while Gemini is overloaded.

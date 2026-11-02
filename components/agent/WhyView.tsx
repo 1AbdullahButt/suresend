@@ -65,7 +65,7 @@ function WhyBody({ m, tone, anchor, nested = false }: { m: WhyModel; tone: Outco
             <span className={s.otherLabel}>{o.label}</span>
           </div>
         ))}
-        {!m.governing && m.others.length === 0 ? <p className={s.note}>No doc makes a claim about this.</p> : null}
+        {!m.governing && m.others.length === 0 ? <p className={s.note}>{m.noDocs}</p> : null}
         {m.didntCount.length ? (
           <details className={s.details}>
             <summary>

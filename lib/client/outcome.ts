@@ -1,7 +1,7 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
 import type { CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
-import { patternNoun } from "@/lib/engine/patterns";
+import { patternNoun, patternTopic } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
 import { isCovered, topicDef, wordsFor } from "@/lib/topics";
 import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
@@ -10,8 +10,8 @@ export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
 
 /** What the "nothing found" net flagged. A gap entry names its own hits; with no gap entry, every hit counts. */
 function gapMatches(result: CheckResult): PatternMatch[] {
-  const named = result.claims.filter((c) => c.reasonCode === "EXTRACTION_GAP").map((c) => c.draftClaim.valueText);
-  return named.length ? result.patternMatches.filter((m) => named.some((text) => text.includes(m.text))) : result.patternMatches;
+  const topics = new Set<string>(result.claims.filter((c) => c.reasonCode === "EXTRACTION_GAP").map((c) => c.draftClaim.topic));
+  return topics.size ? result.patternMatches.filter((m) => topics.has(patternTopic(m.kind) ?? "")) : result.patternMatches;
 }
 
 export interface OutcomeMeta {
@@ -211,6 +211,8 @@ export interface WhyModel {
   governing: WhyDoc | null;
   others: WhyOther[];
   didntCount: Array<{ id: string; text: string }>;
+  /** Shown under "Your docs say" when no doc is listed: why there's nothing to show. */
+  noDocs: string;
   so: string;
 }
 
@@ -317,7 +319,15 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
     }
   }
 
-  return { title: WHY_TITLE[result.decision], replySays, governing, others, didntCount, so: soSentence(result, claim, govEv, only !== undefined) };
+  // A gap or an outside-coverage claim was never compared with the docs, so saying the docs are silent would be false.
+  const reason = claim?.reasonCode ?? result.reasonCode;
+  const noDocs =
+    reason === "EXTRACTION_GAP"
+      ? "SureSend didn't compare this with your docs, because the AI didn't pick it up as a claim. Check it by hand."
+      : reason === "OUTSIDE_COVERAGE"
+        ? "SureSend doesn't check this topic against your docs. Check it by hand."
+        : "No doc makes a claim about this.";
+  return { title: WHY_TITLE[result.decision], replySays, governing, others, didntCount, noDocs, so: soSentence(result, claim, govEv, only !== undefined) };
 }
 
 function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evidence | undefined, perClaim = false): string {

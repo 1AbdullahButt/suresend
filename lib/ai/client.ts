@@ -24,7 +24,7 @@ export interface AiProvider {
 }
 
 /** Which limit a 429 hit. A daily limit won't clear soon, so the scripts stop; a per-minute one clears in seconds. */
-export type QuotaWindow = "day" | "minute" | "unknown";
+export type QuotaWindow = "day" | "minute" | "spend" | "unknown";
 
 export interface QuotaHit {
   window: QuotaWindow;
@@ -36,7 +36,13 @@ export interface QuotaHit {
 
 /** Reads a provider's 429 message: Groq names the limit in words, Gemini in its quota metric and description. */
 export function quotaHit(message: string): QuotaHit {
-  const window: QuotaWindow = /per[\s_-]*day|\b[TR]PD\b|daily|spend(?:ing)?\s*limit/i.test(message) ? "day" : /per[\s_-]*minute|\b[TR]PM\b/i.test(message) ? "minute" : "unknown";
+  const window: QuotaWindow = /spend(?:ing)?\s*limit/i.test(message)
+    ? "spend"
+    : /per[\s_-]*day|\b[TR]PD\b|daily/i.test(message)
+      ? "day"
+      : /per[\s_-]*minute|\b[TR]PM\b/i.test(message)
+        ? "minute"
+        : "unknown";
   const wait = /(?:try again|retry) in ([\d.hms]+)/i.exec(message)?.[1];
   let retryAfterMs: number | null = null;
   if (wait) {
