@@ -256,3 +256,17 @@ DOC-101 §4 already states it). The engine's rule logic, `data/seed`, `SPEC.md`,
   `scripts/snapshot-results.ts` shows every canonical, tour and Fix-the-doc decision and reason code unchanged; evals on
   both providers published as they are; `git diff` on the rule files, tests, seed and spec; README "Adding a topic"; D-041;
   QA APPROVED; deployed; `git worktree list` clean.
+
+## 14. Phase 11: fixes from the independent review (added 2026-11-02, Abdullah's brief)
+Branch `phase-11`. No merge or deploy until QA approves. In order:
+1. **P0-1, a wrong reply passes and the UI celebrates it.** (a) The sent card never claims correctness. (b) The draft prompt extracts
+   valueless claims on covered topics; prompt version bumped. (c) A reply that makes no claim on the topic the customer asked about is a
+   Double-check, generically (no topic names in `decide.ts`). (d) The repro and 5 natural variants as tests, written first and recorded
+   failing. (e) Limitations states the cost.
+2. **P0-3.** "SureSend" replaces "Slite Agent" as panel title and actor; one "Independent concept for Slite Agent" tag; OG image checked.
+3. **P1-1.** A claim with no value shows the governing value. 4. **P1-3.** The slide-over closes when the conversation changes.
+5. **P1-4.** The tour offer doesn't come back after "Not now". 6. **P1-5.** ESLint and a lint script. 7. **P1-2.** README states scope is one axis.
+Then re-record, check the 68 saved results, rerun golden and held-out on Groq (3 runs), Gemini when its quota allows (separate commit if
+not). README: the 41% line matches the source's subgroup wording; no team-size claim about Slite.
+- **Gate:** typecheck, lint, all tests, e2e, axe; the 6 tests recorded failing, then passing; every changed saved result explained by the
+  new rule; evals published as they are; D-045 onward; QA APPROVED; then merged, deployed, pushed; `git worktree list` clean.

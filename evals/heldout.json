@@ -268,6 +268,36 @@
         "decision": "CAUTION",
         "reasonCode": "OUTSIDE_COVERAGE"
       }
+    },
+    {
+      "id": "H20-vague-mid-month",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "It normally clears up around mid-month and the amount reappears in your balance.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "H21-vague-before-long",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "Leave it with us, your cash will find its way home before long.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "H22-vague-paperwork-charge",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "The cash returns once the bank finishes its paperwork, and the sending charge gets sorted out separately.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      }
     }
   ]
 }

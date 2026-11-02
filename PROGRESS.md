@@ -1479,3 +1479,39 @@ X-Content-Type-Options: nosniff
 $ GET /api/mcp (stateless, so 405 is expected)
 405
 ```
+
+## Phase 11
+
+Fixes from the independent review (PLAN.md §14). Branch `phase-11`.
+
+**The tests came first.** `lib/check/vagueReply.test.ts` and `lib/client/copyRules.test.ts`, committed before any fix. The 7 that pass
+already are the guards that the rule stays narrow.
+```
+$ pnpm vitest run lib/check/vagueReply.test.ts lib/client/copyRules.test.ts   (before the fix)
+⎯⎯⎯⎯⎯⎯ Failed Tests 43 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  2 failed (2)
+      Tests  43 failed | 7 passed (50)
+     × repro: Double-check, never Good to send
+     × week-out: Double-check, never Good to send
+     × very-soon: Double-check, never Good to send
+     × monday-less-charge: Double-check, never Good to send
+     × unknown-rail: Double-check, never Good to send
+     × next-week: Double-check, never Good to send
+```
+**The repro before the fix.** Production returned the review's result. It's a cached reading (`latencyMs: 0` on the second call): Groq
+returned 0 claims once and the instance kept that. Fresh calls with the same prompt read the fee part as a contradiction, 5 of 5.
+```
+production, today: 200 ALLOW NO_POLICY_CLAIM claims: [] ai: live
+$ pnpm tsx scripts/probe-draft.ts groq   (the old prompt, live)
+vague-repro [TCK-9001 instant] HOLD/CONTRADICTS_GOVERNING (Hold, AI live)
+  claim: reversal_window "the reversal is automatic and you'll see it reflected after the weekend" value=null → CAUTION/UNSUPPORTED
+  claim: fee_refund "minus the processing charge" value={"flag":false} → HOLD/CONTRADICTS_GOVERNING, docs say refunded
+vague-week-out [TCK-9001 instant] CAUTION/UNSUPPORTED (Double-check, AI live)
+  claim: reversal_window "The money lands back in your wallet before the week is out." value=null → CAUTION/UNSUPPORTED
+vague-very-soon [TCK-9003 standard] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
+vague-monday-less-charge [TCK-9001 instant] HOLD/CONTRADICTS_GOVERNING (Hold, AI live)
+  claim: reversal_window "the funds return on their own by Monday" value=null → CAUTION/UNSUPPORTED
+  claim: fee_refund "less the small charge for the transfer" value={"flag":false} → HOLD/CONTRADICTS_GOVERNING, docs say refunded
+vague-unknown-rail [TCK-9002 unknown] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
+vague-next-week [TCK-9003 standard] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
+```
