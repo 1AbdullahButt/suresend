@@ -1,148 +1,143 @@
-# QA findings · Phase 9 (re-review) · 2026-11-01T14:15:05Z
+# QA findings · Phase 10 · 2026-11-02T10:37:00Z
 
-Scope: Phase 9 "Fix the doc" (PLAN.md §12, D-037) after the coordinator's fixes to my first review. Uncommitted tree on
-`main` at 58f6f48.
+Round 4. Narrow review of `git diff 7ad117f..1bb098f` on branch `phase-10` at 1bb098f. No Groq or Gemini call was made by me: every run used fake keys and the `fetch` stub. I didn't restart the server on :3100 or run `pnpm build`.
 
-Not run by QA:
-- The deployed app and `pnpm mcp:e2e` against the live URL (the lead's gate items).
-- Live eval and `pnpm record`.
-- A fresh `pnpm build` (see the build line below).
+Repro scripts are in `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa\`. New this round: `r4-poison.sh`, `r4-matrix.sh`, `r4-misc.sh`, `r4-rec.sh`, `r4-rec2.sh`, `r4-r3-swap.sh`, `r4-r3-outage.sh`, `r4-gem-replay.sh`, `r4-gem-heldout.sh`, `r4-repair.sh`, `r4-ui-why.cjs`, `r4-ui-noclaim.cjs`. Saved output: `r4-poison.txt`, `r4-matrix.txt`, `r4-misc.txt`, `r4-rec.txt`, `r4-rec2.txt`, `r4-swap.txt`, `r4-outage.txt`, `r4-ui-why.txt`. The other scripts print to the console and can be re-run. Screenshots are in `shots-r4\`.
+
+## My error: I changed files you told me not to touch
+
+**What happened.** At 10:19:01Z a script of mine ran in `D:\Project\slite` instead of its scratch copy. I started it in parallel with the command creating that copy, the `cd` failed, and the script had no `|| exit`. It then did this in the real folder:
+- It deleted `evals/.in-progress`, while Gemini's held-out eval was running.
+- It deleted `evals/results-gemini.json` and `evals/results-gemini.md`, which Gemini's golden run had finished writing 5 minutes earlier.
+- It ran `scripts/eval.ts --provider gemini` over the stub, which wrote those two files and `evals/results.md` again.
+
+No live call came from this, because `fetch` was the stub. No source, test, seed or doc file was touched.
+
+**What changed as a result.**
+- `evals/results-gemini.json`, `evals/results-gemini.md`, `evals/results.md`: the only difference is Gemini's finish time, `10:19:01.073Z` where the real one is `10:13:35.336Z`.
+  - Checked against the real run's log (`%TMP%\p10-eval-gemini.txt`): with the real time, `results.md` equals the log's text, and the report text appears in it verbatim. `results-gemini.json` is 2142 bytes, the real file's size.
+  - One answer in the stub run came from the stub (fee-amount, run 3). The totals match the real report anyway.
+- Held-out eval: the running process survived, because its next save recreated the folder. It finished by itself at 10:21:35Z.
+  - Its answers for runs 1 and 2 and the start of run 3 were deleted from disk while it ran. It no longer needed runs 1 and 2, it holds run 3's in memory, and it would have needed the deleted run-3 answers on disk only if it had stopped.
+  - A clean replay matches the real run's clean-case scores at all 57 saved points, 39 before the deletion and 18 after. Its report differs only where H16's third run feeds in: the exposed section's accuracy, quote count and H16 row. My snapshots lacked that case's answers, and the stub got it wrong.
+
+**Not restored.** You told me not to touch these files, so that's your call. To put the real finish time back:
+
+```
+node "C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa\r4-restore-gemini-finish-time.mjs" "D:/Project/slite" --apply
+```
+
+Without `--apply` it only reports. I dry-ran it: 1 replacement in each of the 3 files. Do this before committing Gemini's results. Copies of Gemini's in-progress folders from 10:12:47Z on are in `scratchpad\qa\r4-gem\watch\`.
 
 ## Commands run
-- `pnpm typecheck` → exit 0
-- `pnpm test` → exit 0 · `Test Files 21 passed (21)` · `Tests 163 passed (163)`
-- `pnpm audit` → `No known vulnerabilities found`
-- `AI_MODE=saved pnpm eval --saved` → `Decision accuracy 100.0% (12/12)` · `Quote validity 100.0% (13/13)` ·
-  `Extraction field accuracy 100.0% (60/60)` · `Gate: PASS`
-- **Build:**
-  - Not rebuilt this round, because the coordinator's server on 3100 was serving from `.next` and a rebuild would have
-    disrupted it.
-  - `.next/BUILD_ID` is 2026-11-01 17:31:54 local, and `find app components lib scripts data/ai-cache README.md
-    DECISIONS.md -newer .next/BUILD_ID` returned nothing.
-  - That build served the new behaviour in the browser: the "Fix approved" menu tag, the new review wording, and the
-    re-recorded fix text.
-  - The first round's `pnpm build` passed (exit 0).
-- `AI_MODE=saved AI_PROVIDER=groq AI_FALLBACK_PROVIDER=gemini pnpm start -p 3200` → `✓ Ready`; stopped afterwards.
-- e2e/demo.spec.ts against 3200, via a QA-only config (the same spec, with baseURL on 3200) → `1 passed`
-- `pnpm mcp:e2e http://127.0.0.1:3200/api/mcp` → `ALL PASS` (18 PASS lines), including `propose_doc_fix … drafted by AI,
-  checked by the rules, applied false` and `no response mentions DOC-105`
-- `POST /api/fix` on 3200:
-  - TCK-9001 as support_agent and as ops_lead → `hold`, DOC-101, `origin ai`, `edit.action add_after`, `exception.rail
-    instant`, recheck `HOLD/CONTRADICTS_GOVERNING | ESCALATE/SCOPE_UNKNOWN | ALLOW/SUPPORTED | ALLOW/SUPPORTED`
-  - TCK-9002 as ops_lead → `ask`, DOC-101
-  - TCK-9003 (Allow) → `proposal: null`
-  - missing draft → 400
-  - no DOC-105/FR-HOLD/CMP-7/Fraud text anywhere
-- **Cache:**
-  - 21 files, and every key verifies against its identity (`cacheKey`).
-  - The 19 HEAD files are byte-identical (sha256 compare, 19/19).
-  - The 2 orphans from the first recording are gone.
-  - The new files are `doc_fix` e85c7d94, whose identity carries `sourceId: DOC-101` and `exceptionRail: instant` with
-    FIX_PROMPT_VERSION `2026-11-01.1`, and the fixed-DOC-101 `source_extraction` 50d58304 under PROMPT_VERSION
-    `2026-10-30.2`.
-  - The doc_fix identity now covers every input `fixUserPrompt` sends.
-- **Validator probe** (QA-only vitest, calling `validateFix`/`proposeFix` on seed DOC-101):
-  - **Original major, fixed:** all five of my first-round edits are rejected (now also locked in lib/fix/fix.test.ts).
-  - **Case and whitespace variants of the target:** accepted, but the validated edit is `add_after` at the exact quote,
-    so nothing else can change.
-  - **Rejected:** "same day", "4-day", "no longer".
-  - **Accepted:** see the first minor finding.
-- **Playwright browser checks** (`scratchpad/qa/browser3200.cjs`) → `BROWSER FAILS: 0`:
-  - **Hold → review → Dismiss (1440):**
-    - The link is reachable by Tab, has a visible focus ring, and focus moves to `#fix-title`.
-    - The review shows the title, "A reply this session copied 4 business days from this doc.", "…gives instant-rail
-      transfers 1 business day…", one Before/After pair, and `<ins>` around "For instant-rail transfers, failed
-      transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: …".
-    - The label reads "Drafted by AI, checked by the rules: it adds one passage after the claim sentence and changes
-      nothing else…".
-    - Dismiss leaves localStorage byte-identical.
-  - **Menu → Review fix → Approve (1440):**
-    - The menu shows "2 held · copied 4 business days" before approval and the "2 replies…" why line.
-    - Approval shows the toast and stores the DOC-101 override (verified), and the Docs tab shows the text.
-    - The same Hold is rechecked and stays Hold with suggestion "We’ll reverse failed transfers within 1 business day.".
-      There is no fix link and no AI-unavailable state.
-    - Ask first no longer offers a fix.
-    - The menu then shows "Fix approved", with no "Review fix" button.
-  - **Ask first on TCK-9002 (1024):** the link and the review with the rail hint work.
-  - **390:** the review fits (Approve at 16+249 px, card 358/358) and the menu renders.
-  - **axe:** 0 violations of any impact on review@1440, ask-review@1024, review@390, menu@1440, menu after approval@1440,
-    menu@1024 and menu@390.
-  - **Layout:** no horizontal scroll at 1024 or 390, and the disclaimer footer is present.
-- **Tour** (`scratchpad/qa/tour3200.cjs`; 1440 approve, 1440 dismiss, 390 approve):
-  - "STEP n OF 6" for n = 1…6, ending in "Finish".
-  - Step 5 axe: 0 violations.
-  - After approve, step 5 shows "Fix approved: Outgoing Transfers: Reversal SOP now names the exception…" with no
-    go-back note.
-  - After dismiss, "Show me the fix" is offered again.
-  - Step 6's DOC-103 edit on top of the approved fix gives Hold with "Failed transfers are reversed within 2 business
-    days." (saved replay).
-  - 1 FAIL, pre-existing: at 390, step 6's card covers "Save and verify" (see the last finding).
-- Secret scan (precommit-scan patterns plus Bearer over `git diff HEAD` and the 10 untracked files, 1,817 lines) →
-  `no secret patterns found`. No tracked `.env*` files.
-- `git status -- tests e2e data/seed lib/engine SPEC.md IMPLEMENTATION_BRIEF.md CLAUDE.md` → 0 entries.
-- `git worktree list` → `D:/Project/slite 58f6f48 [main]` only.
+
+**Gate basics**
+- `pnpm typecheck` → exit 0.
+- `pnpm test` → exit 0. `Test Files 27 passed (27)`, `Tests 245 passed (245)`.
+- `pnpm eval --saved` → exit 0. `Decision accuracy 100.0% (19/19)`, `Quote validity 100.0% (27/27)`, `Extraction field accuracy 98.3% (59/60)`, `Gate PASS`.
+- `pnpm exec tsx scripts/snapshot-results.ts <scratch> --compare evals/snapshots/before.json` → exit 0. `68 identical, 0 different, 0 missing`, `0 not on saved responses`.
+- `pnpm mcp:e2e http://127.0.0.1:3100/api/mcp` → exit 0, `ALL PASS`, including `check_reply two claims on TCK-9001: Hold [reversal window: Good to send; fee refund: Hold]`.
+- `git diff main..HEAD --stat -- tests data/seed SPEC.md IMPLEMENTATION_BRIEF.md` → empty.
+- `git worktree list` → `D:/Project/slite 1bb098f [phase-10]` only.
+- `git diff 7ad117f..1bb098f` on `lib/engine`, `lib/check`, prompts, schemas and `lib/workspace` → empty. In `lib/topics` only a test file changed.
+
+**1. Outage scenarios (`r4-poison.sh`, baseline 57/57)**
+
+| Scenario | First run | Report overwritten | Re-run, healthy |
+|---|---|---|---|
+| 500s from call 30, report present, `--fresh` | exit 3, 19 of 57 saved, 0 not ok | no | continues, identical to uninterrupted |
+| 500s from call 30, no report | exit 3, 19 saved, 0 not ok | no | identical |
+| Held-out, 500s from call 30 | exit 3 | no | identical to the held-out baseline |
+| 500s from call 60 (round 3's late outage) | exit 3, 38 saved, 0 not ok | no | 57/57, identical |
+| 500s from call 1 | exit 3, 0 saved | no | identical |
+| Only the last call fails | exit 3, 56 saved | no | 1 live call, identical |
+| Network failure from call 30 | exit 3, `Connection error.` | no | identical |
+
+- `r4-matrix.sh`, 500s from 18 points, golden and held-out: 36 of 36 lines read `first exit=3 reports-unchanged=yes error-rows-saved=0; resume exit=0; report identical to the uninterrupted run; left=0`.
+- Short outages recover with no stop and 57/57. 1, 2 and 3 errors on a call give a line reading 1, 2 and 3. Three separate blips give 6.
+- `r4-guard.ts`: `3 errors, then an answer: calls=4 waits(s)=30,60,120 retried=3`; `4 errors: (stopped)`.
+- Invalid output stays the model's own result: invalid twice at call 70 → `no-claim 2/3`, 56/57, no stop, no retry line. With an outage after it, the resumed report is still 56/57, `failing: no-claim`.
+- An invalid answer followed by a 500 on the inner retry → retried, not recorded, 57/57.
+- `r4-rec2.sh`, `pnpm record`, 500s from calls 1, 10, 20, 30, 37: `exit=3 ai-cache-unchanged=yes`, and `--resume` is `same-as-uninterrupted`. Short outage: `Recorded 40 … Unexpected: 0`, same outputs.
+
+**2. Why (`r4-ui-why.cjs`, 1440 and 390, `TOTAL 94 PASS / 0 FAIL`)**
+- Real `runCheck` results; only the `/api/send` response is staged. The running build holds the new copy.
+- Gap, timeline missed, and gap, fee missed: the missed claim's card reads `SureSend didn't compare this with your docs, because the AI didn't pick it up as a claim. Check it by hand.` The other card lists its docs.
+- A gap with no claims: same sentence.
+- Outside coverage, alone and with a covered claim: `SureSend doesn't check this topic against your docs. Check it by hand.`
+- A topic no doc covers is a real path. On the real server with DOC-101 deleted: `CAUTION/UNSUPPORTED`, `rejected=none`, `No doc makes a claim about this.` That's true, since every doc was read.
+- Each of those also passed: a word label on the decision, focus on Back, the disclaimer, axe 0 serious or critical, no horizontal scroll.
+- I read screenshots `390-gap-fee-why.png` and `1440-doc-unread-why.png`.
+- One path still fails this item: the first minor below.
+
+**3. The repair of Gemini's progress**
+- `r4-gem-replay.sh`: a clean pass over Gemini's own saved answers with empty scores, compared with the real resumed run.
+  - The stamp matches: `849aba49…`, no `starting over`. The real log reads `continuing an unfinished run (18 of 57 case runs done)`.
+  - At 18 case runs: 60/60 fields, 26/26 quotes.
+  - Scores at the 8 points I read from the real run (36, 45, 51 to 56): `8 identical, 0 different`.
+  - `replay report equals the section in the real run log, apart from times: true`: 57/57, 81/81, 180/180, Gate PASS.
+- `r4-repair.sh`: built the bad state on the stub with 7ad117f's guard (`fee-amount AI_UNAVAILABLE`, `run=2`), ran the real `p10-gemini-repair.ts`, resumed with HEAD → `report identical to the uninterrupted run`.
+- The script is right only if no run-2 case has finished. With 3 finished, my stub double-counts (`89/89`, `212/216`). That wasn't the real state: D-041 and the log both say 19 going to 18. The script is one-time and not in the repo, so this isn't a finding.
+
+**4. Other round 3 minors**
+- Spend limit: `groq: stopped: groq spend limit reached.`, 429 and 400 wordings, 1 call, no retries.
+- `--fresh`: the stop text says `Re-run without --fresh to continue`. That continues, with `live calls=35`, and is identical to uninterrupted. The same command with `--fresh` starts over (84). With both providers, the re-run makes `groq 0, gemini 65`.
+- Recording swap, killed between the renames then `--resume`: `exit=0 … Recorded 40`, `ai-cache: 40 files, ai-cache.old: none`. The other swap failures still leave a whole folder.
+- `gapMatches` by topic: round 3's repro now reads `Couldn't confirm the fee refund`, with only the fee hit named.
+- `heldout.md` states Groq's first session, and the numbers match. `eval --heldout --combine` and `eval --combine` rebuild both reports byte for byte at HEAD.
+- Doc wording: the duplicate README row is gone. H17 to H19's "three-word phrase" wording is in. The Limitations example reproduces: `ALLOW/SUPPORTED`, with `currency:"PKR 25"` among the hits.
+- `r4-rec2.sh` mutations, in a scratch copy: the last provider error returned as a result → `2 failed`; spend reading as daily → `2 failed`; the old gap sentence → `1 failed`; substring matching → `1 failed`. Control: `48 passed`.
+
+**5. README against `evals/results.md`, `evals/heldout.md` at HEAD, and the progress file**
+- 245 tests; 68 of 68.
+- 57/57, 80/80, 175/180, PASS.
+- 39/39, 12/12, 82/82; exposed 17/18, 38/38.
+- First session 36/39, 9/12, 89/89 with H5. H18 0/3 then 3/3. H14 3/3 then 2/3.
+- Gemini's `18/57 … all correct` was the repaired state (18 of 18 correct), and held-out `not started` was also true at the commit.
+- 9-second timeout: `TIMEOUT_MS` is 9,000.
+- I couldn't verify "503 errors, and 20 to 30 seconds per call" without a live call. It's from D-043 and is written as what happened on 2 Nov.
+- Nothing false or overstated at HEAD. "passed (local and live)" was left out as you asked.
 
 ## Findings
-First-round major (validator scope): **resolved.**
-- The target must be normalized-equal to the claim quote, and the quote must occur exactly once.
-- The validated edit is always `add_after` at the exact quote, and a `replace` must keep the sentence word for word.
-- Verified by the new tests and by my probe.
 
-First-round minors resolved:
-- The doc_fix identity covers every prompt input.
-- Tour step 5 acknowledges an approval.
-- The step-6 references are fixed in README, record-ai-cache, variantBodies and the tourReplay test names.
-- FixReview uses `exception.rail`.
-- The source.ts comment is fixed.
-- Ask first requires exactly one distinct exception.
-- The menu shows "Fix approved".
-- The mcp-e2e formatting is fixed.
-- The Triage wording is "like fixes reviewed in Slite's Triage".
-- The approve guard is now `fixStillApplies`, with a test.
+### Majors
 
-Remaining, all minor:
-- [severity: minor] lib/fix/validate.ts:47-48 and 77-84 (the content checks on the added passage)
-  - **Expected:** README "From held replies to doc fixes" step 2 says the passage "may contain no other timeline,
-    amount, number, negation or promise".
-  - **Actual:** my probe got `ok: true` for these additions:
-    - "Instant-rail transfers don’t get 1 business day yet." (curly apostrophe, so `don't` doesn't match)
-    - "The instant-rail change to 1 business day wasn't approved." and "…didn't move to 1 business day." (contractions not in the list)
-    - "Standard-rail transfers are reversed within 1 business day." and "All transfers are reversed within 1 business day." (wrong rail or all rails)
-    - "Standard transfers can take two months.", "…can take a month.", "…eleven days." (months and number words beyond ten aren't in the pattern detector)
-    - "…usually immediately." and "…the fee is waived."
-  - **Why minor:** the edit is now purely additive, shown verbatim to the approver, and rechecked against the canonical
-    decisions. The badScope test shows that a mis-scoped claim moves TCK-9003 and is dropped. Nothing is applied without
-    approval.
-  - **Suggested fix:**
-    - Normalize ’ to ' and match any `\w+n't`.
-    - Add `month(s)` and `immediately|instantly` to a fix-specific check.
-    - Require the exception's rail word and no other rail word.
-    - Or soften README step 2 to "no other digits or detected timelines, and no common negation or promise words".
-  - (D-037's wording, "the policy-pattern detector… no negation or promise ("not", "never", "guaranteed"…)", is closer to
-    what the code does.)
-- [severity: minor] lib/client/useSureSend.ts:583-584 with lib/client/metrics.ts:96-99
-  - **What happens:** `fixApproved` and `heldByDoc[id].fixed` are set on approve and cleared only by Reset demo (or, for
-    `fixed`, by a new hold).
-  - **Effect:** if the visitor then restores or deletes DOC-101 in the Docs tab, the menu still says "Fix approved" and
-    tour step 5 still says "Fix approved: … now names the exception" even though the doc no longer has the fix.
-  - **Severity:** an edge case; clear both when the DOC-101 override is restored or removed.
-- [severity: minor] components/tour/GuidedTour.tsx:204 and scripts/record-ai-cache.ts:129
-  - **What's left:** two code comments still say "Step 5" for the doc-edit step, now step 6.
-  - **Severity:** cosmetic; the user-facing text is correct.
-- [severity: minor, pre-existing, not Phase 9] At 390 px, tour step 6's card covers the bottom sheet's "Save and verify".
-  The Playwright click was intercepted by the card. The step body and positioning are unchanged from HEAD's step 5. The
-  coordinator has logged this as a follow-up.
+None.
 
-Accepted as documented scope (D-037):
-- A 5–7 day reply is not a Hold, so no fix is offered. The matcher maps it to DOC-104, and that is tested.
-- The Ask-first fix is the same DOC-101 edit, with the rail hint.
+### Minors
 
-Checked and fine:
-- **DOC-105:** it can never be a target. Only "everyone" docs qualify, visibility comes from the seed, and the prompt only
-  receives DOC-101 and the DOC-103 quote, title and hint.
-- **Canonical recheck:** it compares decision/reasonCode against a baseline under the same overrides and role, and fails
-  safe on a missing extraction.
-- **Nothing applied:** neither MCP nor `/api/fix` applies anything.
-- **Locked areas:** the engine, tests, e2e, seed data, SPEC.md and IMPLEMENTATION_BRIEF.md are untouched.
+- [severity: minor] lib/client/outcome.ts:324-329; components/agent/WhyView.tsx:68 · Item 2 isn't fully met. On a doc that couldn't be read, Why still says the docs are silent.
+  - Expected: "no sentence claims the docs are silent when they weren't compared". SPEC §6.6.2's source side says an unread source "might hold the contradiction".
+  - Actual, on the real server with DOC-101 edited, so it has no saved response: `"The transfer fee isn't refundable."` on TCK-9003 → `CAUTION/UNSUPPORTED rejected=DOC-101:EXTRACTION_ERROR caps=DOC-101`. The card reads `No doc backs this up | No doc supports isn't refundable.` Why reads `No doc makes a claim about this.`, above `AI read the docs.` DOC-101 §4 says the fee is refunded. Only the trace says `DOC-101 couldn't be read`. Same at 1440 and 390 (`1440-doc-unread-why.png`).
+  - Why it's a minor, and this is a judgement call: it's the same false sentence as round 3's major, but that one fell on every gap with the AI working. This one needs every doc on the topic to fail to read. The decision is right (Double-check, with an acknowledgement), the card says to check with the policy owner, and the trace names the doc. No report or README line is affected. It's the closest thing to a major this round.
+  - The fee topic makes it easier to reach than on `main`, because DOC-101 alone carries the fee claim. One failed read is enough, and in saved mode one edit to DOC-101 is enough. On live AI it needs a provider failure, the state the new Limitations line describes.
+  - Suggested fix, a few lines in `whyModel`: when `result.caps` is non-empty, say "SureSend couldn't read DOC-101, so it can't say what your docs say here. Check it by hand." I'd do this before merging.
+
+- [severity: minor] scripts/eval.ts:223-236 · The retry line leaves out retries from a case a stop interrupted.
+  - Expected: D-041's "The report says how many provider errors were retried".
+  - Actual: `p.providerRetries` is saved only when a case finishes, and `stop` doesn't save. `r4-misc.txt`: a blip of 2, then an outage with 3 more retried on one call → report says `2`. The outage alone → report has no line at all. A run an outage stopped and resumed shows no sign of it.
+  - No score changes, and an uninterrupted run counts exactly. Suggested fix: write only this counter in `stop`, by re-reading `progress.json`, setting `providerRetries` and writing it back. Don't call `saveProgress()` there: the tallies in memory include the interrupted case, so saving them would double-count it on resume.
+
+- [severity: minor] lib/client/outcome.ts:178-179 · The Unsupported sentence reads badly on fee claims. Real server: `No doc supports refunded with your money.` and `No doc supports isn't refundable.` The cause is `valueText` inside a sentence written for durations. Copy only.
+
+- [severity: minor] lib/client/outcome.ts:14 · Round 3's second `gapMatches` case is still open, since it has no gap entry. `A PKR 25 fee applies and refunds take 4 business days.` with the amount claimed names `“PKR 25”`, which that claim accounted for. Same on `main`, narrow, and the decision is right.
+
+- [severity: minor] README.md:154 · "That was a one-time logic correction" is followed two lines later by "A second QA round found the same gap". D-041:757 says "second and last logic change", which is right. Drop "one-time".
+
+### Left as they are in D-041: I agree
+
+- The stamp doesn't cover user-message templates, detector patterns or variant docs. The eval header says so and says to use `--fresh`, and the README now says "system prompts or schemas".
+- H6 and H7 stay clean, for the reason given in round 3.
+- A wide quote on a card sits above the gap entry for the words it missed. The result is still Double-check.
+
+### Checked and found fine
+
+- A no-claim reply: `whyModel` returns "No doc makes a claim about this", but it never reaches the screen. `r4-ui-noclaim.cjs`, real server: `send 200`, no decision card, no Why button.
+- `AI_UNAVAILABLE` hides the Why button (`CheckView.tsx`, `!off`), so that path's sentence isn't shown either.
+- Groq's reports are untouched: `git diff HEAD` on `results-groq.*` and `heldout-groq.json` is empty.
+
+### For the separate Gemini commit (not findings at HEAD)
+
+Gemini finished during this review, uncommitted in the working tree: golden 57/57, 81/81, 180/180, PASS; held-out 39/39, fee 12/12, 81/81; exposed 18/18, 39/39. `evals/results.md` now reads `AI_PROVIDER=gemini` on field accuracy. `.loop/await-human.md`, which isn't mine, asks Abdullah about that. When that commit lands, the Gemini rows change, and so must README.md:183, "The eval picked Groq as primary", unless the selection text explains the choice. Restore the finish time first (see "My error").
 
 ## VERDICT: APPROVED

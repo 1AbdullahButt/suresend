@@ -1299,3 +1299,160 @@ mcp-menu.cjs (live): 31 PASS, 0 FAIL · ALL PASS
 step6-phone-fix.cjs (live): 12 PASS, 0 FAIL · ALL PASS
 tour-step6.cjs (live): 29 PASS, 0 FAIL · ALL PASS
 ```
+
+## Phase 10
+A second topic, `fee_refund`, to prove the rules generalise (D-041, D-042, D-043). Adding it took one topic file, two lines to
+register it, the yes/no comparator and its JSON shape, and version bumps. The commit that adds it (43f1bbf) touches no rule file.
+Replies with several claims get a verdict per claim, one card per claim in Why and Trace, and a suggested reply that fixes only the
+wrong claim. Each ticket has 3 "Try another reply" presets, and MCP `check_reply` covers the topic.
+
+- **The rule files did change, and this is the one place the original gate wording doesn't hold.** Locked tests, seed data, SPEC and
+  the brief are untouched, and the guided tour's code is too (empty diffs below). But QA twice found the refactor had generalised the
+  "nothing found" net (D0b) too loosely, and both fixes are in `decide.ts` (576a6b3, d8a9d61). They name no topic. With one topic
+  the rule equals `main`'s (QA: 0 differences on 270 inputs).
+- **Loop:** QA ran four rounds.
+  - Round 1, CHANGES_REQUIRED: D0b weakened across topics, and held-out wording leaked into the prompt and golden set.
+  - Round 2, CHANGES_REQUIRED: a wide span could still switch D0b off, re-running repeated a finished provider, and the resume
+    stamp left out the model.
+  - Round 3, CHANGES_REQUIRED: an outage's failures could be published as model misses, and Why said the docs were silent on a gap.
+  - Round 4, **APPROVED**, no majors. Its minors were fixed after approval, with tests. One of its scripts ran in the real folder
+    by accident and rewrote Gemini's golden report files; D-041 records that and how the results were checked against the real logs.
+- **Abdullah's decisions along the way:**
+  - Held-out integrity: cases seen while writing the prompts don't count, even after the wording is removed. H17–H19 were written
+    and committed (8e68016) before any further eval, with the prompts frozen.
+  - The scripts check quota first and stop cleanly (D-041).
+  - Groq moved to the paid Developer tier with a $5/month hard spend limit (D-042).
+  - Phase 10 ships without blocking on Gemini (D-043). Gemini finished first anyway, so that wasn't needed.
+- **Honest reading of the numbers:** both providers score 100% on the final runs, but Groq's first session on the same frozen prompts
+  scored 36/39 and 9/12 on fee cases, because H18 flipped from 0/3 to 3/3 with no prompt change. The README shows both sessions and
+  calls hedges unstable. Gemini has one session.
+- **Open:** both providers pass the gate with no rejected quotes, so the eval's tie-break picks Gemini on field accuracy (100% vs
+  97.2%) and `evals/results.md` reads `AI_PROVIDER=gemini`. Production still runs Groq as primary, and the README says both.
+  Whether to switch is Abdullah's call.
+- **Known, left as they are:** D-041 lists them.
+
+GATE: PASSED
+
+**Final local gate (saved mode):**
+```
+$ git log --oneline -1
+340a189 Phase 10: Gemini's evals on the frozen prompts
+$ pnpm typecheck
+exit 0
+$ pnpm test
+ Test Files  27 passed (27)
+      Tests  247 passed (247)
+exit 0
+$ pnpm eval --saved
+- Decision accuracy: **100.0%** (19/19)
+- Quote validity: **100.0%** (27/27 extracted quotes/spans verbatim; 0 rejected)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+$ snapshot-results --compare before.json
+68 results → evals/snapshots/after.json (0 not on saved responses)
+Compared with evals/snapshots/before.json: 68 identical, 0 different, 0 missing.
+$ pnpm audit
+No known vulnerabilities found
+$ browser checks at http://127.0.0.1:3100
+p10-ui exit 0 pass=46 fail=0
+step5-ayesha exit 0 pass=43 fail=0
+mcp-menu exit 0 pass=31 fail=0
+step6-phone-fix exit 0 pass=12 fail=0
+tour-step6 exit 0 pass=29 fail=0
+tour-menu exit 0 pass=231 fail=0
+$ pnpm e2e
+
+  1 passed (1.3s)
+exit 0
+$ pnpm mcp:e2e http://127.0.0.1:3100/api/mcp
+PASS check_reply two claims on TCK-9001: Hold [reversal window: Good to send; fee refund: Hold], suggestion keeps "1 business day" (ai_mode saved)
+ALL PASS
+$ scripts/ui-audit.ts
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+```
+
+**The re-record on the frozen prompts (a later commit removed one saved response replay never reaches, leaving 40):**
+```
+groq: 8912 requests left today; this run needs about 60 calls and 96K tokens.
+Recorded 41 saved responses with groq / openai/gpt-oss-120b. Unexpected: 0
+```
+
+**Evals on the frozen prompts, live, 3 runs each:**
+```
+$ evals/results-groq.json
+## groq · `openai/gpt-oss-120b`
+- Runs per case: 3 · started: 2026-11-02T08:52:30.283Z · finished: 2026-11-02T09:08:37.290Z · throttled
+- Decision accuracy: **100.0%** (57/57)
+- Quote validity: **100.0%** (80/80 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **97.2%** (175/180)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+
+$ evals/results-gemini.json
+## gemini · `gemini-3.5-flash-lite`
+- Runs per case: 3 · started: 2026-11-02T08:52:31.164Z · finished: 2026-11-02T10:13:35.336Z · throttled
+- Decision accuracy: **100.0%** (57/57)
+- Quote validity: **100.0%** (81/81 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **100.0%** (180/180)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+
+$ evals/heldout-groq.json (second session)
+## groq · `openai/gpt-oss-120b`
+- Runs per case: 3 · started: 2026-11-02T08:52:30.504Z · finished: 2026-11-02T09:14:15.423Z · throttled
+**Clean held-out cases (13)**
+- Decision accuracy: **100.0%** (39/39)
+- Fee cases only: **100.0%** (12/12)
+- Quote validity: **100.0%** (82/82 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures; seed docs only, the reworded texts have none): **93.5%** (101/108)
+**Exposed cases (6): regression only, not held-out**
+- Decision accuracy: **94.4%** (17/18)
+- Quote validity: **100.0%** (38/38 extracted quotes/spans verbatim; 0 rejected)
+
+$ evals/heldout-gemini.json
+## gemini · `gemini-3.5-flash-lite`
+- Runs per case: 3 · started: 2026-11-02T10:13:38.522Z · finished: 2026-11-02T10:21:35.365Z · throttled
+**Clean held-out cases (13)**
+- Decision accuracy: **100.0%** (39/39)
+- Fee cases only: **100.0%** (12/12)
+- Quote validity: **100.0%** (81/81 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures; seed docs only, the reworded texts have none): **100.0%** (108/108)
+**Exposed cases (6): regression only, not held-out**
+- Decision accuracy: **100.0%** (18/18)
+- Quote validity: **100.0%** (39/39 extracted quotes/spans verbatim; 0 rejected)
+```
+
+**Groq's first session on the same prompts, from 1db5346, on the 13 cases that are clean now: 36/39, fee cases 9/12, H18 0/3.**
+
+**What changed where:**
+```
+$ git log main..HEAD -- <rule files>
+d8a9d61 Phase 10: QA round 2 fixes
+576a6b3 Phase 10: the nothing-found net (D0b) works per topic
+ca12d5b Phase 10: values are worded through their topic
+4a411e5 Phase 10: comparator registry and topic taxonomy (no behaviour change)
+
+$ git show --stat 43f1bbf
+43f1bbf Phase 10: add the fee_refund topic
+
+ lib/ai/prompts.ts       |  2 +-
+ lib/ai/schemas.ts       | 12 +++++++++++-
+ lib/engine/values.ts    | 19 ++++++++++++++++++-
+ lib/topics/feeRefund.ts | 48 ++++++++++++++++++++++++++++++++++++++++++++++++
+ lib/topics/index.ts     |  3 ++-
+ 5 files changed, 80 insertions(+), 4 deletions(-)
+
+$ git diff main..HEAD --stat -- tests data/seed SPEC.md IMPLEMENTATION_BRIEF.md
+(empty)
+
+$ git diff main..HEAD --stat -- components/tour
+(empty)
+
+$ git diff 8e68016..HEAD --stat -- prompts, schemas, topic files, golden, presets, variants
+(empty)
+
+$ git worktree list
+D:/Project/slite 340a189 [phase-10]
+```
+
+**QA verdict:**
+```
+## VERDICT: APPROVED
+```
