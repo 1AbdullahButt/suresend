@@ -222,34 +222,59 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. the tour's and the doc fix's saved-response replay, Fix the doc, and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 164 passed |
-| `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send and a doc-fix proposal, all on saved responses | passed (local and live) |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 230 passed |
+| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the fee topic: golden, tour, doc fix | 68 of 68 identical |
+| `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
-| `pnpm eval` | 12 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft) × 3 runs × 2 providers | see below |
-| `pnpm eval --heldout` | 10 held-out cases × 3 runs × 2 providers | see below |
+| `pnpm eval` | 19 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases) × 3 runs × 2 providers | see below |
+| `pnpm eval --heldout` | 14 clean held-out cases, and 5 exposed ones reported apart, × 3 runs × 2 providers | see below |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
-**Regression on the 12-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
-that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-10-30.2`, throttled to the free tiers):
+**Regression on the 19-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
+that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.4`):
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (36/36) | 100% (39/39) | 100% (180/180) | PASS |
-| Gemini · `gemini-3.5-flash-lite` | 100% (36/36) | 100% (38/38) | 100% (180/180) | PASS |
+| Groq · `openai/gpt-oss-120b` | 100% (57/57) | 100% (81/81) | 96.1% (173/180) | PASS |
+| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | | | |
+
+Field accuracy is below 100% because Groq read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say
+"unstated". No decision changed.
 
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
 
-**Held-out set (10 cases, never used for tuning).** Written after the prompts were frozen: reworded drafts ("working days",
-a number word, calendar days, a hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal,
-an injection inside the draft and a no-claim reply. From [evals/heldout.md](evals/heldout.md), live, 3 runs each:
+**Held-out set (14 clean cases).** A case seen while the prompts or golden set were being written doesn't count, even after
+its wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
 
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (30/30) | 100% (50/50) |
-| Gemini · `gemini-3.5-flash-lite` | 100% (30/30) | 100% (51/51) |
+| Groq · `openai/gpt-oss-120b` | 92.9% (39/42) | 100% (89/89) |
+| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | |
 
-Read it for what it is: 10 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
+- **H1–H10** (the timeline) were written after an earlier freeze: reworded drafts ("working days", a number word, calendar
+  days, a hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the
+  draft and a no-claim reply. H1 and H5 reuse phrases that older prompt already had, so they're easier than they look.
+- **H12** (the fee) was written before any fee prompt text existed.
+- **H17–H19** (the fee) were written after the final freeze: two claims after a doc edit, a hedge, and an amount outside
+  coverage.
+- For H12 and H17–H19, [a test](lib/ai/heldoutIntegrity.test.ts) fails if their wording appears in the prompts, schema, golden
+  set or presets, or if the prompts change after the freeze.
+
+**The miss.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). Groq returned
+Hold on all 3 runs, not Double-check, because that hedge isn't in the prompt's list. It errs strict: the reply is stopped, not
+let through. The prompts were frozen before this run, so it wasn't tuned away.
+
+**Exposed cases (5): regression only, not held-out.** H11, H13, H14, H15 and H16 were written before the fee prompts, but their
+wording then reached the prompts or the golden set. The wording was removed, and they still don't count (D-041). They're
+shown so nothing is hidden, not as evidence. H14 tests the same behaviour as H18 and was the one that leaked.
+
+| Provider · model | Decision accuracy | Quote validity |
+|---|---|---|
+| Groq · `openai/gpt-oss-120b` | 100% (15/15) | 100% (34/34) |
+| Gemini · `gemini-3.5-flash-lite` | not run yet on this prompt | |
+
+Read it for what it is: 14 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
 conventions the project adopted: "4 days" without "business" means calendar days (H5); a signalled change is compared on the
 amount only, so a proposed "1 day" doesn't contradict "1 business day" (H3); and the exception supersedes the SOP by naming
 its title, even after the SOP is reworded (H7).
@@ -269,7 +294,9 @@ pnpm dev
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
 | `pnpm eval --heldout` | Live held-out cases on both providers → `evals/heldout.md` (report only) |
-| `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc |
+| | `pnpm eval` and `pnpm record` check the provider's quota first and stop on the first daily limit (exit code 3) without changing a report. Re-running an eval continues it with the same answers |
+| `pnpm record` | Re-records all of `data/ai-cache/` with the primary provider: golden cases, presets, the tour's doc edit, Fix the doc. Built aside; replaces the folder only if it finishes with nothing unexpected |
+| `pnpm record --resume` | Continues a recording that stopped on a quota limit |
 | `pnpm record --tour-edits` | Adds only what the tour's step-6 doc edit needs; never clears existing saved responses |
 | `pnpm mcp:e2e [url]` | Checks an MCP endpoint end to end (default `http://127.0.0.1:3100/api/mcp`) |
 | `pnpm record --fix-edits` | Adds only what Fix the doc needs on the canonical path; never clears existing saved responses |
@@ -301,7 +328,8 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
-- The eval is small and built around one scenario; the held-out set (10 cases) is a first check on generalisation, not proof.
+- The eval is small and built around one scenario; the held-out set (14 clean cases) is a first check on generalisation, not proof.
+- A hedge the prompt doesn't list can read as definite: "As far as I can tell" came back Hold, not Double-check (H18).
 
 ## What not to claim
 

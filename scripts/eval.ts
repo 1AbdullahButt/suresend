@@ -408,8 +408,8 @@ function writeCombined() {
     : "**Selection:** no provider passed the gate.";
   const md = `# Live-AI eval results
 
-${golden.cases.length} golden cases (\`evals/golden.json\`: the 3 canonical tickets, Appendix B variants B1–B7, a 1-business-day ALLOW
-and a no-claim draft), each run 3× per provider, prompt version \`${PROMPT_VERSION}\`. The gate is the canonical tickets plus
+${golden.cases.length} golden cases (\`evals/golden.json\`: the 3 canonical tickets, Appendix B variants B1–B7, a 1-business-day ALLOW,
+a no-claim draft and the fee cases), each run 3× per provider, prompt version \`${PROMPT_VERSION}\`. The gate is the canonical tickets plus
 B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this prompt version are listed and used for selection.
 
 ${selection}
