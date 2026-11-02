@@ -1,0 +1,25 @@
+{
+  "key": "78b29e959cab485974d2e452d1a1dc140b4df9b10e28ef969e254825787289e3",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.6",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "The transfer fee is refunded with the principal."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded with the principal",
+        "span": "The transfer fee is refunded with the principal.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T18:15:34.813Z"
+}

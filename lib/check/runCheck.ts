@@ -302,7 +302,9 @@ async function holdSuggestion(
         const claims = validateDraftClaims(text, ex.claims, rejected);
         const re = recheck(text, claims, extractions, sources, ticket, now);
         const said = extractions.draft.ok ? extractions.draft.claims : [];
-        if (rejected.length === 0 && isAcceptable(re) && !dropsAnAnswer(re, said)) return checked(text, "ai", re, sources);
+        // The prompt says to state each value exactly as given; a rewrite that doesn't loses to the template, which does (D-052).
+        const statesValues = facts.filter((f) => f.wrong).every((f) => text.includes(f.claim.governing.valueText));
+        if (rejected.length === 0 && isAcceptable(re) && !dropsAnAnswer(re, said) && statesValues) return checked(text, "ai", re, sources);
       }
     } catch {
       // fall through to the template

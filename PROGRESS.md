@@ -1755,3 +1755,60 @@ PASS the repro on production: CAUTION/UNSUPPORTED
 ```
 **Still open:** Gemini's rerun on the final rules (its daily limit, retry after about 08:00 UTC on 3 Nov), in its own commit, with `--provider gemini`.
 
+### Phase 11, second round: a fee taken off the money reads as not refunded (D-052)
+Abdullah's decision, after the report. Same branch name, same loop. Also: the tour's "reads your docs live", the 404 disclaimer, and the Codex files in `.gitignore`.
+
+**Tests first (e00cd5d), recorded failing before the prompt or detector changed.**
+```
+$ pnpm vitest run lib/topics/feeRefund.test.ts lib/check/vagueReply.test.ts lib/ai/heldoutIntegrity.test.ts
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+Test Files  2 failed | 1 passed (3)
+Tests  6 failed | 113 passed (119)
+FAIL  lib/check/vagueReply.test.ts > the fee taken off the money reads as not refunded (D-052) > if the AI misses the fee and states the timeline, the detector 
+FAIL  lib/topics/feeRefund.test.ts > fee_refund: the detector > catches minus the processing charge
+FAIL  lib/topics/feeRefund.test.ts > fee_refund: the detector > catches less the fee
+FAIL  lib/topics/feeRefund.test.ts > fee_refund: the detector > catches less the small charge for the transfer
+FAIL  lib/topics/feeRefund.test.ts > fee_refund: the detector > catches after deducting the transfer fee
+FAIL  lib/topics/feeRefund.test.ts > fee_refund: the detector > catches net of the fee
+$ the repro live, old prompt
+reply [TCK-9001 instant] CAUTION/UNSUPPORTED (Double-check, AI live)
+  claim: reversal_window "you'll see it reflected after the weekend" value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  claim: fee_refund "minus the processing charge" value=null → CAUTION/UNSUPPORTED, docs say refunded
+  card:  Your reply is vague on this. Your docs say 1 business day; your reply gives no number.
+```
+**After.** Prompt `2026-11-02.6`. Golden 74/75 (the miss: "less the small charge for the transfer" read as vague once, a Double-check), quotes 115/115, fields 173/180, gate PASS. Held-out clean 56/57, fee 20/21, vague 9/9, quotes 130/130; H23–H25 9/9. Exposed 17/18, quotes 40/40; H11 back to 3/3. Gemini's rerun on this prompt follows in its own commit.
+
+**Hedged cases × 10 on this prompt:**
+
+**All 4 cases:** 34 of 40 as expected · 6 strict misses (Hold or Double-check, wrong reason) · 0 unsafe (Good to send) · 0 couldn't be checked.
+
+**Clean cases only (3; H14 is exposed):** 25 of 30 as expected · 5 strict misses (Hold or Double-check, wrong reason) · 0 unsafe (Good to send) · 0 couldn't be checked.
+
+| Case | Expected | Verdicts | As expected | Strict misses | Unsafe |
+|---|---|---|---|---|---|
+| H2-hedged | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 10 | 10/10 | 0 | 0 |
+| H14-fee-hedged-no (exposed) | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 9<br>Hold (CONTRADICTS_GOVERNING): 1 | 9/10 | 1 | 0 |
+| H18-fee-hedged-no | Double-check (HEDGED_CONTRADICTION) | Double-check (HEDGED_CONTRADICTION): 5<br>Hold (CONTRADICTS_GOVERNING): 5 | 5/10 | 5 | 0 |
+| H20-vague-mid-month | Double-check (UNSUPPORTED) | Double-check (UNSUPPORTED): 10 | 10/10 | 0 | 0 |
+
+**Saved results.** `pnpm record`: Unexpected 0. Against Phase 10's 68: 62 identical. The 6: the no-claim reply (2), and the tour's digit-only edit (4, same decision, suggested reply now from the template). Against `phase11.json`, the repro and the Monday variant (2 personas each) go to Hold, as decided.
+
+**Two things the checks caught in this round.** The re-recording's rewrite for the tour's digit-only edit said "within 2 business day". The replay test caught it, and re-recording gave the same words, so the server now checks that a rewrite states the value (D-052). And my first tour wording was long enough that the card covered the doc's text box at phone width; `step6-phone-fix` caught it and the sentence is short again.
+
+**The final state, before QA.**
+```
+$ pnpm test: 372 passed
+$ pnpm lint: exit 0
+p11-ui-check (repro is a Hold; vague timeline; 404; Usman's preset; slide-over): pass=43 fail=0
+p11-offer: pass=27 fail=0
+p10-ui: pass=46 fail=0
+step5-ayesha: pass=43 fail=0
+mcp-menu: pass=31 fail=0
+step6-phone-fix: pass=12 fail=0
+tour-step6: pass=29 fail=0
+tour-menu: pass=231 fail=0
+pnpm mcp:e2e: ALL PASS
+ui-audit: Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+playwright: 1 passed
+```
+

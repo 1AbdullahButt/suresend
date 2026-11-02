@@ -1,0 +1,32 @@
+{
+  "key": "3193cb05d31453438e9856c76428370b520a8a5e465fb54516c22ba38e4ecff0",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.6",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Thanks for your patience. I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it. The transfer fee is refunded."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "as soon as I have it",
+        "span": "I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it.",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded",
+        "span": "The transfer fee is refunded.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T18:20:24.191Z"
+}

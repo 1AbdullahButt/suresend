@@ -1,0 +1,850 @@
+[
+  {
+    "id": "golden canon-9001 (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9001 (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9002 (support_agent)",
+    "decision": "ESCALATE",
+    "reasonCode": "SCOPE_UNKNOWN",
+    "claims": [
+      "reversal_window:ESCALATE/SCOPE_UNKNOWN"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9002 (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9003 (support_agent)",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B1 (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B1 (support_agent) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B2 (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B3 (support_agent)",
+    "decision": "ESCALATE",
+    "reasonCode": "CONFLICT_UNRESOLVED",
+    "claims": [
+      "reversal_window:ESCALATE/CONFLICT_UNRESOLVED"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B3 (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B4 (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B5 (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B6 (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B7 (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden allow-1day (support_agent)",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden no-claim (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "TOPIC_GAP",
+    "claims": [
+      "reversal_window:CAUTION/TOPIC_GAP"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-repro (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED",
+      "fee_refund:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-repro (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED",
+      "fee_refund:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-week-out (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-very-soon (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-monday-less-charge (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED",
+      "fee_refund:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-monday-less-charge (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED",
+      "fee_refund:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-unknown-rail (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-next-week (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9001 (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9001 (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9002 (ops_lead)",
+    "decision": "ESCALATE",
+    "reasonCode": "SCOPE_UNKNOWN",
+    "claims": [
+      "reversal_window:ESCALATE/SCOPE_UNKNOWN"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9002 (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden canon-9003 (ops_lead)",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B1 (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B1 (ops_lead) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B2 (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B3 (ops_lead)",
+    "decision": "ESCALATE",
+    "reasonCode": "CONFLICT_UNRESOLVED",
+    "claims": [
+      "reversal_window:ESCALATE/CONFLICT_UNRESOLVED"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B3 (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B4 (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B5 (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B6 (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden B7 (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden allow-1day (ops_lead)",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden no-claim (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "TOPIC_GAP",
+    "claims": [
+      "reversal_window:CAUTION/TOPIC_GAP"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-repro (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED",
+      "fee_refund:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-repro (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED",
+      "fee_refund:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-week-out (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-very-soon (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-monday-less-charge (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED",
+      "fee_refund:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-monday-less-charge (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED",
+      "fee_refund:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-unknown-rail (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "golden vague-next-week (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "UNSUPPORTED",
+    "claims": [
+      "reversal_window:CAUTION/UNSUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full verify (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full verify (support_agent) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full verify (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full verify (ops_lead) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full re-check (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit full re-check (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly verify (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "template→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly verify (support_agent) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly verify (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "template→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly verify (ops_lead) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly re-check (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "tour edit digitOnly re-check (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "fix proposal TCK-9001 (support_agent)",
+    "decision": "PROPOSAL",
+    "reasonCode": "DOC-101 ai",
+    "claims": [
+      "TCK-9001/instant: HOLD / CONTRADICTS_GOVERNING",
+      "TCK-9002/unknown: ESCALATE / SCOPE_UNKNOWN",
+      "TCK-9003/standard: ALLOW / SUPPORTED",
+      "TCK-9001/instant: ALLOW / SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9001 (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9001 (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full verify (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full verify (support_agent) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full re-check (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly verify (support_agent)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "template→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly verify (support_agent) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly re-check (support_agent)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "fix proposal TCK-9002 (support_agent)",
+    "decision": "PROPOSAL",
+    "reasonCode": "DOC-101 ai",
+    "claims": [
+      "TCK-9001/instant: HOLD / CONTRADICTS_GOVERNING",
+      "TCK-9002/unknown: ESCALATE / SCOPE_UNKNOWN",
+      "TCK-9003/standard: ALLOW / SUPPORTED",
+      "TCK-9001/instant: ALLOW / SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9002 (support_agent)",
+    "decision": "ESCALATE",
+    "reasonCode": "SCOPE_UNKNOWN",
+    "claims": [
+      "reversal_window:ESCALATE/SCOPE_UNKNOWN"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9002 (support_agent) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "fix proposal TCK-9001 (ops_lead)",
+    "decision": "PROPOSAL",
+    "reasonCode": "DOC-101 ai",
+    "claims": [
+      "TCK-9001/instant: HOLD / CONTRADICTS_GOVERNING",
+      "TCK-9002/unknown: ESCALATE / SCOPE_UNKNOWN",
+      "TCK-9003/standard: ALLOW / SUPPORTED",
+      "TCK-9001/instant: ALLOW / SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9001 (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9001 (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "SUPPORTED",
+    "claims": [
+      "reversal_window:ALLOW/SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full verify (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "ai→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full verify (ops_lead) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit full re-check (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly verify (ops_lead)",
+    "decision": "HOLD",
+    "reasonCode": "CONTRADICTS_GOVERNING",
+    "claims": [
+      "reversal_window:HOLD/CONTRADICTS_GOVERNING"
+    ],
+    "suggestion": "template→CAUTION",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly verify (ops_lead) → Use this reply → Send",
+    "decision": "CAUTION",
+    "reasonCode": "CHANGE_SIGNALLED",
+    "claims": [
+      "reversal_window:CAUTION/CHANGE_SIGNALLED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix + tour edit digitOnly re-check (ops_lead)",
+    "decision": "CAUTION",
+    "reasonCode": "WEAK_BASIS",
+    "claims": [
+      "reversal_window:CAUTION/WEAK_BASIS"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "fix proposal TCK-9002 (ops_lead)",
+    "decision": "PROPOSAL",
+    "reasonCode": "DOC-101 ai",
+    "claims": [
+      "TCK-9001/instant: HOLD / CONTRADICTS_GOVERNING",
+      "TCK-9002/unknown: ESCALATE / SCOPE_UNKNOWN",
+      "TCK-9003/standard: ALLOW / SUPPORTED",
+      "TCK-9001/instant: ALLOW / SUPPORTED"
+    ],
+    "suggestion": null,
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9002 (ops_lead)",
+    "decision": "ESCALATE",
+    "reasonCode": "SCOPE_UNKNOWN",
+    "claims": [
+      "reversal_window:ESCALATE/SCOPE_UNKNOWN"
+    ],
+    "suggestion": "template→ALLOW",
+    "aiMode": "saved"
+  },
+  {
+    "id": "after fix TCK-9002 (ops_lead) → Use this reply → Send",
+    "decision": "ALLOW",
+    "reasonCode": "NO_POLICY_CLAIM",
+    "claims": [],
+    "suggestion": null,
+    "aiMode": "saved"
+  }
+]

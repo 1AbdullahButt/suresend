@@ -198,9 +198,9 @@ flowchart TD
 - **AI providers:** two live providers behind one adapter ([`lib/ai/client.ts`](lib/ai/client.ts)): Groq
   (`openai/gpt-oss-120b`, strict JSON-schema output) and Google Gemini (`gemini-3.5-flash-lite`, native JSON-schema
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
-  over. On the current prompt both pass the gate with no rejected quotes, so the eval's tie-break goes to field accuracy and picks Gemini, though Groq scores higher on
+  over. On the last prompt both providers finished (`2026-11-02.5`), both passed the gate with no rejected quotes, so the eval's tie-break went to field accuracy and picked Gemini, though Groq scored higher on
   decisions (below). Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
-  the field-accuracy gap changed no decision. [evals/results.md](evals/results.md) shows both. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
+  the field-accuracy gap changed no decision. [evals/results.md](evals/results.md) shows the pick and the override whenever both have run on the current prompt. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
   stored identity hashes to its name.
@@ -243,57 +243,58 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 356 passed |
-| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 66 of 68 identical. The other 2 are the no-claim reply (both personas), now a Double-check by rule D0e |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 372 passed |
+| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 62 of 68 identical. The other 6: the no-claim reply (both personas), now a Double-check by rule D0e; and the tour's digit-only edit (4 paths), same decision, with the suggested reply now from the template |
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs × 2 providers | see below |
-| `pnpm eval --heldout` | 16 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
-| `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the frozen prompts | 36/40 as expected; 4 strict misses; 0 Good to send |
+| `pnpm eval --heldout` | 19 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
+| `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the frozen prompts | 34/40 as expected; 6 strict misses; 0 Good to send |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
 **Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path works, not
-that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.5`):
+that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.6`):
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 98.7% (74/75) | 100% (107/107) | 98.9% (178/180) | PASS |
-| Gemini (fallback) · `gemini-3.5-flash-lite` (before QA's fixes) | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
+| Groq · `openai/gpt-oss-120b` | 98.7% (74/75) | 100% (115/115) | 96.1% (173/180) | PASS |
+| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
 
-Every miss on both providers is on the six vague replies, and none reached Good to send. These score against the expected reason. Groq read
-one fee wording as "not refunded" once, which gives a Hold. Gemini did that on 4 runs, and on 6 it found no claim, so rule D0e's Double-check caught them.
+Groq's one miss: it read "less the small charge for the transfer" as vague on 1 of 3 runs, so that run got a Double-check, not a Hold. These score against the expected reason, and no
+reply reached Good to send.
 
-Groq's field accuracy is below 100% because it read DOC-101 as "in force" where the hand-written fixtures say "unstated". An earlier session on
-this prompt, before QA's fixes, scored 75/75 and 170/180, also misreading DOC-104 and the Slack proposal. The prompt for reading docs didn't change in
-this phase, so that's the model varying. No decision changed.
+Groq's field accuracy is below 100% because it read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say "unstated". Over this phase's three sessions it went
+170, 178, then 173 of 180. The prompt for reading docs didn't change in this phase, so that's the model varying. No decision changed.
 
-**Gemini's rows ran before QA's rule fixes.** The rerun hit its 500-a-day free limit on 2 Nov, and it follows in its own commit. Those fixes change what happens
-with an unread doc, a reply that only resembles the holding reply, and an AI rewrite that drops an answer. The reports show the run times.
+**Gemini's rows are from the previous prompt (`2026-11-02.5`), and before QA's rule fixes.** It hit its 500-a-day free limit on 2 Nov, so its rerun on this prompt follows in its own commit. On that
+prompt every Gemini miss was a vague reply, and none reached Good to send: a Hold on 4 runs, and on 6 it found no claim, so rule D0e's Double-check caught them.
 
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
 
-**Held-out set (16 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
+**Held-out set (19 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
 wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
 
-| Provider · model | All clean cases | Fee cases only (H12, H17–H19) | Vague replies only (H20–H22) | Quote validity |
+| Provider · model | All clean cases | Fee cases only (H12, H17–H19, H23–H25) | Vague replies only (H20–H22) | Quote validity |
 |---|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 97.9% (47/48) | 91.7% (11/12) | 100% (9/9) | 100% (97/97) |
-| Groq, earlier session on this prompt (before QA's fixes) | 95.8% (46/48) | 83.3% (10/12) | 100% (9/9) | 100% (98/98) |
-| Gemini (fallback) · `gemini-3.5-flash-lite` (before QA's fixes) | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
+| Groq · `openai/gpt-oss-120b` | 98.2% (56/57) | 95.2% (20/21) | 100% (9/9) | 100% (130/130) |
+| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt, 16 cases | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
+| Groq, previous prompt (`2026-11-02.5`), 16 cases, two sessions | 95.8% (46/48), then 97.9% (47/48) | 83.3% (10/12), then 91.7% (11/12) | 100% (9/9) both | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Groq, two sessions | 92.3% (36/39), then 100% (39/39) | 75% (9/12), then 100% (12/12) | no such cases | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Gemini | 100% (39/39) | 100% (12/12) | no such cases | 100% (81/81) |
 
 - **The vague replies are the evidence for this phase's prompt change.** H20–H22 were committed before any prompt work on valueless
   claims, and the same test checks them for shared phrases. They're three cases, so it's a first check. They score against the reason, so a
   reply the AI misses and rule D0e catches still counts as a miss here: Gemini's two are that (H22).
+- **H23–H25 are the evidence for reading a fee taken off the money as not refunded.** They say it in other words ("with the service cost taken off", "once we deduct what the send cost you", "short of
+  our handling charge"), and were committed before that prompt change (e00cd5d), under the same test for shared phrases. Groq: 9 of 9.
 - **Three expected results changed with the rule, not the case:** H10, H12 and H13 leave the customer's question open, so they're
   now Double-check where they were Good to send (D-045).
 
 - **The fee cases are the real evidence for the new topic.** H12 was written before any fee prompt text existed. H17–H19 were
   written after the final freeze: two claims after a doc edit, a hedge, and an amount outside coverage.
-  [A test](lib/ai/heldoutIntegrity.test.ts) fails if any of the four shares a three-word phrase with the prompts, schema,
+  [A test](lib/ai/heldoutIntegrity.test.ts) fails if any of them shares a three-word phrase with the prompts, schema,
   golden set or presets, or if the system prompts or schemas change after the freeze.
 - **The timeline cases** (H1–H4, H6–H10) were written after an earlier freeze: reworded drafts ("working days", a number word, a
   hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the draft and
@@ -302,12 +303,12 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 
 **Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On one
 frozen prompt, Groq returned Hold on all 3 runs of one session and Double-check on all 3 of the next, and nothing was tuned between them
-([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On this prompt it's 1 of 3, then 2 of 3, then 6 of 10
-([hedge runs](evals/hedge-runs.md)). H14, its exposed twin, has gone 3/3, 2/3, 3/3, 3/3 and 10/10. A miss here errs strict: the reply is stopped, not let through.
+([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On the previous prompt it was 1 of 3, 2 of 3, then 6 of 10; on this one 2 of 3, then 5 of 10
+([hedge runs](evals/hedge-runs.md)). H14, its exposed twin, has gone 3/3, 2/3, 3/3, 3/3, 10/10, 3/3 and 9/10. A miss here errs strict: the reply is stopped, not let through.
 
-**Marking vague fee wording as valueless has a cost.** H11 says "the transfer charge stays with us", a plain "not refunded". On the earlier
-prompt Groq held it on all 3 runs of its last session. On this one it read the charge as vague on 2 of 6 runs (1 of 3 right, then 3 of 3), so those get a Double-check, not a
-Hold. It isn't let through, but it's weaker on a reply that's wrong. H11 is exposed, so it's not in the clean score, and it's why this is called out here.
+**A fee taken off the money reads as not refunded.** The previous prompt listed "minus the processing charge" as vague wording, and that had a cost: H11 ("the transfer charge stays with us", a plain "not refunded")
+fell from Hold on 3 of 3 to 4 of 6, so a wrong reply sometimes got only a Double-check. This prompt says money back with the fee taken off means the fee isn't refunded. H11 is back to 3 of 3 and H23–H25 are 9 of 9, so
+those replies are held. The detector catches the same wording too, so if the AI misses it, the reply is a Double-check, not Good to send.
 
 **Exposed cases (6): regression only, not held-out.** H5, H11, H13, H14, H15 and H16. Their wording reached the prompts or the
 golden set, or shares a phrase with drafts written after them. Where it could be removed, it was, and they still don't count
@@ -315,13 +316,13 @@ golden set, or shares a phrase with drafts written after them. Where it could be
 
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
-| Groq · `openai/gpt-oss-120b` | 88.9% (16/18) | 100% (41/41) |
-| Gemini (fallback) · `gemini-3.5-flash-lite` (before QA's fixes) | 94.4% (17/18) | 100% (39/39) |
+| Groq · `openai/gpt-oss-120b` | 94.4% (17/18) | 100% (40/40) |
+| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 94.4% (17/18) | 100% (39/39) |
 
-Groq's two misses are both H13, whose "It is returned along with your money" it read as a timeline with no value. That's still a Double-check, for a
+Groq's one miss is H13, whose "It is returned along with your money" it read as a timeline with no value on 1 of 3 runs. That's still a Double-check, for a
 different reason.
 
-Read it for what it is: 16 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
+Read it for what it is: 19 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
 conventions the project adopted: "4 days" without "business" means calendar days (H5, now exposed); a signalled change is compared on the
 amount only, so a proposed "1 day" doesn't contradict "1 business day" (H3); and the exception supersedes the SOP by naming
 its title, even after the SOP is reworded (H7).
@@ -393,11 +394,11 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
-- The eval is small and built around one scenario; the held-out set (16 clean cases) is a first check on generalisation, not proof.
-- **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq with the frozen prompts, the four hedged held-out cases gave the expected verdict on 36 of
-  40 runs. The other 4 were strict and none was Good to send: all 4 are H18, whose "As far as I can tell" the AI read as definite, so it got a Hold, not a Double-check. H2, H14 and H20
+- The eval is small and built around one scenario; the held-out set (19 clean cases) is a first check on generalisation, not proof.
+- **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq with the frozen prompts, the four hedged held-out cases gave the expected verdict on 34 of
+  40 runs. The other 6 were strict and none was Good to send: each is a hedge the AI read as definite, so it got a Hold, not a Double-check (5 on H18's "As far as I can tell", 1 on H14). H2 and H20
   were right 10 of 10. That's four sentences at temperature 0 in one sitting, so 0 unsafe in 40 doesn't prove never: even if the runs were independent, at 95% confidence a rate up to about 7% could go unseen, or about 26% for any one sentence (0 of 10). See
-  [evals/hedge-runs.md](evals/hedge-runs.md). Over every Groq session on the last two prompts, H18 is a Hold on 10 of 22 runs.
+  [evals/hedge-runs.md](evals/hedge-runs.md). Over every Groq session on the last three prompts, H18 is a Hold on 16 of 35 runs.
 
 ## What not to claim
 

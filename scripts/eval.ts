@@ -511,13 +511,14 @@ ${clean.length} clean held-out cases (\`evals/heldout.json\`), run with prompt \
 - **H12** (the fee) was written before any fee prompt text existed. It shares no three-word phrase with the prompts, schema, golden set or presets.
 - **H17–H19** (the fee) were written after the prompts were frozen at \`2026-11-02.4\`, and share no three-word phrase with those files: two claims after a doc edit, a hedge, and an amount outside coverage.
 - **H20–H22** (vague replies) were written and committed before any prompt work on valueless claims, and share no three-word phrase with those files (D-045). They're scored against the expected reason, so a reply the AI misses but rule D0e catches is still Double-check, and still counts as a miss here.
+- **H23–H25** (a fee taken off the money) were written and committed before the prompt said that means not refunded (e00cd5d), and share no three-word phrase with those files.
 - **H10, H12 and H13** changed their expected result when rule D0e arrived (D-045): each is a reply that leaves the customer's question open, so each is now Double-check. The rule changed, not the case.
 
-The four fee cases are the real evidence for the second topic, and the three vague cases for valueless claims; a line below scores each group on its own.
+The seven fee cases are the real evidence for the second topic, and the three vague cases for valueless claims; a line below scores each group on its own.
 
 ${exposed.length} exposed cases (${exposed.map((c) => c.id.split("-")[0]).join(", ")}) no longer count as held-out and are reported separately as regression cases. Their wording reached the prompts or the golden set, or came from them, even where it was later removed (D-041).
 
-Sessions on earlier prompts are in commits 1db5346 and 5a0b026. H18 and H14 have flipped between sessions on one prompt: treat them as unstable, not as fixed (D-041).`;
+Sessions on earlier prompts are in commits 1db5346, 5a0b026 and 9d13a70. H18 and H14 have flipped between sessions on one prompt: treat them as unstable, not as fixed (D-041).`;
   const body = `${reports.map((r) => r.markdown).join("\n")}
 `;
   const out = `${md}${missing.length ? `\n\nNot finished on this prompt: ${missing.join(", ")}.` : ""}\n\n${body}`;

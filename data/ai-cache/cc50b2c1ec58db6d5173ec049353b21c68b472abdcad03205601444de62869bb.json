@@ -1,0 +1,23 @@
+{
+  "key": "cc50b2c1ec58db6d5173ec049353b21c68b472abdcad03205601444de62869bb",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.6",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "All sorted on our end, the refund is on its way and will show up very soon."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "very soon",
+        "span": "the refund is on its way and will show up very soon",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T18:18:35.268Z"
+}

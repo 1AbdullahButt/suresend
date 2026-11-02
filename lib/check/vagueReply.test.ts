@@ -426,6 +426,16 @@ describe("a suggested reply that drops an answer the draft gave", () => {
     expect(r.suggestion?.recheckDecision).toBe("ALLOW");
   });
 
+  // The doc itself can have the typo: a tour visitor changing only the digit gets "2 business day" in DOC-103, and the model copied it.
+  it("a rewrite that doesn't state the value as given loses to the template", async () => {
+    const r = await runCheck({ ...input(CASES[1]!), draft: FOUR }, {
+      ...withRewrite([timeline], "Failed transfers are reversed within one working day."),
+      extractDraft: async (text) => ({ claims: text === FOUR ? [timeline] : [{ ...timeline, value: { amount: 1, unit: "business_days" }, valueText: "one working day", span: "within one working day" }], info: INFO }),
+    });
+    expect(r.suggestion?.origin).toBe("template");
+    expect(r.suggestion?.text).toContain("1 business day");
+  });
+
   it("a fee-only draft had no timeline to drop, so its rewrite stands, with a Double-check that says why", async () => {
     const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: false }, valueText: "isn't refundable", span: "The transfer fee isn't refundable", definitive: true };
     const rewrite = "The transfer fee is refunded with your money.";

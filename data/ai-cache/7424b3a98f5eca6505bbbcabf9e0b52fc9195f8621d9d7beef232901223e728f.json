@@ -1,0 +1,36 @@
+{
+  "key": "7424b3a98f5eca6505bbbcabf9e0b52fc9195f8621d9d7beef232901223e728f",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.6",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Nothing to do on your side: the reversal is automatic and you'll see it reflected within 1 business day, and the processing charge will be refunded."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "within 1 business day",
+        "span": "you'll see it reflected within 1 business day",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "will be refunded",
+        "span": "the processing charge will be refunded",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T18:18:11.296Z"
+}
