@@ -10,10 +10,10 @@ B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this pro
 
 ## groq · `openai/gpt-oss-120b`
 
-- Runs per case: 3 · started: 2026-11-02T12:41:44.302Z · finished: 2026-11-02T13:05:58.794Z · throttled · provider errors retried, with no answer to score: 5
-- Decision accuracy: **100.0%** (75/75)
-- Quote validity: **100.0%** (105/105 extracted quotes/spans verbatim; 0 rejected)
-- Extraction field accuracy (vs hand-written fixtures): **94.4%** (170/180)
+- Runs per case: 3 · started: 2026-11-02T15:15:21.915Z · finished: 2026-11-02T15:35:46.494Z · throttled
+- Decision accuracy: **98.7%** (74/75)
+- Quote validity: **100.0%** (107/107 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **98.9%** (178/180)
 - Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
 
 | Case |  | Expected | Runs | Correct |
@@ -40,15 +40,12 @@ B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this pro
 | vague-repro |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-week-out |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-very-soon |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
-| vague-monday-less-charge |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| vague-monday-less-charge |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✗ HOLD/CONTRADICTS_GOVERNING | 2/3 |
 | vague-unknown-rail |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-next-week |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 
 Field misses:
 - DOC-101/seed reversal_window statusWording: want "unstated" got "in_force"
-- DOC-104/seed reversal_window statusWording: want "unstated" got "in_force"
-- DOC-104/seed other statusWording: want "unstated" got "in_force"
-- SRC-202/seed reversal_window statusWording: want "proposed" got "pending_approval"
 
 ## gemini · `gemini-3.5-flash-lite`
 

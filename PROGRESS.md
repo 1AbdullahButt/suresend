@@ -1590,9 +1590,41 @@ FAIL storage blocked: stays gone after a reload
 FAIL storage blocked: stays gone after leaving and coming back
 2 FAILED
 ```
-**Evals on Groq, 3 runs, prompt `2026-11-02.5`, published as they came.** Golden 75/75, quotes 105/105, fields 170/180, gate PASS. Held-out clean 46/48, fee 10/12, vague 9/9, quotes 98/98.
-Exposed 16/18. Misses: H18 1/3 (the known unstable hedge, errs strict) and H11 1/3. H11 is new: "the transfer charge stays with us" read as vague on 2 of 3, so Double-check, not Hold.
-The first held-out run stopped at 29 of 66 on four Groq timeouts in a row; the guard scored nothing from that call and the rerun continued.
+**Evals, first session on prompt `2026-11-02.5`, before QA's fixes.** Groq: golden 75/75, quotes 105/105, fields 170/180, gate PASS; held-out clean 46/48, fee 10/12, vague 9/9, quotes 98/98; exposed 16/18.
+Misses: H18 1/3 (the known unstable hedge, errs strict) and H11 1/3 ("the transfer charge stays with us" read as vague on 2 of 3, so Double-check, not Hold). The first held-out run stopped at 29 of 66 on four
+Groq timeouts in a row; the guard scored nothing from that call and the rerun continued. Gemini: golden 65/75, quotes 107/107, fields 180/180, gate PASS; held-out clean 44/48, fee 10/12, vague 7/9, quotes 91/91;
+exposed 17/18. Every Gemini golden miss is a vague reply: Hold on 4 runs, rule D0e's Double-check on 6. None reached Good to send.
 
 **How the loop ran.** Builder and tester work was done in this session. QA is an independent subagent.
+
+**QA round 1: CHANGES_REQUIRED, three majors, all real.** (1) The tour's step 1 still said "Slite Agent", and my copy test missed it because the source wraps between the two words. (2) With the governing doc unread, the card said
+"Your docs say 4 business days" on an instant transfer. (3) The Ask-first exemption only looked for "the exact reversal timeline", so "We never share the exact reversal timeline" sent as Good to send when the AI also missed it. All fixed (f93910e), with tests.
+Also fixed from its minors: the broken image on the how-it-works page, a rewrite that drops an answer now loses to the template, held Enter on "Not now" starting the tour, MCP's `says` on a gap (`in_reply`), "Your reply is right" and its siblings, a doc in doubt flagged, wrong numbers (H14), and stale docs. My slide-over check never really changed the ticket, because its click landed on the scrim; it now does, and asserts that it did.
+
+**The one-time e2e unlock (D-050), approved by Abdullah.** Three strings. The diff on `.loop/locked` is empty, and a real edit attempt is refused:
+```
+$ git diff --numstat main..phase-11 -- e2e
+3	3	e2e/demo.spec.ts
+$ cat .loop/locked
+# Locked paths (in addition to tests/, SPEC.md, IMPLEMENTATION_BRIEF.md, data/seed/). One per line.
+e2e/
+Edit on e2e/demo.spec.ts → PreToolUse hook: BLOCKED by protect-locked: "e2e/demo.spec.ts" is locked (SPEC is the contract; see CLAUDE.md rule 1).
+$ pnpm exec playwright test
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → D
+  1 passed (26.2s)
+```
+**After the fixes, on a saved-mode build.** The saved results are unchanged by them: 80 of 80 identical to `evals/snapshots/phase11.json`, so still 66 of the original 68.
+```
+p11-ui-check (repro, sent card, actor, slide-over with a real change of ticket): pass=29 fail=0
+p11-offer (Not now at 3 widths, X, held Enter, blocked storage): pass=27 fail=0
+p10-ui: pass=46 fail=0
+step5-ayesha: pass=43 fail=0
+mcp-menu: pass=31 fail=0
+step6-phone-fix: pass=12 fail=0
+tour-step6: pass=29 fail=0
+tour-menu: pass=231 fail=0
+pnpm mcp:e2e: ALL PASS
+```
+**Evals after the fixes, published as they came.** Groq, prompt `2026-11-02.5`: golden 74/75 (the miss is a Hold on `vague-monday-less-charge`), quotes 107/107, fields 178/180, gate PASS. Held-out clean 47/48, fee 11/12, vague 9/9, quotes 97/97. Exposed 16/18, quotes 41/41: H13 1/3, read as a timeline with no value, still a Double-check. H11 was 3/3 this time, so Hold on 4 of 6 over the two sessions.
+**Gemini's reports are from before these fixes.** My first rerun command was wrong: a `;` went to `pnpm` as an argument, so Groq's held-out and Gemini's golden never ran. I caught it in the log and reran Groq's. Gemini's held-out rerun hit its daily limit at 22 of 66 ("retry in 16h 22m"). Its reports stay as committed, and the rerun follows in its own commit, as the brief allows.
 
