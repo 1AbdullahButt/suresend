@@ -26,7 +26,7 @@ function visible(file: string): string {
 
 describe("copy rules", () => {
   // "The AI only read the docs" implies the same reply always gets the same verdict; the AI reads the reply too (D-051).
-  it.each(["got the right answer", "never reached", "your reply is right", "only read the docs"])("nothing says %s", (phrase) => {
+  it.each(["got the right answer", "never reached", "your reply is right", "only read the docs", "reads your docs live"])("nothing says %s", (phrase) => {
     expect(FILES.filter((f) => visible(f).toLowerCase().includes(phrase)).map(rel)).toEqual([]);
   });
 
@@ -34,6 +34,11 @@ describe("copy rules", () => {
     const allowed = /(Independent concept for Slite Agent · synthetic data · not affiliated with Slite|independent concept for Slite Agent)/gi;
     const found = FILES.filter((f) => visible(f).replace(allowed, "").includes("Slite Agent")).map(rel);
     expect(found).toEqual([]);
+  });
+
+  // SPEC: every screen carries the disclaimer. Next's default 404 doesn't.
+  it("the 404 page has the disclaimer", () => {
+    expect(visible(path.join(ROOT, "app", "not-found.tsx"))).toContain("Independent concept for Slite Agent · synthetic data · not affiliated with Slite");
   });
 
   it("the app states the concept tag exactly once per page", () => {

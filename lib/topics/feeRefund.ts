@@ -23,8 +23,8 @@ export const feeRefund = {
   prompt: {
     taxonomy: `- "fee_refund": whether the customer gets the transfer FEE back when a transfer fails (a yes/no fact, not the fee amount).`,
     about: "the fee refund",
-    draftRule: `A statement about whether the customer gets the transfer fee back ("the transfer fee is refunded with your money", "the fee isn't refundable", "the fee is charged anyway") is "fee_refund". A fee AMOUNT ("a PKR 25 fee") is "other".`,
-    vagueRule: `A vague statement about the transfer fee, with no clear yes or no ("minus the processing charge"), is still "fee_refund": value null, valueText the words as written.`,
+    draftRule: `A statement about whether the customer gets the transfer fee back ("the transfer fee is refunded with your money", "the fee isn't refundable", "the fee is charged anyway") is "fee_refund". A fee AMOUNT ("a PKR 25 fee") is "other". Money coming back with the fee taken off it ("minus the processing charge", "less the fee", "after deducting the fee") says the fee isn't refunded: {"flag": false}.`,
+    vagueRule: `A vague statement about the transfer fee, with no clear yes or no ("we'll look at the fee as well"), is still "fee_refund": value null, valueText the words as written.`,
     values: `- "fee_refund" values are yes/no: {"flag": true} when the fee is refunded ("refunded with the principal", "refunded with your money"); {"flag": false} when it isn't ("isn't refundable", "the fee is charged anyway"). Hedged wording ("should be refunded", "probably isn't refunded") keeps its flag. valueText: the words as written, e.g. "refunded with the principal".`,
     sourceNote: `A fee policy stated as a negative ("the transfer fee is not refunded") IS a claim: fee_refund with {"flag": false}. Rule 2 only skips instructions not to say something ("Do NOT promise same day").`,
   },
@@ -32,7 +32,7 @@ export const feeRefund = {
     {
       kind: "fee",
       re: new RegExp(
-        String.raw`\b${FEE}\b[^.!?\n]{0,40}?\b${BACK}\b|\b(?:refund(?:ed|able)?|return(?:ed)?|get back)\b[^.!?\n]{0,40}?\b${FEE}\b|\bno ${FEE}\b|\bfee-free\b|\bfree of charge\b`,
+        String.raw`\b${FEE}\b[^.!?\n]{0,40}?\b${BACK}\b|\b(?:refund(?:ed|able)?|return(?:ed)?|get back)\b[^.!?\n]{0,40}?\b${FEE}\b|\bno ${FEE}\b|\bfee-free\b|\bfree of charge\b|\b(?:minus|less|after deducting|deducting|net of)\b[^.!?\n]{0,30}?\b${FEE}\b`,
         "gi",
       ),
       noun: "the fee refund",

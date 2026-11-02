@@ -145,8 +145,8 @@ describe("the AI finds nothing in a vague reply: the customer's question is stil
   it.each(CASES)("$id: Double-check, never Good to send", async (c) => {
     const r = await runCheck(input(c), depsFor([]));
     expect(r.decision).toBe("CAUTION");
-    // "return on their own by Monday, less the small charge" also trips the fee detector, so D0b gives the reason there.
-    expect(r.reasonCode).toBe(c.id === "monday-less-charge" ? "EXTRACTION_GAP" : "TOPIC_GAP");
+    // A fee taken off the money also trips the fee detector (D-052), so D0b gives the reason there.
+    expect(r.reasonCode).toBe(c.id === "monday-less-charge" || c.id === "repro" ? "EXTRACTION_GAP" : "TOPIC_GAP");
     expect(r.trace.find((t) => t.rule === "D0e")?.outcome).toBe("fired");
     expect(r.claims.some((x) => x.reasonCode === "TOPIC_GAP" && x.governing?.valueText === (c.docs ?? undefined)) || c.docs === null).toBe(true);
   });
@@ -160,7 +160,7 @@ describe("the AI finds nothing in a vague reply: the customer's question is stil
     const r = await runCheck(input(c), depsFor([]));
     const { headline, sentence } = summarize(r, c.rail);
     expect(headline).not.toMatch(/right/i);
-    if (c.id === "monday-less-charge") return expect(sentence).toMatch(/couldn't confirm the fee refund/);
+    if (c.id === "monday-less-charge" || c.id === "repro") return expect(sentence).toMatch(/couldn't confirm the fee refund/);
     if (c.docs) expect(sentence).toContain(c.docs);
     expect(sentence).toMatch(/your reply doesn't/i);
   });
@@ -316,7 +316,9 @@ describe("only SureSend's own holding reply gets past D0e", () => {
   ])("the AI finds nothing in %j: still a Double-check", async (draft) => {
     const r = await runCheck({ ...input(CASES[4]!), draft }, depsFor([]));
     expect(r.decision).toBe("CAUTION");
-    expect(r.reasonCode).toBe("TOPIC_GAP");
+    // A fee taken off the money trips the fee detector as well (D-052); either way the timeline gets its own entry.
+    expect(r.reasonCode).toBe(draft.includes("minus the processing charge") ? "EXTRACTION_GAP" : "TOPIC_GAP");
+    expect(r.claims.some((c) => c.reasonCode === "TOPIC_GAP")).toBe(true);
     const send = await handleSend({ ticketId: "TCK-9002", rail: "unknown", draft, role: "support_agent", overrides: [] }, depsFor([]));
     expect(send.status).toBe(428);
   });
@@ -328,7 +330,8 @@ describe("only SureSend's own holding reply gets past D0e", () => {
     const other: DraftClaim = { claimId: "o", topic: "other", value: null, valueText: "", span: added, definitive: true };
     const r = await runCheck({ ...input(CASES[4]!), draft }, depsFor([other]));
     expect(r.decision).toBe("CAUTION");
-    expect(r.reasonCode).toBe("TOPIC_GAP");
+    expect(r.reasonCode).toBe("EXTRACTION_GAP"); // the fee detector, D-052
+    expect(r.claims.some((c) => c.reasonCode === "TOPIC_GAP")).toBe(true);
   });
 
   it("a right fee claim with a wide span can't vouch for timing words", async () => {

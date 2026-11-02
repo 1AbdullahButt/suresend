@@ -120,7 +120,7 @@ const STEPS: Step[] = [
     title: "Change the policy, watch the answer change",
     body: (
       <>
-        <p>SureSend reads your docs live. Nothing is hard-coded.</p>
+        <p>The answer comes from the doc, not from hard-coded text. This edit replays a saved AI reading; any other edit is read live.</p>
         <ol className={s.steps}>
           <li>
             In the doc, change <b>1 business day</b> to <b>2 business days</b>.
