@@ -1,0 +1,30 @@
+{
+  "key": "e4f2fad85a16c6bcedb95880a86826615b04de2bbb1df279c07302afc3c7019e",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-02.5",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "You can relax, the funds return on their own by Monday, less the small charge for the transfer."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "by Monday",
+        "span": "the funds return on their own by Monday",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": null,
+        "valueText": "less the small charge for the transfer",
+        "span": "less the small charge for the transfer",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T12:38:30.417Z"
+}

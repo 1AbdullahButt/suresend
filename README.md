@@ -11,7 +11,8 @@
 ## The problem
 
 Docs go stale, and between a policy change and the doc fix, an agent can still type the old answer into a customer
-conversation. In Slite's own survey of 143 people, 41% said wrong information from an outdated doc reached a customer
+conversation. Slite asked 143 founders, operators and engineers about stale documentation: 76% had an AI tool surface a
+stale doc and produce a wrong answer, and among them, 41% said that the wrong info has reached a customer
 ([source](https://slite.com/learn/dangers-of-stale-documentation)). Slite detects drift in docs and routes the fixes
 through Triage, but the doc that's verified isn't always the one that governs: a newer, more specific exception can
 override it, an informal Slack proposal can look authoritative, and an outdated macro can still be the first thing an
@@ -114,9 +115,11 @@ proposal over MCP with `propose_doc_fix`, which applies nothing.
 | Word the safe reply from given facts | Recheck the safe reply; fall back to a template if it fails |
 
 **The AI never decides the outcome.** The decision is a pure function, `decide(extractions, sources, ticket, now)` in
-[`lib/engine/decide.ts`](lib/engine/decide.ts). Every rule writes a trace entry, shown in the Slite Agent card's Why and Trace views.
+[`lib/engine/decide.ts`](lib/engine/decide.ts). Every rule writes a trace entry, shown in the SureSend card's Why and Trace views.
 "The AI found nothing" is never treated as "safe": a deterministic policy-pattern detector catches timelines the AI missed,
-and an unreadable source caps the result at Caution.
+an unreadable source caps the result at Caution, and a reply that leaves the customer's question open is a Double-check, because
+staying silent isn't the same as being right. Sending says what happened ("Sent. Nothing in the docs contradicted it."), never
+that the reply was correct.
 
 Key rules (full table in [SPEC.md §6](SPEC.md)):
 
@@ -156,7 +159,19 @@ the rules were generalised, in `decide.ts`, and nothing in it names a topic. Wit
 second QA round found the same gap in one more place: a claim whose span was the whole sentence still vouched for the
 other topic in that sentence. [That fix](https://github.com/1AbdullahButt/suresend/commit/d8a9d61da69be3080ec0c8725f3155d86230bda5) closes it, again in `decide.ts` and again naming no topic.
 
-So the next topic needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
+**Scope is one axis today: the payment rail.** A claim says which rail it applies to (`instant`, `standard` or `any`), a ticket
+says which rail it's on, and [`applicability.ts`](lib/engine/applicability.ts) compares the two. A new topic reuses that axis. A topic
+that varies by plan tier or country needs more than a topic file:
+
+- a new field on a claim's `scope`, in the schema and the extraction prompt (both versions bumped), and on the ticket;
+- `applicability.ts` comparing every axis, so a claim applies only when all of them match, and "unknown" works per axis;
+- `decide.ts` and `resolve.ts` reading "the scope" where they read the rail today: D1 (ask first when the answer depends on what's
+  unknown) and D6 (the one specific claim wins);
+- the wording that names the rail (headlines, topic sentences, the Ask-first template) and the rail picker in the UI.
+
+That's a change to the rules' input, unlike a new topic, and nothing here has been built for it.
+
+So the next topic that fits the rail needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
 versions bumped. Only a new kind of value (not a duration, an amount or a yes/no) also needs a comparator in `values.ts`
 and its JSON shape in `schemas.ts`. Its tests, golden cases and saved responses come on top.
 
@@ -181,8 +196,8 @@ flowchart TD
 - **AI providers:** two live providers behind one adapter ([`lib/ai/client.ts`](lib/ai/client.ts)): Groq
   (`openai/gpt-oss-120b`, strict JSON-schema output) and Google Gemini (`gemini-3.5-flash-lite`, native JSON-schema
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
-  over. On the final prompts both pass the gate with no rejected quotes, so the eval's tie-break goes to field accuracy and
-  picks Gemini. Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
+  over. On the last prompts both providers finished (`2026-11-02.4`), both passed the gate with no rejected quotes, so the eval's tie-break went to field accuracy and
+  picked Gemini. Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
   the accuracy gap changed no decision. [evals/results.md](evals/results.md) shows both. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
@@ -226,36 +241,45 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 247 passed |
-| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the fee topic: golden, tour, doc fix | 68 of 68 identical |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 302 passed |
+| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 66 of 68 identical. The other 2 are the no-claim reply (both personas), now a Double-check by rule D0e |
+| `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
-| `pnpm eval` | 19 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases) × 3 runs × 2 providers | see below |
-| `pnpm eval --heldout` | 13 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
+| `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs × 2 providers | see below |
+| `pnpm eval --heldout` | 16 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
-**Regression on the 19-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
-that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.4`):
+**Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path is stable, not
+that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-02.5`):
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (57/57) | 100% (80/80) | 97.2% (175/180) | PASS |
-| Gemini (fallback) · `gemini-3.5-flash-lite` | 100% (57/57) | 100% (81/81) | 100% (180/180) | PASS |
+| Groq · `openai/gpt-oss-120b` | 100% (75/75) | 100% (105/105) | 94.4% (170/180) | PASS |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | not run on this prompt yet | | | Last prompt (`2026-11-02.4`): 57/57, 100% quotes, 100% fields, PASS |
 
 Groq's field accuracy is below 100% because it read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say
-"unstated". No decision changed.
+"unstated", and in one run read the Slack proposal as "pending approval" rather than "proposed". The prompt for reading docs didn't
+change in this phase, so that's the model varying. No decision changed.
 
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
 
-**Held-out set (13 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
+**Held-out set (16 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
 wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
 
-| Provider · model | All clean cases | Fee cases only (H12, H17–H19) | Quote validity |
-|---|---|---|---|
-| Groq · `openai/gpt-oss-120b` | 100% (39/39) | 100% (12/12) | 100% (82/82) |
-| Gemini (fallback) · `gemini-3.5-flash-lite` | 100% (39/39) | 100% (12/12) | 100% (81/81) |
-| Groq, first session (same prompts, before the D0b fix) | 92.3% (36/39) | 75% (9/12) | 100% (89/89, with H5) |
+| Provider · model | All clean cases | Fee cases only (H12, H17–H19) | Vague replies only (H20–H22) | Quote validity |
+|---|---|---|---|---|
+| Groq · `openai/gpt-oss-120b` | 95.8% (46/48) | 83.3% (10/12) | 100% (9/9) | 100% (98/98) |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | not run on this prompt yet | | | |
+| Earlier prompt (`2026-11-02.4`), 13 cases: Groq, two sessions | 92.3% (36/39), then 100% (39/39) | 75% (9/12), then 100% (12/12) | no such cases | 100% |
+| Earlier prompt (`2026-11-02.4`), 13 cases: Gemini | 100% (39/39) | 100% (12/12) | no such cases | 100% (81/81) |
+
+- **The vague replies are the evidence for this phase's prompt change.** H20–H22 were committed before any prompt work on valueless
+  claims, and the same test checks them for shared phrases. They're three cases, so it's a first check. They score against the reason, so a
+  reply the AI misses and rule D0e catches would still count as a miss here.
+- **Three expected results changed with the rule, not the case:** H10, H12 and H13 leave the customer's question open, so they're
+  now Double-check where they were Good to send (D-045).
 
 - **The fee cases are the real evidence for the new topic.** H12 was written before any fee prompt text existed. H17–H19 were
   written after the final freeze: two claims after a doc edit, a hedge, and an amount outside coverage.
@@ -266,12 +290,14 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
   a no-claim reply. They were in the repo while the fee prompts were written and already passed on earlier prompts, so they
   show nothing broke, not that the new topic works. H1 reuses phrases that older prompt already had.
 
-**Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On the
-same frozen prompts, Groq returned Hold on all 3 runs of the first session and Double-check on all 3 of the second. The rule
-fix between them doesn't touch this path, so that's model variance, not an improvement. H14, its exposed twin, went 3/3 then
-2/3. H18 gave the same answer on all 3 runs in each session, so those runs may not be three independent samples. Gemini was
-right on all 3 in its one session, which is one sample too. A miss here errs strict: the reply is stopped, not let through. The first session is in commit
-[1db5346](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md), and nothing was tuned between them.
+**Hedges aren't stable.** H18 is a hedged "not refunded" ("As far as I can tell, you won't recover the service charge…"). On one
+frozen prompt, Groq returned Hold on all 3 runs of one session and Double-check on all 3 of the next, and nothing was tuned between them
+([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On this prompt it's 1 of 3. Those are the two
+misses in the fee line above. H14, its exposed twin, has gone 3/3, 2/3 and 2/3. A miss here errs strict: the reply is stopped, not let through.
+
+**Marking vague fee wording as valueless has a cost.** H11 says "the transfer charge stays with us", a plain "not refunded". On the earlier
+prompt Groq held it on all 3 runs. On this one it read the charge as vague on 2 of 3, so the reply gets a Double-check, not a Hold. It isn't let
+through, but it's weaker on a reply that's wrong. H11 is exposed, so it's not in the clean score, and it's why this is called out here.
 
 **Exposed cases (6): regression only, not held-out.** H5, H11, H13, H14, H15 and H16. Their wording reached the prompts or the
 golden set, or shares a phrase with drafts written after them. Where it could be removed, it was, and they still don't count
@@ -279,10 +305,10 @@ golden set, or shares a phrase with drafts written after them. Where it could be
 
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
-| Groq · `openai/gpt-oss-120b` | 94.4% (17/18) | 100% (38/38) |
-| Gemini (fallback) · `gemini-3.5-flash-lite` | 100% (18/18) | 100% (39/39) |
+| Groq · `openai/gpt-oss-120b` | 88.9% (16/18) | 100% (36/36) |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | not run on this prompt yet | |
 
-Read it for what it is: 13 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
+Read it for what it is: 16 cases around one scenario, a first check on generalisation, not proof. Three expectations rest on
 conventions the project adopted: "4 days" without "business" means calendar days (H5, now exposed); a signalled change is compared on the
 amount only, so a proposed "1 day" doesn't contradict "1 business day" (H3); and the exception supersedes the SOP by naming
 its title, even after the SOP is reworded (H7).
@@ -298,6 +324,7 @@ pnpm dev
 | Command | What it does |
 |---|---|
 | `pnpm test` | Acceptance + unit tests (fixtures, no network) |
+| `pnpm lint` | ESLint, no warnings allowed |
 | `pnpm e2e` | Playwright demo flow in saved mode |
 | `pnpm eval` | Live eval on both providers → `evals/results.md` |
 | `pnpm eval --saved` | Replays saved responses only (no key needed) |
@@ -319,6 +346,13 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 
 ## Limitations
 
+- **More Double-checks on correct but vague replies.** A reply that gives no value, or leaves the customer's question open, is a
+  Double-check even when nothing in it is wrong. "I've passed this to our payments team and will update you" is honest and still
+  gets one; so does a correct fee-only reply to someone asking when their money comes back. Only SureSend's own holding wording ("I'm
+  confirming the exact reversal timeline…") goes through. Every seed ticket asks about the timeline, so in this demo that covers every
+  reply that doesn't state it. That's the price of never calling a silent reply safe (D-045).
+- What a customer is asking is keyword matching, per topic (`asks` in each topic file). A question in unusual words doesn't trigger
+  the check. Over MCP with no `ticket_id` there's no question to compare with, so a vague reply the AI also misses reads as Good to send.
 - Two topics (`reversal_window`, `fee_refund`) plus `other`: any other factual claim, such as a fee amount or a limit, is
   "outside coverage" (Caution). The rules are topic-agnostic; the next topic needs a file in `lib/topics` with its
   examples, and a comparator only for a new kind of value (see Adding a topic).
@@ -326,7 +360,7 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   an out-of-topic claim already covers those words. If a reply makes two claims on the same topic and the AI catches only
   one, the other isn't flagged.
 - The detector only knows common wording. A fee statement in unusual words, such as "we also repay the service charge", gets
-  past it, so if the AI misses that too, the reply reads as Good to send. Its words aren't added, since those come from the
+  past it, so if the AI misses that too and the reply answers what the customer asked, it reads as Good to send. Its words aren't added, since those come from the
   held-out cases.
 - A fee statement with a timing word in it ("refunded within the same transfer") gets a Double-check even when it's right,
   because a claim on one topic never vouches for another. That's the safe direction.
@@ -345,7 +379,7 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
-- The eval is small and built around one scenario; the held-out set (13 clean cases) is a first check on generalisation, not proof.
+- The eval is small and built around one scenario; the held-out set (16 clean cases) is a first check on generalisation, not proof.
 - A hedge the prompt doesn't list can read as definite: "As far as I can tell" came back Hold, not Double-check, on 3 of 6 Groq runs (H18).
 
 ## What not to claim

@@ -3,7 +3,7 @@
 //   pnpm build && pnpm tsx scripts/record-demo.ts
 import { chromium, type Page } from "@playwright/test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const PORT = 3400;
@@ -78,6 +78,20 @@ async function demo(page: Page) {
   await pause(page, 2000);
 }
 
+/** The link preview (D-047): the Hold, at the size link previews use. A GIF's first frame is all most of them show. */
+async function preview(page: Page) {
+  await page.goto(base);
+  await page.getByRole("contentinfo").waitFor();
+  const notNow = page.getByRole("button", { name: "Not now" });
+  if (await notNow.isVisible({ timeout: 1500 }).catch(() => false)) await notNow.click();
+  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Ayesha K\./ }).click();
+  await page.getByRole("textbox", { name: "Your reply" }).fill(DRAFT);
+  await page.getByRole("button", { name: "Send", exact: true }).click();
+  await page.getByRole("region", { name: "Decision" }).getByText("Hold").first().waitFor();
+  await pause(page, 600);
+  await page.screenshot({ path: path.join(process.cwd(), "public", "og.png") });
+}
+
 async function main() {
   rmSync(videoDir, { recursive: true, force: true });
   mkdirSync(videoDir, { recursive: true });
@@ -88,6 +102,9 @@ async function main() {
     const page = await context.newPage();
     await demo(page);
     await context.close(); // flushes the video
+    const still = await browser.newContext({ viewport: { width: 1200, height: 630 } });
+    await preview(await still.newPage());
+    await still.close();
   } finally {
     await browser.close();
     stopServer(server);
@@ -105,7 +122,7 @@ async function main() {
   ff(["-i", path.join(outDir, "demo.webm"), "-vf", `${filters},palettegen=stats_mode=diff`, palette]);
   ff(["-i", path.join(outDir, "demo.webm"), "-i", palette, "-lavfi", `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5`, path.join(outDir, "demo.gif")]);
   rmSync(videoDir, { recursive: true, force: true });
-  console.log("wrote docs/demo.gif and docs/demo.webm");
+  console.log("wrote docs/demo.gif, docs/demo.webm and public/og.png");
 }
 
 void main();

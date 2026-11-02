@@ -837,3 +837,69 @@ Groq 97.2%) and the eval picks Gemini. Abdullah overrode that: Groq stays primar
   and the override side by side, from a constant in `scripts/eval.ts`, so a regenerated report can't contradict production.
 - **Production doesn't change.** It already runs `AI_PROVIDER=groq` and `AI_FALLBACK_PROVIDER=gemini`.
 - **Also confirmed by Abdullah:** H5 stays exposed (D-041, QA round 2), so the clean held-out set stays at 13 cases.
+
+### D-045 · A reply that leaves the customer's question open is a Double-check (Abdullah's brief, P0-1, 2026-11-02). Amends SPEC §6.6
+An independent review found a wrong reply passing on the live demo. Ayesha, instant rail: "Nothing to do on your side: the reversal is
+automatic and you'll see it reflected after the weekend, minus the processing charge." came back ALLOW / NO_POLICY_CLAIM with 0 claims, and
+the sent card said "Ayesha got the right answer."
+- **What was really going on.** That result was one reading of Groq's, cached on the instance (`latencyMs: 0` on repeat). Fresh calls on the
+  same prompt read the fee part as "not refunded" and gave a Hold, 5 of 5 (PROGRESS.md). Three of the five other wordings did get 0 claims. So
+  the reliable fix can't be the prompt alone: temperature 0 doesn't make the model consistent, and the rules must not depend on it.
+- **Rule D0e (new), in `decide.ts`, naming no topic.** A covered topic the customer's message asks about, with no claim on it in the reply, is
+  CAUTION with the new reason `TOPIC_GAP`. It amends D0d, which now also needs no such topic. Each topic file brings an `asks` pattern, so
+  the check is deterministic. The entry carries the docs' value when they have one (D-046). A gap never overrides a more severe result, and
+  the existing reason stands when one already applies (D0b, D0c).
+- **Three things D0e doesn't flag, and why.**
+  - A detector hit on that same topic: that's D0b's, and T8 requires its reason.
+  - SureSend's own Ask-first reply. It says the answer is being confirmed, in the topic's `confirming` words. Without this the system would
+    Double-check its own holding reply, on the path that must send (SPEC §6.7). An agent typing those same words gets the same pass.
+  - Over MCP with no `ticket_id`, where the seed ticket only supplies the rail, so its customer's question isn't this reply's. The flag isn't
+    in the API body, so a client can't switch the rule off on `/api/send`.
+- **Suggested replies.** A `TOPIC_GAP` recheck is accepted: the AI's rewrite was understood, and the question was missing from the draft too. A
+  gap entry is never in the facts a reply is built from. So a corrected fee-only reply on these tickets rechecks as Double-check, and the UI and MCP
+  say why ("it doesn't answer what the customer asked").
+- **Prompt `2026-11-02.5`, draft side only.** Vague wording on a covered topic is a claim with no value, with the three examples from the brief.
+  Follow-up promises stay non-claims even when they name the topic. Rewritten in the topic files; `SOURCE_SYSTEM` is unchanged.
+- **Copy.** The sent card says "Sent. Nothing in the docs contradicted it." and "got the right answer" and "never reached" are gone, enforced by
+  `lib/client/copyRules.test.ts`. Two additions the brief didn't name, same reason: a send past a Double-check says "Sent with your OK." because the
+  docs may well have disagreed (a hedged contradiction is a Double-check), and a no-claim Allow says "No policy promise here", not "Your reply is right".
+- **Expected results that changed because of the rule, not the case:** golden `no-claim`, `fee-correct`, `fee-unknown-rail`; held-out H10, H12, H13
+  (marked `expectChanged`, all CAUTION / TOPIC_GAP); the preset `usman-fee-only`.
+- **Held-out:** H20–H22 (vague replies) were committed before any prompt work (commit 40878c8), since the old set had no case for this. The 6 replies
+  in `lib/check/vagueReply.test.ts` and the golden `vague-*` cases aren't held-out: their wording was in view when the prompt was written.
+- **Written first:** 43 of 50 new tests failed before the fix (PROGRESS.md); the 7 that passed are the guards that the rule stays narrow.
+- **Cost:** more Double-checks on correct but vague replies. README, Limitations.
+
+### D-046 · A claim with no value shows the governing value (Abdullah's brief, P1-1, 2026-11-02)
+"No doc backs this up" was false when the docs have a clear answer and the reply just doesn't give it. `decide.ts` now resolves the governing value
+for a claim with no value and for a topic gap, using D4 to D7, and returns it on the claim: "Your docs say 1 business day; your reply gives no number."
+- **It decides nothing.** D-012.4 stands: a claim with no value is CAUTION / UNSUPPORTED, skipping D1. The value only goes to the reader, the trace
+  entry, the headline and MCP's `docs_say`. `resolve()`'s own trace is dropped here, since those rules didn't decide anything; D3's entry names the value.
+- **No value named when there isn't one:** an unknown rail with rules that differ by rail, or a conflict, says "Your docs don't give one answer for
+  this ticket". With no candidate at all, "No doc backs this up" is still true and still shown.
+- **Fee wording:** `noValue` per topic, since "gives no number" is wrong for a yes/no: "Your docs say refunded; your reply doesn't say it plainly."
+- **Suggested replies.** On a Hold with a vague claim beside it, the vague claim is marked for fixing, like a wrong one, so the rewrite states the value.
+
+### D-047 · SureSend is the actor, not Slite Agent (Abdullah's brief, P0-3, 2026-11-02)
+The panel title, status text ("Held by SureSend", "Sent · checked by SureSend"), landmark and button names, the tour and the empty state now say SureSend.
+`copyRules.test.ts` allows "Slite Agent" only in the "independent concept" wording.
+- **One tag.** The footer stays ("Independent concept for Slite Agent · synthetic data · not affiliated with Slite"), since the brief requires it on every
+  screen. So the header's "Concept for Slite Agent" pill went. The page title reads "SureSend · independent concept for Slite Agent".
+- **OG image.** It was the README GIF, which showed the old title and "Held by Slite Agent", and whose first frame is an empty panel, which is what most
+  link previews show. It's now a static `public/og.png` of the Hold, and the GIF is re-recorded. `scripts/record-demo.ts` makes both.
+- **Locked e2e.** `e2e/demo.spec.ts` asserts the two old status strings. See PROGRESS.md for how that was handled.
+
+### D-048 · ESLint (Abdullah's brief, P1-5, 2026-11-02)
+`eslint.config.mjs` uses `next/core-web-vitals` and `next/typescript`, the rules `next lint` sets up. `pnpm lint` allows no warnings and runs in CI. It found
+10 things, all fixed by hand, with no mass rewrite: one real `<a>` that should be `<Link>`, two unused names, four `useCallback`s missing the stable `forgetFix`,
+and three unused parameters or variables. One rule is set explicitly: `ignoreRestSiblings`, because destructuring a field out to drop it is how
+`lib/client/metrics.ts` omits one. The existing disable in `App.tsx` now says why.
+
+### D-049 · The slide-over and the tour offer (Abdullah's brief, P1-3, P1-4, 2026-11-02)
+- **P1-3.** Under 1100 px, changing the conversation closes the slide-over. The auto-open effect also watched the send state, which is per ticket, so
+  moving to a ticket with a result could reopen it; now a change of ticket only closes it. A running tour opens the panel itself, so it's exempt.
+- **P1-4.** I couldn't reproduce this with working storage: on production, "Not now" held at 1440, 900 and 390 px through reload, leaving and coming back, the
+  Demo menu, Reset demo and changing the conversation. It does come back when the browser blocks `localStorage`, as some private modes and in-app browsers
+  do, because the answer then lives only in memory. So the offer now appears only if the answer can be remembered (`canPersist()`). In those browsers
+  there's no first-visit offer, and the tour button and Demo menu still start it. If the review saw it in a normal browser, this hasn't fixed that.
+

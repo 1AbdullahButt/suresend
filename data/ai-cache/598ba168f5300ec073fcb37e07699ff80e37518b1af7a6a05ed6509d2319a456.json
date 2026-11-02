@@ -1,0 +1,31 @@
+{
+  "key": "598ba168f5300ec073fcb37e07699ff80e37518b1af7a6a05ed6509d2319a456",
+  "identity": {
+    "task": "source_extraction",
+    "promptVersion": "2026-11-02.5",
+    "schemaVersion": "2026-11-02.3",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Hamza (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Bilal posts the policy 🙏\n",
+    "sourceKind": "slack"
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "calendar_days"
+        },
+        "valueText": "1 day",
+        "rail": "instant",
+        "effectiveFrom": null,
+        "statusWording": "proposed",
+        "supersedes": null,
+        "quote": "we're planning to move instant reversals to 1 day once compliance signs off."
+      }
+    ]
+  },
+  "recordedAt": "2026-11-02T12:32:42.493Z"
+}
