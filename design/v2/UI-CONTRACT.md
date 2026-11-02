@@ -29,7 +29,7 @@ unless marked "exact".
 | Impact tiles (in Demo menu) | `group` | "Replies checked", "Wrong ones stopped", "False alarms"; each contains its value as text |
 | AI mode line (in Demo menu) | `status` | name starts with "AI mode:" |
 | Reset (in Demo menu) | `button` | "Reset demo" |
-| Footer | `contentinfo` | text contains "Independent concept for SureSend" |
+| Footer | `contentinfo` | text contains "Independent concept for Slite Agent" |
 
 Behaviour the e2e relies on (SPEC §5, §6.8, §11; REDESIGN_PROMPT items 1, 5, 6):
 - Selecting a conversation loads its draft into the composer.

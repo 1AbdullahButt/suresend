@@ -851,18 +851,22 @@ the sent card said "Ayesha got the right answer."
   the existing reason stands when one already applies (D0b, D0c).
 - **Three things D0e doesn't flag, and why.**
   - A detector hit on that same topic: that's D0b's, and T8 requires its reason.
-  - SureSend's own Ask-first reply. It says the answer is being confirmed, in the topic's `confirming` words. Without this the system would
-    Double-check its own holding reply, on the path that must send (SPEC §6.7). An agent typing those same words gets the same pass.
+  - SureSend's own Ask-first reply, word for word, with nothing after it but what the extracted claims account for (`holdingTopics`). Without this the
+    system would Double-check its own holding reply, on the path that must send (SPEC §6.7). My first version only looked for the words "the exact reversal
+    timeline", and QA showed "We never share the exact reversal timeline" sending as Good to send when the AI also missed it. One consequence: Ask first on the
+    fee alone (only after a doc edit makes the fee rail-specific) confirms the fee, and the timeline is still open, so that reply is a Double-check. That's honest.
   - Over MCP with no `ticket_id`, where the seed ticket only supplies the rail, so its customer's question isn't this reply's. The flag isn't
     in the API body, so a client can't switch the rule off on `/api/send`.
-- **Suggested replies.** A `TOPIC_GAP` recheck is accepted: the AI's rewrite was understood, and the question was missing from the draft too. A
-  gap entry is never in the facts a reply is built from. So a corrected fee-only reply on these tickets rechecks as Double-check, and the UI and MCP
+- **Suggested replies.** A `TOPIC_GAP` recheck is accepted only when the draft made no claim on that topic: the AI's rewrite was understood, and the question
+  was missing from the draft too. A rewrite that drops an answer the draft gave loses to the template, which states it. A gap entry is never in the facts a reply is built from. So a corrected fee-only reply on these tickets rechecks as Double-check, and the UI and MCP
   say why ("it doesn't answer what the customer asked").
 - **Prompt `2026-11-02.5`, draft side only.** Vague wording on a covered topic is a claim with no value, with the three examples from the brief.
   Follow-up promises stay non-claims even when they name the topic. The wording is in the topic files; `SOURCE_SYSTEM` is unchanged.
 - **Copy.** The sent card says "Sent. Nothing in the docs contradicted it." and "got the right answer" and "never reached" are gone, enforced by
   `lib/client/copyRules.test.ts`. Two additions the brief didn't name, same reason: a send past a Double-check says "Sent with your OK." because the
-  docs may well have disagreed (a hedged contradiction is a Double-check), and a no-claim Allow says "No policy promise here", not "Your reply is right".
+  docs may well have disagreed (a hedged contradiction is a Double-check), and a no-claim Allow says "No policy promise here". QA also showed "Your reply is right"
+  can be false: with only the timeline extracted, "back within 1 business day, minus the processing charge" is an Allow. So every Allow says "Matches your docs", a
+  signalled change says "Matches today, changing soon", and the tour offer says "send a checked one". The brief named the sent card; these are the same false comfort.
 - **Expected results that changed because of the rule, not the case:** golden `no-claim`, `fee-correct`, `fee-unknown-rail`; held-out H10, H12, H13
   (marked `expectChanged`, all CAUTION / TOPIC_GAP); the preset `usman-fee-only`.
 - **Held-out:** H20–H22 (vague replies) were committed before any prompt work (commit 40878c8), since the old set had no case for this. The 6 replies
@@ -877,6 +881,10 @@ for a claim with no value and for a topic gap, using D4 to D7, and returns it on
   entry, the headline and MCP's `docs_say`. `resolve()`'s own trace is dropped here, since those rules didn't decide anything; D3's entry names the value.
 - **No value named when there isn't one:** an unknown rail with rules that differ by rail, or a conflict, says "Your docs don't give one answer for
   this ticket". With no candidate at all, "No doc backs this up" is still true and still shown.
+- **Nor while a doc is unread.** QA round 1 found my first version offering the next doc's value: with DOC-103 unread, Ayesha's card said "Your docs say 4 business days",
+  the exact answer this product exists to stop. An unread doc might hold the answer (SPEC §6.6.2), so no value is named while any visible doc is unread, and the card says
+  which doc: "DOC-103 couldn't be read, so SureSend can't say what your docs give; your reply gives no number."
+- **A doc in doubt is flagged:** "Your docs say 4 business days, but that doc is in doubt; your reply gives no number."
 - **Fee wording:** `noValue` per topic, since "gives no number" is wrong for a yes/no: "Your docs say refunded; your reply doesn't say it plainly."
 - **Suggested replies.** On a Hold with a vague claim beside it, the vague claim is marked for fixing, like a wrong one, so the rewrite states the value.
 
@@ -886,8 +894,8 @@ The panel title, status text ("Held by SureSend", "Sent · checked by SureSend")
 - **One tag.** The footer stays ("Independent concept for Slite Agent · synthetic data · not affiliated with Slite"), since the brief requires it on every
   screen. So the header's "Concept for Slite Agent" pill went. The page title reads "SureSend · independent concept for Slite Agent".
 - **OG image.** It was the README GIF, which showed the old title and "Held by Slite Agent", and whose first frame is an empty panel, which is what most
-  link previews show. It's now a static `public/og.png` of the Hold, and the GIF is re-recorded. `scripts/record-demo.ts` makes both.
-- **Locked e2e.** `e2e/demo.spec.ts` asserts the two old status strings. See PROGRESS.md for how that was handled.
+  link previews show. It's now a static `public/og.png` of the Hold, and the GIF is re-recorded. `scripts/record-demo.ts` makes both, and copies the GIF to `public/demo.gif` for the how-it-works page.
+- **Locked e2e.** `e2e/demo.spec.ts` asserted the two old status strings. See D-050.
 
 ### D-048 · ESLint (Abdullah's brief, P1-5, 2026-11-02)
 `eslint.config.mjs` uses `next/core-web-vitals` and `next/typescript`, the rules `next lint` sets up. `pnpm lint` allows no warnings and runs in CI. It found
@@ -902,4 +910,23 @@ and three unused parameters or variables. One rule is set explicitly: `ignoreRes
   Demo menu, Reset demo and changing the conversation. It does come back when the browser blocks `localStorage`, as some private modes and in-app browsers
   do, because the answer then lives only in memory. So the offer now appears only if the answer can be remembered (`canPersist()`). In those browsers
   there's no first-visit offer, and the tour button and Demo menu still start it. If the review saw it in a normal browser, this hasn't fixed that.
+  - QA found no path back to the offer with working storage either (64 checks). Two things it did find. Most private windows allow storage for the session, so `canPersist()` is
+    true and each new private window offers again, which can't be detected and may be what the review saw. And a held Enter on "Not now" moved focus to the tour button, and
+    its key repeat started the tour. The tour button now ignores key repeat; a deliberate press still works.
+
+### D-050 · One-time unlock of `e2e/` for the rename (Abdullah's decision, 2026-11-02)
+P0-3 replaces the two status strings the locked e2e asserts, so it couldn't pass as written. I asked before touching it. Abdullah: "Yes, unlock once. Record it in
+DECISIONS.md with the before/after diff, and show me that e2e/ is re-locked before merging." Same process as D-026.
+- **What was done:** `e2e/` was removed from `.loop/locked`, the three lines below were changed, and `e2e/` was put back. `git diff` on `.loop/locked` is empty.
+- **What didn't change:** the journey, the selectors, the guarantees and the footer assertion. Only the expected actor's name. The test still proves a held reply isn't sent.
+- **Before and after** (`e2e/demo.spec.ts`, 3 lines changed, nothing else):
+```diff
+-  await expect(page.getByRole("status").filter({ hasText: "Held by Slite Agent" })).toBeVisible();
++  await expect(page.getByRole("status").filter({ hasText: "Held by SureSend" })).toBeVisible();
+-  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" })).toHaveCount(0);
++  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" })).toHaveCount(0);
+-  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" })).toBeVisible();
++  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" })).toBeVisible();
+```
+- **The re-lock, proven:** a real edit attempt on the file blocked by the hook, with the output in PROGRESS.md.
 

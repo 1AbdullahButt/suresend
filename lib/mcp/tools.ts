@@ -38,7 +38,9 @@ export const CheckReplyOutput = {
   /** Each claim the reply makes, with its own verdict; the overall decision is the most severe (D-041). */
   claims: z.array(
     z.object({
+      /** The reply's words, or what's missing when in_reply is false (the customer asked and the reply doesn't say). */
       says: z.string(),
+      in_reply: z.boolean(),
       topic: z.string(),
       decision: z.enum(["Good to send", "Double-check", "Hold", "Ask first", "Couldn't check"]),
       docs_say: z.string().nullable(),
@@ -196,6 +198,7 @@ export function present(result: CheckResult, ticket: { id: string | null; rail: 
     governing: governingOf(result),
     claims: result.claims.map((c) => ({
       says: c.draftClaim.span,
+      in_reply: c.reasonCode !== "TOPIC_GAP",
       topic: isCovered(c.draftClaim.topic) ? topicDef(c.draftClaim.topic).label.replace(/-/g, " ") : "outside coverage",
       decision: OUTCOME[c.decision].name as CheckReplyResult["decision"],
       docs_say: c.governing?.valueText ?? null,

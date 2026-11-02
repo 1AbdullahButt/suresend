@@ -7,7 +7,8 @@ import { resolve, skip } from "./resolve";
 import { mostSevere } from "./severity";
 import { claimStanding, weakeners } from "./standing";
 import { sameValue, unitLabel, unitsMatch, valueWithin } from "./values";
-import { acknowledges, describeValue, isCovered, topicDef, topicsAsked } from "@/lib/topics";
+import { holdingTopics } from "@/lib/replies/templates";
+import { describeValue, isCovered, topicDef, topicsAsked } from "@/lib/topics";
 import type {
   Applicability,
   Cap,
@@ -112,6 +113,13 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     }
   }
 
+  // The docs' value for a reply that gives none (D-046). An unread doc might hold it (SPEC §6.6.2), so none is named then.
+  const anyUnread = sources.some((s) => {
+    const ex = extractions.sources[s.id];
+    return ex && !ex.ok && !s.flaggedOutdated;
+  });
+  const docsSay = (topic: string) => (anyUnread ? null : docsValue(topic, pool, ticket));
+
   // Claims on a covered topic go through rules D1–D11; the taxonomy registry says which topics are covered (D-041).
   const covered = draft.claims.filter((c) => isCovered(c.topic));
   const outside = draft.claims.filter((c) => c.topic === "other" && c.value !== null);
@@ -135,11 +143,12 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   const quoted = (ms: PatternMatch[]) => ms.map((m) => `"${m.text}"`).join(", ");
 
   // D0e (D-045, amends SPEC D0d): the customer asked about a covered topic and the reply makes no claim on it. A detector hit
-  // on that topic is D0b's. A reply that says the answer is being confirmed, as the Ask-first template does, isn't a gap.
+  // on that topic is D0b's. SureSend's own Ask-first reply, word for word, says the answer is being confirmed, so it isn't a gap.
   const flagged = new Set(uncovered.map((m) => patternTopic(m.kind)));
   const asked = ticket.message ? topicsAsked(ticket.message) : [];
-  const unanswered = asked.filter((t) => !claimed.has(t) && !flagged.has(t) && !acknowledges(t, draftText));
-  const topicGaps = unanswered.map((t, i) => topicGap(t, i, pool, ticket));
+  const holding = holdingTopics(draftText, draft.claims);
+  const unanswered = asked.filter((t) => !claimed.has(t) && !flagged.has(t) && !holding.includes(t));
+  const topicGaps = unanswered.map((t, i) => topicGap(t, i, pool, docsSay));
   const d0e: TraceEntry =
     topicGaps.length > 0
       ? { rule: "D0e", outcome: "fired", detail: topicGaps.map((g) => g.trace[0]!.detail).join(" ") }
@@ -180,7 +189,7 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
       trace.push({ rule: "D0d", outcome: "fired", detail: "No policy claims in this reply." });
     }
   } else {
-    claims = [...covered.map((dc) => decideClaim(dc, pool, ticket, draftText)), ...outsideResults];
+    claims = [...covered.map((dc) => decideClaim(dc, pool, ticket, draftText, docsSay)), ...outsideResults];
     // Another topic's claim doesn't vouch for this one: a topic with a hit but no claim is its own Double-check entry.
     if (uncovered.length > 0) {
       gapNoun = patternNoun(uncovered);
@@ -294,11 +303,11 @@ function extractionGaps(hits: PatternMatch[]): ClaimResult[] {
 }
 
 /** One CAUTION entry for a covered topic the customer asked about and the reply leaves unanswered (D0e, D-045). */
-function topicGap(topic: string, i: number, pool: EvaluatedClaim[], ticket: DecideTicket): ClaimResult {
+function topicGap(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (topic: string) => Governing | null): ClaimResult {
   const def = topicDef(topic);
   const span = `Nothing on ${def.subject}`;
   const dc: DraftClaim = { claimId: `ask#${i + 1}`, topic: topic as DraftClaim["topic"], value: null, valueText: span, span, definitive: true };
-  const governing = docsValue(topic, pool, ticket);
+  const governing = docsSay(topic);
   return {
     draftClaim: dc,
     decision: "CAUTION",
@@ -377,7 +386,7 @@ function toEvidence(e: EvaluatedClaim, dc: DraftClaim): Evidence {
   };
 }
 
-function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicket, draftText: string): ClaimResult {
+function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicket, draftText: string, docsSay: (topic: string) => Governing | null): ClaimResult {
   const trace: TraceEntry[] = [];
   const formatValue = (v: NonNullable<DraftClaim["value"]>) => describeValue(dc.topic, v);
   const onTopic = pool.filter((e) => e.claim.topic === dc.topic);
@@ -411,7 +420,7 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
   if (!dc.value) {
     // No checkable value: no candidate can support it, so it is treated as unsupported (DECISIONS D-012.4). The docs' value
     // is named for the reader, and changes no decision (D-046).
-    const docs = docsValue(dc.topic, pool, ticket);
+    const docs = docsSay(dc.topic);
     skip(trace, ["D1", "D2"], "The draft claim states no checkable value.");
     trace.push({
       rule: "D3",

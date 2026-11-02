@@ -274,6 +274,7 @@
     },
     {
       "id": "H20-vague-mid-month",
+      "note": "A timeline with no number, standard rail: Double-check, with the docs' value",
       "ticketId": "TCK-9003",
       "rail": "standard",
       "draft": "It normally clears up around mid-month and the amount reappears in your balance.",
@@ -284,6 +285,7 @@
     },
     {
       "id": "H21-vague-before-long",
+      "note": "A timeline with no number, instant rail: the docs' value is the exception's",
       "ticketId": "TCK-9001",
       "rail": "instant",
       "draft": "Leave it with us, your cash will find its way home before long.",
@@ -294,6 +296,7 @@
     },
     {
       "id": "H22-vague-paperwork-charge",
+      "note": "Two claims with no value: timing tied to paperwork, and a fee 'sorted out separately'",
       "ticketId": "TCK-9003",
       "rail": "standard",
       "draft": "The cash returns once the bank finishes its paperwork, and the sending charge gets sorted out separately.",

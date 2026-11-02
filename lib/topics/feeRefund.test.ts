@@ -360,8 +360,8 @@ describe("a reply with both claims", () => {
     const out = present(r, { id: "TCK-9001", rail: "instant" });
     expect(out.decision).toBe("Hold");
     expect(out.claims).toEqual([
-      { says: "within 1 business day", topic: "reversal window", decision: "Good to send", docs_say: "1 business day" },
-      { says: "the transfer fee isn't refundable", topic: "fee refund", decision: "Hold", docs_say: "refunded" },
+      { says: "within 1 business day", in_reply: true, topic: "reversal window", decision: "Good to send", docs_say: "1 business day" },
+      { says: "the transfer fee isn't refundable", in_reply: true, topic: "fee refund", decision: "Hold", docs_say: "refunded" },
     ]);
   });
 });

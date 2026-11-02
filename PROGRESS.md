@@ -1516,6 +1516,9 @@ vague-unknown-rail [TCK-9002 unknown] ALLOW/NO_POLICY_CLAIM (Good to send, AI li
 vague-next-week [TCK-9003 standard] ALLOW/NO_POLICY_CLAIM (Good to send, AI live)
 ```
 
+One correction to the recording above. `monday-less-charge` with 0 claims trips the fee detector, so it was already a Double-check before the fix, through D0b. Its expected
+reason changed to EXTRACTION_GAP after that commit, with a stricter assertion added. So "fails first" holds on the decision for 5 of the 6, and on the reason code for this one.
+
 **The same tests after the fix.**
 ```
 $ pnpm vitest run lib/check/vagueReply.test.ts lib/client/copyRules.test.ts
@@ -1588,11 +1591,8 @@ FAIL storage blocked: stays gone after leaving and coming back
 2 FAILED
 ```
 **Evals on Groq, 3 runs, prompt `2026-11-02.5`, published as they came.** Golden 75/75, quotes 105/105, fields 170/180, gate PASS. Held-out clean 46/48, fee 10/12, vague 9/9, quotes 98/98.
-Exposed 16/18. Misses: H18 1/3 (the known unstable hedge, errs strict), H14 2/3, H11 1/3. H11 is new: "the transfer charge stays with us" read as vague on 2 of 3, so Double-check, not Hold.
+Exposed 16/18. Misses: H18 1/3 (the known unstable hedge, errs strict) and H11 1/3. H11 is new: "the transfer charge stays with us" read as vague on 2 of 3, so Double-check, not Hold.
 The first held-out run stopped at 29 of 66 on four Groq timeouts in a row; the guard scored nothing from that call and the rerun continued.
-
-**Locked paths and the e2e.** `e2e/demo.spec.ts` asserts "Held by Slite Agent" and "Sent · checked by Slite Agent", which P0-3 removes. `e2e/` is locked, so it hasn't been touched. A scratch
-copy with only those 3 lines changed passes (1 passed). The change needs Abdullah's one-time unlock, as in D-026.
 
 **How the loop ran.** Builder and tester work was done in this session. QA is an independent subagent.
 

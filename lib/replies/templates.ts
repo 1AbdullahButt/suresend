@@ -1,6 +1,10 @@
 // Safe-reply templates (SPEC §6.7). Never say or imply a reversal has already started or finished.
+import type { DraftClaim } from "@/lib/engine/types";
 import type { AnyValue } from "@/lib/engine/values";
-import { topicDef } from "@/lib/topics";
+import { isCovered, topicDef, TOPICS } from "@/lib/topics";
+
+const HOLDING_OPEN = "Thanks for your patience. I'm confirming ";
+const HOLDING_CLOSE = " for your transfer and will update you here as soon as I have it.";
 
 /** The HOLD template for a claim on `topic`: the topic's own sentence stating the governing value (D-041). */
 export function holdTemplate(topic: string, v: AnyValue): string {
@@ -14,7 +18,28 @@ export function holdTemplate(topic: string, v: AnyValue): string {
 export function escalateTemplate(topics: string[]): string {
   const what = [...new Set(topics)].map((t) => topicDef(t).confirming);
   const list = what.length > 1 ? `${what.slice(0, -1).join(", ")} and ${what[what.length - 1]}` : (what[0] ?? "the details");
-  return `Thanks for your patience. I'm confirming ${list} for your transfer and will update you here as soon as I have it.`;
+  return `${HOLDING_OPEN}${list}${HOLDING_CLOSE}`;
+}
+
+/**
+ * The topics a reply says are being confirmed, only if it's SureSend's own Ask-first reply (D-045): that sentence word for
+ * word, and nothing after it but what the extracted claims account for. Any other wording gets no pass from rule D0e, whatever
+ * words it shares with this one.
+ */
+export function holdingTopics(reply: string, claims: DraftClaim[]): string[] {
+  const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+  const text = flat(reply);
+  const end = text.indexOf(HOLDING_CLOSE);
+  if (!text.startsWith(HOLDING_OPEN) || end < 0) return [];
+  const named = text.slice(HOLDING_OPEN.length, end).split(/, | and /);
+  const topics = named.map((phrase) => TOPICS.find((t) => t.confirming === phrase)?.id);
+  if (topics.some((t) => !t)) return [];
+  let rest = text.slice(end + HOLDING_CLOSE.length);
+  for (const c of claims) {
+    if (c.value && isCovered(c.topic)) rest = rest.replace(flat(topicDef(c.topic).replyTemplate(c.value)), "");
+    rest = rest.replace(flat(c.span), "");
+  }
+  return /[\p{L}\p{N}]/u.test(rest) ? [] : (topics as string[]);
 }
 
 /** The canonical Ask-first reply (the reversal timeline). */

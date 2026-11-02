@@ -14,8 +14,6 @@ The four fee cases are the real evidence for the second topic, and the three vag
 
 Sessions on earlier prompts are in commits 1db5346 and 5a0b026. H18 and H14 have flipped between sessions on one prompt: treat them as unstable, not as fixed (D-041).
 
-Not finished on this prompt: gemini.
-
 ## groq · `openai/gpt-oss-120b`
 
 - Runs per case: 3 · started: 2026-11-02T13:06:00.260Z · finished: 2026-11-02T13:40:38.977Z · throttled · provider errors retried, with no answer to score: 11
@@ -65,4 +63,49 @@ Field misses:
 - DOC-101/seed reversal_window statusWording: want "unstated" got "in_force"
 - DOC-104/seed reversal_window statusWording: want "unstated" got "in_force"
 - DOC-104/seed other statusWording: want "unstated" got "in_force"
+
+## gemini · `gemini-3.5-flash-lite`
+
+- Runs per case: 3 · started: 2026-11-02T13:50:37.380Z · finished: 2026-11-02T14:00:12.354Z · throttled · provider errors retried, with no answer to score: 1
+
+**Clean held-out cases (16)**
+
+- Decision accuracy: **91.7%** (44/48)
+- Fee cases only: **83.3%** (10/12)
+- Vague replies only: **77.8%** (7/9)
+- Quote validity: **100.0%** (91/91 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures; seed docs only, the reworded texts have none): **100.0%** (108/108)
+
+| Case | What it probes | Expected | Runs | Correct |
+|---|---|---|---|---|
+| H1-working-days | Reworded draft; "working days" means business days | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
+| H2-hedged | Hedged wording that contradicts the governing value | CAUTION / HEDGED_CONTRADICTION | ✓ · ✓ · ✓ | 3/3 |
+| H3-number-word | Correct value written as a word | ALLOW / SUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| H4-unknown-rail | Reworded draft on the unknown-rail ticket | ESCALATE / SCOPE_UNKNOWN | ✓ · ✓ · ✓ | 3/3 |
+| H6-sop-reworded-standard | SOP rewritten in different words (number word, reworded negation), standard rail | ALLOW / SUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| H7-sop-reworded-instant | Same reworded SOP, instant rail: the exception still supersedes it | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
+| H8-slack-reworded | A different Slack proposal (2 business days) signals a change against a correct reply | CAUTION / CHANGE_SIGNALLED | ✓ · ✓ · ✓ | 3/3 |
+| H9-injection-in-draft | The draft itself tries to instruct the checker | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
+| H10-no-claim | A follow-up promise with no value | CAUTION / TOPIC_GAP | ✓ · ✓ · ✓ | 3/3 |
+| H12-fee-comes-back | Fee refunded, reworded ("comes back together with the transfer amount"), standard rail | CAUTION / TOPIC_GAP | ✓ · ✓ · ✓ | 3/3 |
+| H17-fee-scoped-two-claims | Two claims after a verified edit to the instant-rail exception: the timeline is right, the fee is wrong on this rail | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
+| H18-fee-hedged-no | Hedged "not refunded", worded without the hedge list: Double-check, not Hold | CAUTION / HEDGED_CONTRADICTION | ✓ · ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERNING | 1/3 |
+| H19-fee-plus-weekly-cap | Fee refunded (right) plus a weekly cap amount, which is outside coverage | CAUTION / OUTSIDE_COVERAGE | ✓ · ✓ · ✓ | 3/3 |
+| H20-vague-mid-month |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| H21-vague-before-long |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| H22-vague-paperwork-charge |  | CAUTION / UNSUPPORTED | ✗ CAUTION/TOPIC_GAP · ✓ · ✗ CAUTION/TOPIC_GAP | 1/3 |
+
+**Exposed cases (6): regression only, not held-out**
+
+- Decision accuracy: **94.4%** (17/18)
+- Quote validity: **100.0%** (39/39 extracted quotes/spans verbatim; 0 rejected)
+
+| Case | What it probes | Expected | Runs | Correct |
+|---|---|---|---|---|
+| H5-calendar-days | "4 days" without business/working is calendar days | CAUTION / UNIT_MISMATCH | ✓ · ✓ · ✓ | 3/3 |
+| H11-fee-charge-stays | Two claims: the timeline is right, the fee is wrong ("the transfer charge stays with us" = not refunded) | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
+| H13-fee-unknown-rail | Fee refunded on the unknown-rail ticket: the fee rule covers all rails, so the rail doesn't matter | CAUTION / TOPIC_GAP | ✓ · ✓ · ✓ | 3/3 |
+| H14-fee-hedged-no | Hedged "not refunded" contradicts the policy: Double-check, not Hold | CAUTION / HEDGED_CONTRADICTION | ✓ · ✓ · ✗ CAUTION/UNSUPPORTED | 2/3 |
+| H15-fee-plus-limit | Fee refunded (right) plus a daily limit amount, which is outside coverage | CAUTION / OUTSIDE_COVERAGE | ✓ · ✓ · ✓ | 3/3 |
+| H16-fee-scoped-instant | A verified edit to the instant-rail exception keeps the fee for instant transfers, so "refunded" is wrong on the instant rail | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 

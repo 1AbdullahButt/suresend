@@ -20,11 +20,12 @@ const rel = (f: string) => path.relative(ROOT, f).replace(/\\/g, "/");
 function visible(file: string): string {
   return readFileSync(file, "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/(^|\s)\/\/.*$/gm, "$1");
+    .replace(/(^|\s)\/\/.*$/gm, "$1")
+    .replace(/\s+/g, " "); // a line break inside JSX is a space on screen
 }
 
 describe("copy rules", () => {
-  it.each(["got the right answer", "never reached"])("nothing says %s", (phrase) => {
+  it.each(["got the right answer", "never reached", "your reply is right"])("nothing says %s", (phrase) => {
     expect(FILES.filter((f) => visible(f).toLowerCase().includes(phrase)).map(rel)).toEqual([]);
   });
 

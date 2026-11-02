@@ -222,6 +222,10 @@ const ACCEPTED_CAUTION = new Set(["WEAK_BASIS", "CHANGE_SIGNALLED", "SOURCE_UNRE
 const isAcceptable = (r: { decision: string; reasonCode: string }) =>
   r.decision === "ALLOW" || (r.decision === "CAUTION" && ACCEPTED_CAUTION.has(r.reasonCode));
 
+/** The rewrite leaves open a topic the draft did make a claim on: the template states it, so the rewrite loses (D-045). */
+const dropsAnAnswer = (re: ReturnType<typeof decide>, said: DraftClaim[]) =>
+  re.claims.some((c) => c.reasonCode === "TOPIC_GAP" && said.some((d) => d.topic === c.draftClaim.topic));
+
 /** A claim a doc governs, and whether the reply gets it wrong (D-041). Only these are stated in a suggested reply. */
 interface GovernedClaim {
   claim: ClaimResult & { governing: NonNullable<ClaimResult["governing"]> };
@@ -291,7 +295,8 @@ async function holdSuggestion(
         const rejected: RejectedExtraction[] = [];
         const claims = validateDraftClaims(text, ex.claims, rejected);
         const re = recheck(text, claims, extractions, sources, ticket, now);
-        if (rejected.length === 0 && isAcceptable(re)) return checked(text, "ai", re, sources);
+        const said = extractions.draft.ok ? extractions.draft.claims : [];
+        if (rejected.length === 0 && isAcceptable(re) && !dropsAnAnswer(re, said)) return checked(text, "ai", re, sources);
       }
     } catch {
       // fall through to the template

@@ -3,7 +3,7 @@
 //   pnpm build && pnpm tsx scripts/record-demo.ts
 import { chromium, type Page } from "@playwright/test";
 import { spawn, spawnSync, type ChildProcess } from "node:child_process";
-import { mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
+import { copyFileSync, mkdirSync, readdirSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 
 const PORT = 3400;
@@ -122,7 +122,8 @@ async function main() {
   ff(["-i", path.join(outDir, "demo.webm"), "-vf", `${filters},palettegen=stats_mode=diff`, palette]);
   ff(["-i", path.join(outDir, "demo.webm"), "-i", palette, "-lavfi", `${filters}[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5`, path.join(outDir, "demo.gif")]);
   rmSync(videoDir, { recursive: true, force: true });
-  console.log("wrote docs/demo.gif, docs/demo.webm and public/og.png");
+  copyFileSync(path.join(outDir, "demo.gif"), path.join(process.cwd(), "public", "demo.gif")); // the how-it-works page renders the README's image from here
+  console.log("wrote docs/demo.gif, docs/demo.webm, public/demo.gif and public/og.png");
 }
 
 void main();

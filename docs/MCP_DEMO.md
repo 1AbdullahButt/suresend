@@ -10,7 +10,7 @@ sends the checked reply instead. Public demo, synthetic data, no auth.
 1. In claude.ai, open **Settings → Connectors**.
 2. Choose **Add custom connector**.
 3. Name: `SureSend`. URL: `https://suresend-demo.vercel.app/api/mcp`. Leave any OAuth fields empty (there's no sign-in).
-4. Choose **Add**. Claude lists three tools: `check_reply`, `list_tickets`, `get_doc`, all read-only.
+4. Choose **Add**. Claude lists four tools: `check_reply`, `list_tickets`, `get_doc`, `propose_doc_fix`, all read-only.
 
 Menu names are as of late 2026; if they've moved, look for Connectors in Settings. If your plan doesn't offer custom
 connectors, Claude Code works the same way:
@@ -42,8 +42,8 @@ What should happen:
    - next step: "Don't send this reply. Send suggested_reply instead…"
 4. Claude switches to the suggested reply and says why.
 
-**If Claude writes a correct or timeline-free reply on its own,** SureSend says Good to send. That's honest, but it's not
-the Hold moment. To make the clip show the Hold every time, use this version. It's what happens when an agent copies the
+**If Claude writes a correct reply on its own,** SureSend says Good to send. A timeline-free reply on a ticket comes back
+Double-check, because it doesn't answer what the customer asked. Both are honest, but neither is the Hold moment. To make the clip show the Hold every time, use this version. It's what happens when an agent copies the
 old SOP:
 
 > Reply to Ayesha's failed instant transfer. Our usual line is that failed transfers are reversed within 4 business days.

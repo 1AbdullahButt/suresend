@@ -45,7 +45,7 @@ function governingEvidence(claim: ClaimResult | null): Evidence | undefined {
 
 const UNIT_ADJ: Record<Unit, string> = { business_days: "business-day", calendar_days: "day", hours: "hour" };
 
-/** "4 business days" → "4-business-day" (for "The 4-business-day reply never reached Ayesha."). */
+/** "4 business days" → "4-business-day" (for "The 4-business-day reply was held and not sent."). */
 export function valueAdjective(v: Value): string | null {
   if (!v || !isDuration(v)) return null;
   const n = v.amountMax !== undefined && v.amountMax !== v.amount ? `${v.amount}–${v.amountMax}` : String(v.amount);
@@ -69,7 +69,7 @@ export interface Summary {
 }
 
 const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
-  CHANGE_SIGNALLED: "Right today, changing soon",
+  CHANGE_SIGNALLED: "Matches today, changing soon",
   WEAK_BASIS: "The doc behind this changed",
   OUTSIDE_COVERAGE: "Outside what we can check",
   SOURCE_UNREAD: "A doc couldn't be read",
@@ -82,9 +82,19 @@ const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
 
 const candidatesIn = (claim: ClaimResult) => claim.evidence.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value);
 
-/** A claim with no value, where the docs do have something to say (D-046). */
-const isVague = (claim: ClaimResult | null | undefined): boolean =>
-  !!claim && claim.reasonCode === "UNSUPPORTED" && claim.draftClaim.value === null && isCovered(claim.draftClaim.topic) && candidatesIn(claim).length > 0;
+/** A claim with no value, where the docs have something to say, or a doc that might couldn't be read (D-046). */
+const isVague = (claim: ClaimResult | null | undefined, result: CheckResult): boolean =>
+  !!claim && claim.reasonCode === "UNSUPPORTED" && claim.draftClaim.value === null && isCovered(claim.draftClaim.topic) && (candidatesIn(claim).length > 0 || result.caps.length > 0);
+
+/** Why no value is named: an unread doc might hold it (D-046). */
+const unreadLead = (result: CheckResult): string | null =>
+  result.caps.length > 0 ? `${result.caps.map((c) => c.sourceId).join(", ")} couldn't be read, so SureSend can't say what your docs give` : null;
+
+/** The docs' value for a reply that gives none, flagged when the doc behind it is in doubt. */
+function docsSayWords(claim: ClaimResult, value: NonNullable<Value>): string {
+  const doubt = governingEvidence(claim)?.weakeners.length ? ", but that doc is in doubt" : "";
+  return `Your docs say ${wordsFor(claim.draftClaim.topic, value)}${doubt}`;
+}
 
 /** The sent card (D-045): what happened, never that the reply was right. Past a Double-check, the docs may well have disagreed. */
 export function sentCopy({ decision, payoff }: { decision: OverallDecision; payoff: { heldValue: string | null } | null }): { headline: string; sentence: string } {
@@ -139,15 +149,15 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
         return { ...base, headline: "No policy promise here", sentence: "There's no policy promise in this reply, so there's nothing to contradict.", strong: null };
       }
       const s = said("allow");
-      if (s) return { ...base, headline: "Your reply is right", ...s };
-      return { ...base, headline: "Your reply is right", sentence: "Your reply matches your docs.", strong: null };
+      if (s) return { ...base, headline: "Matches your docs", ...s };
+      return { ...base, headline: "Matches your docs", sentence: "Your reply matches your docs.", strong: null };
     }
     case "CAUTION": {
       // EXTRACTION_GAP names what the detector found: "Couldn't confirm the timing".
       const headline =
         result.reasonCode === "EXTRACTION_GAP"
           ? `Couldn't confirm ${patternNoun(gapMatches(result))}`
-          : isVague(claim)
+          : isVague(claim, result)
             ? "Your reply is vague on this"
             : (CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending");
       return { ...base, headline, sentence: cautionSentence(result, claim), strong: null };
@@ -200,13 +210,13 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     case "PROPOSAL_ONLY":
       return `Only a proposal mentions ${saidValue(claim)}. Don't promise it until a policy confirms it.`;
     case "UNSUPPORTED": {
-      if (!claim || !isVague(claim)) return `No doc supports ${saidValue(claim)}. Check it with the policy owner.`;
+      if (!claim || !isVague(claim, result)) return `No doc supports ${saidValue(claim)}. Check it with the policy owner.`;
       const short = topicDef(claim.draftClaim.topic).noValue;
-      return gov ? `Your docs say ${wordsFor(claim.draftClaim.topic, gov.value)}; your reply ${short}.` : `Your docs don't give one answer for this ticket; your reply ${short}.`;
+      return `${gov ? docsSayWords(claim, gov.value) : (unreadLead(result) ?? "Your docs don't give one answer for this ticket")}; your reply ${short}.`;
     }
     case "TOPIC_GAP": {
       const topic = claim && isCovered(claim.draftClaim.topic) ? topicDef(claim.draftClaim.topic) : null;
-      return gov && claim ? `Your docs say ${wordsFor(claim.draftClaim.topic, gov.value)}; your reply doesn't say.` : `The customer asked about ${topic?.coverage ?? "this"}; your reply doesn't say.`;
+      return `${gov && claim ? docsSayWords(claim, gov.value) : (unreadLead(result) ?? `The customer asked about ${topic?.coverage ?? "this"}`)}; your reply doesn't say.`;
     }
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
@@ -305,6 +315,8 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
   const others: WhyOther[] = [];
   const didntCount: Array<{ id: string; text: string }> = [];
   const seen = new Set<string>();
+  // No value is named for this reply because a doc couldn't be read, so what the other docs say can't be called the answer.
+  const unconfirmed = result.caps.length > 0 && !gov && (isVague(claim, result) || claim?.reasonCode === "TOPIC_GAP");
 
   if (gov && govEv) {
     seen.add(govEv.source.id);
@@ -335,7 +347,9 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
             ? "Replaced"
             : "Overridden"
           : "Agrees"
-        : ev.applicability === "SCOPE_UNRESOLVED"
+        : unconfirmed
+          ? "Can't confirm"
+          : ev.applicability === "SCOPE_UNRESOLVED"
           ? "Only for one rail"
           : "Disagrees";
       others.push({ id: ev.source.id, title: ev.source.title, line: `${v ? wordsFor(ev.claim.topic, v) : ev.claim.valueText}, ${railShort(ev.claim.scope.rail)}`, label });
@@ -353,6 +367,8 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
       didntCount.push({ id: ev.source.id, text: `${ev.source.title}: ${reason}.` });
     }
   }
+
+  for (const cap of result.caps) if (!seen.has(cap.sourceId)) didntCount.push({ id: cap.sourceId, text: `${cap.sourceId} couldn't be read.` });
 
   // A gap, an outside-coverage claim or an unread doc means the docs weren't fully compared, so saying they're silent would be false.
   const reason = claim?.reasonCode ?? result.reasonCode;
@@ -403,9 +419,11 @@ function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evide
           ? "But it changed after it was verified, so double-check before sending."
           : code === "CHANGE_SIGNALLED"
             ? "A change is signalled, so double-check before sending."
-            : code === "TOPIC_GAP"
+            : result.caps.length > 0 && !gov && (code === "TOPIC_GAP" || isVague(claim, result))
+              ? "A doc couldn't be read, so SureSend can't name the value. Double-check before sending."
+              : code === "TOPIC_GAP"
               ? "Your reply doesn't answer what the customer asked, so double-check before sending."
-              : isVague(claim)
+              : isVague(claim, result)
                 ? "Your reply gives nothing to compare with them, so double-check before sending."
                 : "The rules can't confirm it, so double-check before sending.";
       break;

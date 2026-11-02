@@ -35,6 +35,10 @@ export const Header = forwardRef<
           className={cx(ui.btn, ui.primary, ui.sm, s.tourBtn)}
           aria-expanded={tourOpen}
           onClick={onTour}
+          // Focus lands here after "Not now": a held Enter's repeat isn't a request for the tour.
+          onKeyDown={(e) => {
+            if (e.repeat) e.preventDefault();
+          }}
           data-tour="tour-button"
         >
           Guided tour

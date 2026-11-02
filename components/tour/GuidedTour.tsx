@@ -41,8 +41,8 @@ const STEPS: Step[] = [
     title: "Send runs the check",
     body: (
       <>
-        Ayesha&apos;s transfer went over the <b>instant rail</b>, and the reply promises <b>4 business days</b>. Press <b>Send</b>: Slite
-        Agent checks the reply against your docs first, and holds it if it&apos;s wrong.
+        Ayesha&apos;s transfer went over the <b>instant rail</b>, and the reply promises <b>4 business days</b>. Press <b>Send</b>: SureSend
+        checks the reply against your docs first, and holds it if it&apos;s wrong.
       </>
     ),
     target: (ag) => (held(ag, "TCK-9001") ? ['[data-tour="decision"]'] : ['[data-tour="send"]', '[data-tour="composer"]']),
@@ -298,7 +298,7 @@ export function GuidedTour({
     setCollapsed(false);
     if (state.step === EDIT_STEP) setStartEdited(Boolean(agRef.current.overrides["DOC-103"]));
     step.enter?.(ctx());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per step: ctx() and the step are read for that step, not watched
   }, [isTour, state.step, ready]);
 
   // Step 6 on a phone: tapping into the doc to edit it shrinks the card, so the text and the save buttons stay reachable.
@@ -412,7 +412,7 @@ export function GuidedTour({
             New here? Take the 2-minute tour
           </h2>
           <p id={bodyId} className={s.body}>
-            Catch a wrong reply at Send, see why the rules held it, send the right one, handle an unknown rail, fix the doc behind it and
+            Catch a wrong reply at Send, see why the rules held it, send a checked one, handle an unknown rail, fix the doc behind it and
             edit a doc live. Skip at any step.
           </p>
           <div className={s.nav}>

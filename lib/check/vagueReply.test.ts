@@ -10,7 +10,7 @@ import { sentCopy, summarize, traceRows, whyModel } from "@/lib/client/outcome";
 import { checkReply } from "@/lib/mcp/tools";
 import { ESCALATE_TEMPLATE } from "@/lib/replies/templates";
 import { seedTickets } from "@/lib/workspace/seed";
-import { seedBody } from "@/lib/workspace/variants";
+import { draftSave, seedBody } from "@/lib/workspace/variants";
 import type { AiRunInfo, CheckDeps, DraftClaim, Rail, Source, SourceClaim } from "@/lib/engine/types";
 
 const NOW = "2026-10-30T12:00:00Z";
@@ -211,6 +211,121 @@ describe("the AI reads the vague words as a claim with no value", () => {
   });
 });
 
+describe("a doc that governs can't be read: no other doc's value is offered as the answer", () => {
+  const unreadDeps = (claims: DraftClaim[]): CheckDeps => ({
+    ...depsFor(claims),
+    extractSource: async (s) => {
+      if (s.id === "DOC-103") throw new Error("simulated extraction failure");
+      return { claims: sourceClaims(s.id), info: INFO };
+    },
+  });
+  const repro = CASES[0]!;
+  const claimsOf = repro.vague.map(([topic, span], i) => vague(topic, span, i));
+
+  it("a claim with no value names no value, and the card says why", async () => {
+    const r = await runCheck(input(repro), unreadDeps(claimsOf));
+    expect(r.decision).toBe("CAUTION");
+    expect(r.claims.map((c) => c.governing)).toEqual([null, null]);
+    const { headline, sentence } = summarize(r, repro.rail);
+    expect(headline).toBe("Your reply is vague on this");
+    expect(sentence).toBe("DOC-103 couldn't be read, so SureSend can't say what your docs give; your reply gives no number.");
+    expect(r.headline).not.toContain("4 business days");
+    const why = whyModel(r, r.claims[0]!);
+    expect(why.governing).toBeNull();
+    expect(why.others.every((o) => o.label === "Can't confirm")).toBe(true);
+    expect(why.didntCount.map((d) => d.text)).toContain("DOC-103 couldn't be read.");
+    expect(why.so).toContain("couldn't be read");
+    expect(why.so).not.toMatch(/agree/i);
+  });
+
+  it("a silent reply names no value either", async () => {
+    const r = await runCheck(input(CASES[1]!), unreadDeps([]));
+    expect(r.reasonCode).toBe("TOPIC_GAP");
+    expect(r.claims[0]?.governing).toBeNull();
+    expect(summarize(r, "instant").sentence).toBe("DOC-103 couldn't be read, so SureSend can't say what your docs give; your reply doesn't say.");
+  });
+
+  it("MCP reports no governing value", async () => {
+    const out = await checkReply({ reply: repro.draft, ticket_id: "TCK-9001" }, unreadDeps(claimsOf));
+    expect(out.ok && out.value.governing).toBeNull();
+    expect(out.ok && out.value.claims.map((c) => c.docs_say)).toEqual([null, null]);
+  });
+
+  it("a Hold's suggested reply doesn't state the other doc's value for the vague claim", async () => {
+    const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: false }, valueText: "isn't refundable", span: "the transfer fee isn't refundable", definitive: true };
+    const draft = "You'll have it after the weekend, but the transfer fee isn't refundable.";
+    const r = await runCheck({ ...input(repro), draft }, unreadDeps([vague("reversal_window", "after the weekend", 0), fee]));
+    expect(r.decision).toBe("HOLD");
+    expect(r.suggestion?.text).not.toContain("4 business days");
+  });
+});
+
+describe("the docs' value when the doc behind it is in doubt", () => {
+  it("says so, as the comparison path does", async () => {
+    const c = CASES.find((x) => x.id === "next-week")!;
+    const edited = draftSave("DOC-101", `${seedBody("DOC-101").trimEnd()}\n\nEdited.\n`, "2026-10-29T09:00:00Z");
+    const r = await runCheck({ ...input(c), overrides: [edited] }, depsFor([vague("reversal_window", "early next week", 0)]));
+    expect(summarize(r, c.rail).sentence).toBe("Your docs say 4 business days, but that doc is in doubt; your reply gives no number.");
+  });
+});
+
+describe("only SureSend's own holding reply gets past D0e", () => {
+  it.each([
+    "I'm confirming the exact reversal timeline for your transfer, but you'll see it reflected after the weekend, minus the processing charge.",
+    "Don't worry about the exact reversal timeline: you'll see it reflected after the weekend, minus the processing charge.",
+    "We never share the exact reversal timeline, so please stop asking.",
+    "THE EXACT REVERSAL TIMELINE IS AFTER THE WEEKEND.",
+    `${ESCALATE_TEMPLATE} You'll see it reflected after the weekend.`,
+    `You'll see it after the weekend. ${ESCALATE_TEMPLATE}`,
+    ESCALATE_TEMPLATE.replace("the exact reversal timeline", "the exact reversal timeline and when it lands"),
+  ])("the AI finds nothing in %j: still a Double-check", async (draft) => {
+    const r = await runCheck({ ...input(CASES[4]!), draft }, depsFor([]));
+    expect(r.decision).toBe("CAUTION");
+    expect(r.reasonCode).toBe("TOPIC_GAP");
+    const send = await handleSend({ ticketId: "TCK-9002", rail: "unknown", draft, role: "support_agent", overrides: [] }, depsFor([]));
+    expect(send.status).toBe(428);
+  });
+
+  it("the holding reply with a kept claim after it, as Ask first suggests it, still goes out", async () => {
+    const draft = `${ESCALATE_TEMPLATE} The transfer fee is refunded.`;
+    const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: true }, valueText: "refunded", span: "transfer fee is refunded", definitive: true };
+    const send = await handleSend({ ticketId: "TCK-9002", rail: "unknown", draft, role: "support_agent", overrides: [] }, depsFor([fee]));
+    expect(send.status).toBe(200);
+  });
+});
+
+describe("a suggested reply that drops an answer the draft gave", () => {
+  const timeline: DraftClaim = { claimId: "t", topic: "reversal_window", value: { amount: 4, unit: "business_days" }, valueText: "4 business days", span: "within 4 business days", definitive: true };
+  const FOUR = "Failed transfers are reversed within 4 business days.";
+  const withRewrite = (draftClaims: DraftClaim[], rewrite: string): CheckDeps => ({
+    ...depsFor(draftClaims),
+    extractDraft: async (text) => ({ claims: text === rewrite ? [] : draftClaims, info: INFO }),
+    suggestReply: async () => ({ text: rewrite, info: INFO }),
+  });
+
+  it("loses to the template, which states the value", async () => {
+    const r = await runCheck({ ...input(CASES[1]!), draft: FOUR }, withRewrite([timeline], "Thanks for your patience, our team is on it."));
+    expect(r.decision).toBe("HOLD");
+    expect(r.suggestion?.origin).toBe("template");
+    expect(r.suggestion?.text).toContain("1 business day");
+    expect(r.suggestion?.recheckDecision).toBe("ALLOW");
+  });
+
+  it("a fee-only draft had no timeline to drop, so its rewrite stands, with a Double-check that says why", async () => {
+    const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: false }, valueText: "isn't refundable", span: "The transfer fee isn't refundable", definitive: true };
+    const rewrite = "The transfer fee is refunded with your money.";
+    const deps: CheckDeps = {
+      ...depsFor([fee]),
+      extractDraft: async (text) => ({ claims: text === rewrite ? [{ ...fee, value: { flag: true }, valueText: "refunded", span: "The transfer fee is refunded" }] : [fee], info: INFO }),
+      suggestReply: async () => ({ text: rewrite, info: INFO }),
+    };
+    const r = await runCheck({ ...input(CASES[2]!), draft: "The transfer fee isn't refundable." }, deps);
+    expect(r.suggestion?.origin).toBe("ai");
+    expect(r.suggestion?.recheckDecision).toBe("CAUTION");
+    expect(r.suggestion).toMatchObject({ recheckNote: "it doesn't answer what the customer asked" });
+  });
+});
+
 describe("the topic gap stays narrow", () => {
   const t = (message?: string) => ({ id: "T", rail: "standard" as const, ...(message ? { message } : {}) });
   const doc: Source = {
@@ -304,6 +419,7 @@ describe("the topic gap stays narrow", () => {
     expect(out.ok && out.value.engine_decision).toBe("CAUTION");
     expect(out.ok && out.value.reason_code).toBe("TOPIC_GAP");
     expect(out.ok && out.value.governing?.value).toBe("4 business days");
+    expect(out.ok && out.value.claims[0]?.in_reply).toBe(false);
   });
 });
 

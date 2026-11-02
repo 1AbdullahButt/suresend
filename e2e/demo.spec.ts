@@ -27,11 +27,11 @@ test("wrong draft → Send → held → Use this reply → Send → sent → Dem
   // + SPEC §14 T1 (HOLD) + SPEC §16 step 3 (Try Send → blocked).
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await expect(page.getByRole("region", { name: "Decision" })).toContainText("Hold");
-  await expect(page.getByRole("status").filter({ hasText: "Held by Slite Agent" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Held by SureSend" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Send (held)", exact: true })).toBeDisabled();
   // Not sent: the composer still holds the wrong draft and there is no sent confirmation.
   await expect(composer).toHaveValue(WRONG_DRAFT);
-  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" })).toHaveCount(0);
+  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" })).toHaveCount(0);
 
   // Step 3 — SPEC §16 step 3 (Recover): use the safe reply (already rechecked) → it says "1 business day";
   // UI-CONTRACT: changing the composer text clears the held state and re-enables Send.
@@ -42,7 +42,7 @@ test("wrong draft → Send → held → Use this reply → Send → sent → Dem
 
   // Step 4 — SPEC §16 step 3 + §6.8 (ALLOW → sent) + REDESIGN item 5 (sent payoff).
   await send.click();
-  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by Slite Agent" })).toBeVisible();
+  await expect(page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" })).toBeVisible();
 
   // Step 5 — SPEC §14 ("Impact shows 1 intercept") + §11 metric 2 + REDESIGN item 6 (Impact lives in the Demo menu).
   await page.getByRole("button", { name: "Demo menu", exact: true }).click();
