@@ -188,10 +188,11 @@ flowchart TD
   ignored; the docs the check runs against are the workspace the client submits (see Limitations).
 - **Permissions (simulated):** the persona filter runs before extraction, so a hidden source never reaches the AI or a
   response. Personas are not authorization: anyone can switch, and a real deployment would take the role from the session.
-- **Spend limit:** Both keys are free tier with no billing account linked, so there is nothing to spend. When the quota runs out, requests are refused (429). That's a hard stop at $0.
+- **Spend limit:** Groq runs on the paid Developer tier with a $5/month hard spend limit. Gemini is free tier with no
+  billing. The app also caps live checks at 500 a day and MCP at 200 a day.
 - **Rate limiting on the public demo:** a shared Upstash Redis limiter from the Vercel Marketplace (a per-IP cap per 10
   minutes and a daily cap overall, set by `RATE_LIMIT_PER_10MIN` and `GLOBAL_LIVE_CHECKS_PER_DAY`; defaults 20 and 500),
-  then the providers' free-tier quotas, then the saved-response fallback with a "Live AI paused" badge (D-034). Responses
+  then the providers' limits, then the saved-response fallback with a "Live AI paused" badge (D-034). Responses
   from `/api/check` and `/api/send` carry `x-suresend-limiter`, which reads `upstash` after a live check went through the
   shared limiter. Without the Upstash vars the code falls back to an in-memory per-instance limiter. Input caps
   (4,000 chars per doc, 1,000 per draft, 6 sources) and free cache hits apply either way. The canonical path and the guided
@@ -296,7 +297,8 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - The MCP server has no auth because it only reads this public, synthetic workspace. A real one would sit behind the
   workspace's own sign-in and check the caller's permissions.
 - No real Slite or Intercom integration; all data is synthetic.
-- Free-tier AI limits (Groq ~8K tokens/min): concurrent live checks fall back to saved responses with a visible badge.
+- Live AI stops at the app's daily caps, Groq's $5/month spend limit or Gemini's free-tier quota. Past those, checks fall
+  back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
 - The eval is small and built around one scenario; the held-out set (10 cases) is a first check on generalisation, not proof.

@@ -357,7 +357,7 @@ ${rows.join("\n")}`,
   const fieldMisses = [...new Set(p.fieldMisses)];
   const markdown = `## ${providerName} · \`${model}\`${savedMode ? " (saved responses replay, AI_MODE=saved)" : ""}
 
-- Runs per case: ${runs} · started: ${p.startedAt} · finished: ${new Date().toISOString()}${savedMode ? "" : " · throttled to stay under the free tier"}
+- Runs per case: ${runs} · started: ${p.startedAt} · finished: ${new Date().toISOString()}${savedMode ? "" : " · throttled"}
 ${heldOutMode ? `\n**Clean held-out cases (${cleanCases.length})**\n\n` : ""}${clean.summary}
 - Extraction field accuracy (vs hand-written fixtures${heldOutMode ? "; seed docs only, the reworded texts have none" : ""}): **${pct(p.clean.fieldsCorrect, p.clean.fieldsTotal)}** (${p.clean.fieldsCorrect}/${p.clean.fieldsTotal})
 ${heldOutMode ? "" : `- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **${gatePass ? "PASS" : "FAIL"}**\n`}

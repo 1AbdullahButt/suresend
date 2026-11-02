@@ -78,7 +78,7 @@ async function checkGroq(apiKey: string, model: string, calls: number, http: typ
     `groq: ${Number.isFinite(left) ? left : "?"} requests left today; this run needs about ${calls} calls and ${Math.round(tokens / 1000)}K tokens.`,
     "groq doesn't report its daily tokens until the limit is reached, so this only proves the next call fits.",
   ];
-  if (tokens > GROQ_DAILY_TOKENS) lines.push(`That's more than a day's ${GROQ_DAILY_TOKENS / 1000}K tokens: expect a stop, then re-run the same command to continue.`);
+  if (tokens > GROQ_DAILY_TOKENS) lines.push(`On Groq's free tier (${GROQ_DAILY_TOKENS / 1000}K tokens a day), expect a stop, then re-run the same command to continue.`);
   if (Number.isFinite(left) && left < calls) return { ok: false, lines: [`groq: only ${left} requests left today; this run needs about ${calls}.`] };
   return { ok: true, lines };
 }

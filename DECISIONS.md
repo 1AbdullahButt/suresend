@@ -745,3 +745,14 @@ An independent-style review before sharing with Slite (security, correctness, UX
     unexpected. `pnpm record --resume` continues one that stopped.
   - An eval writes its report files only when all its runs finish. Until then its responses and scores stay in
     `evals/.in-progress`, and re-running continues with the same responses and scores, so nothing gets a second attempt.
+
+### D-042 · Groq moves to the paid Developer tier, with a spend limit (Abdullah's decision, 2026-11-02)
+Groq's free tier allows 200,000 tokens a day, so the Phase 10 re-record and 3-run evals would have taken about 2 days. Abdullah
+upgraded the account to the Developer tier. Production uses this same key.
+- **Spend:** Groq has a $5/month hard spend limit, set by Abdullah in Groq's billing settings, with email alerts. Gemini stays
+  free tier with no billing. The app still caps live checks at 500 a day and MCP at 200 a day.
+- **Replaces** D-025's "both keys are free tier … a hard stop at $0" for Groq. Money is now at risk up to that limit, which also
+  answers SPEC §10.1's provider backstop for this account.
+- **Limits read after the upgrade:** 250,000 tokens a minute, from Groq's response headers. The scripts' spacing (12 s per Groq
+  call) is unchanged.
+- The README's spend line, its rate-limit line and its Limitations line now say this.
