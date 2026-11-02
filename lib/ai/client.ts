@@ -23,8 +23,40 @@ export interface AiProvider {
   complete(req: StructuredRequest): Promise<unknown>;
 }
 
+/** Which limit a 429 hit. A daily limit won't clear soon, so the scripts stop; a per-minute one clears in seconds. */
+export type QuotaWindow = "day" | "minute" | "unknown";
+
+export interface QuotaHit {
+  window: QuotaWindow;
+  /** How long the provider says to wait, when it says. */
+  retryAfterMs: number | null;
+  /** The limit's own figures, e.g. "tokens per day (TPD): Limit 200000, Used 198169, Requested 3708". No ids or keys. */
+  detail: string | null;
+}
+
+/** Reads a provider's 429 message: Groq names the limit in words, Gemini in its quota metric and description. */
+export function quotaHit(message: string): QuotaHit {
+  const window: QuotaWindow = /per[\s_-]*day|\b[TR]PD\b|daily/i.test(message) ? "day" : /per[\s_-]*minute|\b[TR]PM\b/i.test(message) ? "minute" : "unknown";
+  const wait = /(?:try again|retry) in ([\d.hms]+)/i.exec(message)?.[1];
+  let retryAfterMs: number | null = null;
+  if (wait) {
+    const scale: Record<string, number> = { h: 3_600_000, m: 60_000, s: 1_000, ms: 1 };
+    retryAfterMs = Math.ceil([...wait.matchAll(/([\d.]+)(ms|h|m|s)/g)].reduce((sum, p) => sum + Number(p[1]) * scale[p[2]!]!, 0));
+  }
+  const groq = /(?:tokens|requests) per (?:day|minute) \([A-Z]+\): Limit \d+, Used \d+, Requested \d+/.exec(message)?.[0];
+  const gemini = /limit: (\d+)/.exec(message)?.[1];
+  return { window, retryAfterMs, detail: groq ?? (gemini ? `limit ${gemini}` : null) };
+}
+
 /** The provider rejected the call with 429 or a quota error: try the fallback once, then use saved responses. */
-export class AiRateLimitedError extends Error {}
+export class AiRateLimitedError extends Error {
+  constructor(
+    message?: string,
+    readonly quota: QuotaHit = { window: "unknown", retryAfterMs: null, detail: null },
+  ) {
+    super(message);
+  }
+}
 /** The provider itself rejected the model's output as not matching the schema (e.g. Groq 400 json_validate_failed). */
 export class AiInvalidOutputError extends Error {}
 
@@ -51,8 +83,8 @@ export function isRateLimit(e: unknown): boolean {
 }
 
 function rethrow(e: unknown): never {
-  if (isRateLimit(e)) throw new AiRateLimitedError(`Provider rate limit or quota (${statusOf(e) ?? "quota"})`);
   const msg = e instanceof Error ? e.message : String(e);
+  if (isRateLimit(e)) throw new AiRateLimitedError(`Provider rate limit or quota (${statusOf(e) ?? "quota"})`, quotaHit(msg));
   if (statusOf(e) === 400 && /json_validate_failed|failed to (generate|validate) json/i.test(msg)) {
     throw new AiInvalidOutputError(msg);
   }

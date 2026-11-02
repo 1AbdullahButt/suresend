@@ -3,8 +3,12 @@
 // cache identity (including provider and model); the loader refuses a file whose identity doesn't match its key.
 // Records with the configured primary provider (AI_PROVIDER), throttled to stay under its free tier.
 //
-//   pnpm record                    re-record everything live with AI_PROVIDER (clears data/ai-cache first): the golden
-//                                  cases, the guided tour's doc edit, Fix the doc and the composer presets (D-041)
+// Checks the provider's quota first and stops on the first daily limit (lib/ai/quota.ts, exit code 3). A full recording
+// is built in data/.ai-cache-recording and replaces data/ai-cache only if it finishes with nothing unexpected.
+//
+//   pnpm record                    re-record everything live with AI_PROVIDER: the golden cases, the guided tour's doc
+//                                  edit, Fix the doc and the composer presets (D-041)
+//   pnpm record --resume           continue a full recording that stopped; keeps what it already recorded
 //   pnpm record --provider gemini  record with a specific provider
 //   pnpm record --tour-edits       only add what guided-tour step 6 (the doc edit) needs (both ways of typing its edit, saved with
 //                                  verify and with re-check); appends, existing files are reused and never cleared (D-034)
@@ -15,14 +19,15 @@
 //
 // Every check that suggests a reply also records "Use this reply → Send" on that suggestion.
 import { loadEnvConfig } from "@next/env";
-import { mkdirSync, readdirSync, readFileSync, rmSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { runCheck } from "@/lib/check/runCheck";
-import { AI_CACHE_DIR, AiTaskError, aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
+import { AI_CACHE_DIR, aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { fixOverride, proposeFix, type FixDeps } from "@/lib/fix/propose";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
-import { createAiCache } from "@/lib/ai/cache";
+import { cacheKey, createAiCache, type AiCache } from "@/lib/ai/cache";
 import { providerChain, type ProviderName } from "@/lib/ai/client";
+import { checkQuota, guarded, QUOTA_STOP_EXIT } from "@/lib/ai/quota";
 import { draftSave, seedBody, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
 import { tourStep5Edits } from "@/lib/workspace/variantBodies";
 import { PRESETS } from "@/lib/workspace/presets";
@@ -47,19 +52,41 @@ interface Golden {
 
 const ROLES: Role[] = ["support_agent", "ops_lead"];
 const FOUR = "Failed transfers are reversed within 4 business days.";
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+/** A full recording's own folder (gitignored): data/ai-cache stays as it was until the recording finishes. */
+const RECORDING_DIR = path.join(process.cwd(), "data", ".ai-cache-recording");
+/** About what a full recording makes, retries included (it saves ~40 responses). */
+const FULL_RECORDING_CALLS = 60;
 
-async function withBackoff<T>(fn: () => Promise<T>): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (e) {
-      if (e instanceof AiTaskError && e.kind === "paused" && attempt < 6) {
-        await sleep(15_000 * (attempt + 1));
-        continue;
-      }
-      throw e;
-    }
+const jsonFiles = (dir: string) => (existsSync(dir) ? readdirSync(dir).filter((f) => f.endsWith(".json")) : []);
+
+/** Notes which saved responses this pass used, so a resumed recording can drop what an interrupted pass left unused. */
+function tracked(cache: AiCache, used: Set<string>): AiCache {
+  return {
+    get(identity) {
+      const hit = cache.get(identity);
+      if (hit !== undefined) used.add(cacheKey(identity));
+      return hit;
+    },
+    set: (identity, output) => cache.set(identity, output),
+    save(identity, output) {
+      used.add(cacheKey(identity));
+      cache.save(identity, output);
+    },
+  };
+}
+
+/** The finished recording becomes data/ai-cache. */
+function publishRecording(used: Set<string>): void {
+  for (const f of jsonFiles(RECORDING_DIR)) {
+    if (!used.has(f.replace(/\.json$/, ""))) rmSync(path.join(RECORDING_DIR, f));
+  }
+  rmSync(AI_CACHE_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  try {
+    renameSync(RECORDING_DIR, AI_CACHE_DIR);
+  } catch {
+    // Windows can refuse a rename while something still holds the folder.
+    cpSync(RECORDING_DIR, AI_CACHE_DIR, { recursive: true });
+    rmSync(RECORDING_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
   }
 }
 
@@ -158,26 +185,43 @@ async function recordPresets(deps: CheckDeps): Promise<number> {
 
 async function main() {
   const golden = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "golden.json"), "utf8")) as Golden;
-  // Fresh cache bound to the saved-responses dir; persist writes every live result to disk.
   const args = process.argv.slice(2);
   const only = (args.includes("--provider") ? args[args.indexOf("--provider") + 1] : providerChain()[0]!.provider) as ProviderName;
-  const rt = createRuntime({ only, throttle: true, cache: createAiCache({ dir: AI_CACHE_DIR, maxEntries: 2000 }), persist: true });
+  const mode = args.includes("--tour-edits") ? "tour" : args.includes("--fix-edits") ? "fix" : args.includes("--presets") ? "presets" : "all";
+  const dir = mode === "all" ? RECORDING_DIR : AI_CACHE_DIR;
+  const resume = args.includes("--resume");
+  const saved = mode === "all" && resume ? jsonFiles(RECORDING_DIR).length : 0;
+
+  const stop = (why: string): never => {
+    console.error(`\nStopped: ${why}.`);
+    console.error(
+      mode === "all"
+        ? `data/ai-cache is untouched; ${jsonFiles(RECORDING_DIR).length} responses are kept in data/.ai-cache-recording. Continue with: pnpm record --resume`
+        : "Nothing that was already saved changed. Re-run the same command to continue.",
+    );
+    process.exit(QUOTA_STOP_EXIT);
+  };
+
+  const quota = await checkQuota(only, Math.max(5, FULL_RECORDING_CALLS - saved));
+  for (const line of quota.lines) console.log(line);
+  if (!quota.ok) stop("the quota check failed");
+
+  if (mode === "all" && !resume) rmSync(RECORDING_DIR, { recursive: true, force: true });
+  mkdirSync(dir, { recursive: true });
+  const used = new Set<string>();
+  // persist writes every live result to the recording's folder.
+  const rt = createRuntime({ only, throttle: true, cache: tracked(createAiCache({ dir, maxEntries: 2000 }), used), persist: true });
   const slot = rt.chain[0]!;
   if (!slot.provider) throw new Error(`No live provider for ${only} (check the key and AI_MODE); data/ai-cache left untouched`);
-  const mode = args.includes("--tour-edits") ? "tour" : args.includes("--fix-edits") ? "fix" : args.includes("--presets") ? "presets" : "all";
-  if (mode === "all") {
-    rmSync(AI_CACHE_DIR, { recursive: true, force: true });
-    mkdirSync(AI_CACHE_DIR, { recursive: true });
-  }
-  const before = readdirSync(AI_CACHE_DIR).filter((f) => f.endsWith(".json")).length;
+  const before = jsonFiles(dir).length;
   const base = aiDeps(rt);
   const deps: CheckDeps = {
-    extractSource: (s) => withBackoff(() => base.extractSource(s)),
-    extractDraft: (d) => withBackoff(() => base.extractDraft(d)),
-    suggestReply: (r) => withBackoff(() => base.suggestReply!(r)),
+    extractSource: (s) => guarded(only, () => base.extractSource(s), stop),
+    extractDraft: (d) => guarded(only, () => base.extractDraft(d), stop),
+    suggestReply: (r) => guarded(only, () => base.suggestReply!(r), stop),
   };
   const fixBase = aiFixDeps(rt);
-  const fixDeps: Required<FixDeps> = { draftDocFix: (r) => withBackoff(() => fixBase.draftDocFix(r)) };
+  const fixDeps: Required<FixDeps> = { draftDocFix: (r) => guarded(only, () => fixBase.draftDocFix(r), stop) };
 
   let bad = 0;
   if (mode === "all" || mode === "presets") {
@@ -196,9 +240,18 @@ async function main() {
     console.log("— Fix the doc");
     bad += await recordFix(deps, fixDeps, golden);
   }
-  const after = readdirSync(AI_CACHE_DIR).filter((f) => f.endsWith(".json")).length;
-  console.log(`\n${mode === "all" ? "Recorded" : "Added"} ${after - before} saved responses (${before} → ${after}) with ${slot.name} / ${slot.model}. Unexpected: ${bad}`);
-  process.exit(bad === 0 ? 0 : 1);
+  if (mode !== "all") {
+    const after = jsonFiles(dir).length;
+    console.log(`\nAdded ${after - before} saved responses (${before} → ${after}) with ${slot.name} / ${slot.model}. Unexpected: ${bad}`);
+    process.exit(bad === 0 ? 0 : 1);
+  }
+  if (bad > 0) {
+    console.log(`\nUnexpected: ${bad}. data/ai-cache is untouched; the recording is kept in data/.ai-cache-recording.`);
+    process.exit(1);
+  }
+  publishRecording(used);
+  console.log(`\nRecorded ${jsonFiles(AI_CACHE_DIR).length} saved responses with ${slot.name} / ${slot.model}. Unexpected: 0`);
+  process.exit(0);
 }
 
 void main();

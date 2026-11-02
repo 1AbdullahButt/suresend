@@ -15,6 +15,7 @@ import {
   throttled,
   type AiProvider,
   type ProviderName,
+  type QuotaHit,
   type StructuredRequest,
 } from "./client";
 import { createAiCache, type AiCache, type CacheIdentity } from "./cache";
@@ -54,6 +55,8 @@ export class AiTaskError extends Error {
     message: string,
     readonly kind: "unavailable" | "paused" | "invalid_output" | "provider_error",
     readonly info: AiRunInfo,
+    /** Which limit a "paused" call hit; the scripts stop on a daily one (lib/ai/quota.ts). */
+    readonly quota?: QuotaHit,
   ) {
     super(message);
   }
@@ -148,7 +151,7 @@ async function callLive<W, T>(
     } catch (e) {
       const latencyMs = Date.now() - started;
       if (e instanceof AiRateLimitedError) {
-        throw new AiTaskError(`${slot.name}: rate limit or quota`, "paused", { ...base, mode: "unavailable", latencyMs, paused: true });
+        throw new AiTaskError(`${slot.name}: rate limit or quota`, "paused", { ...base, mode: "unavailable", latencyMs, paused: true }, e.quota);
       }
       if (e instanceof SyntaxError || e instanceof AiInvalidOutputError) {
         lastIssue = `invalid JSON: ${e.message}`;

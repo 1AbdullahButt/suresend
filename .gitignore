@@ -14,3 +14,6 @@ next-env.d.ts
 design/build-screens/
 # Abdullah's own notes; they name his employer and the repo is public (D-031, D-034)
 docs/VIDEO_SCRIPT.md
+# Unfinished runs that stopped on a quota limit (D-041): replaced or removed when the run completes
+data/.ai-cache-recording/
+evals/.in-progress/
