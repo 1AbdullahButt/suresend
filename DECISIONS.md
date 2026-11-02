@@ -822,3 +822,9 @@ Phase 10's gate asked for both providers' evals. On 2 Nov Gemini's free tier was
   app's real 9 seconds. A small call every 15 minutes checks this; the eval starts only on an answer in under 5 seconds.
 - When Gemini finishes, its results and the README update go in a separate commit.
 - Limitations says the fallback can't answer within the timeout while Gemini is overloaded.
+- **What happened next.** Gemini recovered at 10:09 UTC and finished at 10:21 UTC, before anything shipped, so the "partial" wording
+  never went public. Golden 57/57, gate passes, 81/81 quotes, 180/180 fields. Clean held-out 39/39, fee cases 12/12, exposed 18/18.
+  That's one session on the same frozen prompts, spread across the overload: the first 18 case runs were 09:07 to 09:10.
+- **The selection rule's pick changed.** Both providers pass the gate with 0 quote rejections, so D-019's tie-break goes to field
+  accuracy (Gemini 100%, Groq 97.2%), and `evals/results.md` reads `AI_PROVIDER=gemini`. Production still runs Groq as primary. The
+  README says both. Whether to switch is Abdullah's call and is still open.
