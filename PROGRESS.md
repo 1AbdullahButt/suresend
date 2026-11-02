@@ -1653,3 +1653,44 @@ playwright: 1 passed
 
 **QA round 3: APPROVED**, no blockers or majors, at 7c2ad93. Round 2's major is fixed on the real saved reading, through a real Send, at 1440 and 390 and over MCP, and QA agreed the evals needn't rerun: it went through the diff line by line. I took its three minors before merging: the filter now needs the whole reply to be SureSend's own text (three shapes reached Good to send without that), what it sets aside is recorded in `rejectedExtractions`, and the replay test has the case that would have caught the bug. Left for a later phase: copy with a doc unread on replies that carry a value (same on `main`), and the 404 page's missing label.
 
+**QA round 4: APPROVED** at 6963504, confirming that last diff. Round 3's three shapes are Double-check; the demo's Ask-first replies still send, in the browser and over MCP; the new `usman-both` case fails on the old code and passes now.
+
+**The final state, at 6963504.**
+```
+$ pnpm typecheck                     exit 0
+$ pnpm lint                          exit 0, no warnings
+$ pnpm test
+Test Files  30 passed (30)
+Tests  355 passed (355)
+$ pnpm build                         exit 0
+$ snapshot against evals/snapshots/phase11.json: 80 identical, 0 different, 0 missing (66 of the original 68; the other 2 are the no-claim reply)
+p11-ui-check: pass=31 fail=0
+p11-offer: pass=27 fail=0
+p10-ui: pass=46 fail=0
+step5-ayesha: pass=43 fail=0
+mcp-menu: pass=31 fail=0
+step6-phone-fix: pass=12 fail=0
+tour-step6: pass=29 fail=0
+tour-menu: pass=231 fail=0
+$ pnpm mcp:e2e http://127.0.0.1:3100/api/mcp
+ALL PASS
+$ pnpm exec playwright test
+1 passed (57.9s)
+```
+**e2e re-locked, shown to Abdullah before merging.** `git diff main..phase-11 -- .loop/locked` is empty and the spec's diff is the 3 lines in D-050. A real Edit on the file was refused by the hook. Fed to the hook directly:
+```
+Write, backslash path   exit 2  BLOCKED by protect-locked: "e2e/demo.spec.ts" is locked
+Edit, backslash path    exit 2  BLOCKED by protect-locked: "e2e/demo.spec.ts" is locked
+Write, forward path     exit 2  BLOCKED by protect-locked: "e2e/demo.spec.ts" is locked
+Write, relative path    exit 2  BLOCKED by protect-locked: "e2e/demo.spec.ts" is locked
+Bash, remove the spec   exit 2  BLOCKED by protect-locked: "rm" on "e2e/" is locked
+Write to README.md      exit 0  (not locked)
+```
+One thing that test turned up: the hook exits 0 on input it can't parse. My first try sent malformed JSON and looked like a pass. Claude Code always sends valid JSON, so the lock holds, but it fails open.
+
+```
+$ git worktree list
+D:/Project/slite 6963504 [phase-11]
+```
+GATE: PASSED
+
