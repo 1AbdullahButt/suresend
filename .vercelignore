@@ -8,3 +8,9 @@ design/build-screens/
 docs/demo.webm
 test-results/
 playwright-report/
+# Private, and gitignored: with this file present, Vercel does not apply .gitignore.
+docs/VIDEO_SCRIPT.md
+# Another tool's local config, not part of the app.
+.agents/
+.codex/
+AGENTS.md

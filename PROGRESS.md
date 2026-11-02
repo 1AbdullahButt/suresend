@@ -1694,3 +1694,37 @@ D:/Project/slite 6963504 [phase-11]
 ```
 GATE: PASSED
 
+**Deployed to https://suresend-demo.vercel.app, live checks.** Merged to `main` at e85f974, CI success. Deployed twice: the second added `docs/VIDEO_SCRIPT.md`, `.agents/`, `.codex/` and `AGENTS.md` to `.vercelignore`, because Vercel doesn't apply `.gitignore` once that file exists. None of them was ever publicly reachable (404 on the first deploy).
+```
+repro /api/check: 200 CAUTION/UNSUPPORTED, ai saved, prompt 2026-11-02.5
+  reversal_window "you'll see it reflected after the weekend" value=null → CAUTION/UNSUPPORTED, docs say 1 business day
+  fee_refund "minus the processing charge" value=null → CAUTION/UNSUPPORTED, docs say refunded
+  headline: Caution: the policy says 1 business day (Instant Rail: Reversal Exception, effective 27 Oct 2026), and the draft gives no checkable value.
+repro /api/send, no OK: 428 ACKNOWLEDGEMENT_REQUIRED
+repro /api/send, with OK: 200 sent=true
+noCustomerMessage in the body: 200 CAUTION/UNSUPPORTED
+Usman's preset: 200 ESCALATE, suggestion check ALLOW: "Thanks for your patience. I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it. The transfe
+Usman's holding reply /api/send: 200 sent=true, recorded: ["OWN_HOLDING_SENTENCE"]
+
+p11-ui-check (live): exit 0 pass=31 fail=0
+p11-offer (live): exit 0 pass=27 fail=0
+p10-ui (live): exit 0 pass=46 fail=0
+step5-ayesha (live): exit 0 pass=43 fail=0
+mcp-menu (live): exit 0 pass=31 fail=0
+step6-phone-fix (live): exit 0 pass=12 fail=0
+tour-step6 (live): exit 0 pass=29 fail=0
+tour-menu (live): exit 0 pass=231 fail=0
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+PASS check_reply 4 days on TCK-9001: Hold · suggestion "Failed transfers are reversed within 1 business day." (Good to send) · governing Instant Rail: Reversal Exceptio
+PASS check_reply 4 days on TCK-9002: Ask first (ai_mode saved)
+PASS check_reply two claims on TCK-9001: Hold [reversal window: Good to send; fee refund: Hold], suggestion keeps "1 business day" (ai_mode saved)
+ALL PASS
+$ security headers
+Content-Security-Policy: frame-ancestors 'none'
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+og.png 200, demo.gif 200
+property="og:image" content="https://suresend-demo.vercel.app/og.png"
+```
+
