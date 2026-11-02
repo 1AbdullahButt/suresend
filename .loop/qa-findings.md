@@ -1,57 +1,59 @@
-# QA findings · Phase 11 · 2026-11-02T17:07:34Z
+# QA findings · Phase 11 addendum · 2026-11-02T17:46:46Z
 
-Round 4, narrow: `git diff 7c2ad93..6963504` on branch `phase-11`. Round 3's results at 7c2ad93 (commit 6963504's copy of this file) carry forward for everything this diff doesn't touch. No live AI call, no `pnpm eval`, no `pnpm record`. Scripts: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa11r4\`.
+`git diff 81e112f..f195c37` on `main`, HEAD f195c37, not pushed. No live AI, no eval, record or hedge-runs run; I read `scripts/hedge-runs.ts` rather than running it. Scripts: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa11r5\`.
 
 ## Commands run
 
 - `pnpm typecheck` → exit 0. `pnpm lint` → exit 0. `pnpm build` → exit 0.
-- `pnpm test` → exit 0. `Test Files 30 passed (30)`, `Tests 355 passed (355)`.
-- `pnpm tsx scripts/snapshot-results.ts <temp>/snap.json --compare evals/snapshots/after.json` → exit 1, as it returns on any difference. `66 identical, 2 different, 0 missing`, the same two `no-claim` rows. Output byte-identical to `evals/snapshots/phase11.json`.
-- `pnpm e2e` → exit 0, `1 passed`. `pnpm mcp:e2e http://127.0.0.1:3100/api/mcp` → exit 0, `ALL PASS`.
-- `git diff main..HEAD --numstat -- tests e2e SPEC.md IMPLEMENTATION_BRIEF.md data/seed` → `3 3 e2e/demo.spec.ts` only. `.loop/locked` diff empty. `hook-test.mjs`: as expected. `git worktree list` → `D:/Project/slite 6963504 [phase-11]` only.
-- Not re-run, because this diff touches no UI: the axe audit and the builder's browser scripts.
-- `paths.cjs` → 24 pass, 0 fail, on a saved-mode server rebuilt at HEAD. `engine.ts`, `engine2.ts`, `mcp-http.mjs`, `rawjson.cjs`.
-- Temp copies of 6b665bc and 7c2ad93 with the new test files, removed afterwards.
+- `pnpm test` → exit 0. `Test Files 30 passed (30)`, `Tests 356 passed (356)`.
+- `pnpm e2e` → exit 0, `1 passed`.
+- `tour-menu.cjs` → 231/0. `tour-step6.cjs` → 29/0. Saved-mode build; stopped; port 3100 free.
+- `tour2.cjs`: step 2's new text on screen at 1440 and 390, inside the viewport, old phrase gone.
+- `same.ts`: the sentence as written, on saved readings.
+- `git diff 81e112f..f195c37 --stat -- SPEC.md IMPLEMENTATION_BRIEF.md tests e2e data evals/heldout.json evals/heldout.md lib/ai lib/engine lib/check/runCheck.ts lib/replies` → empty.
 
 ## Findings
 
-### Blockers and majors
+### Major
 
-None.
+- [severity: major] README.md:27, :119, DECISIONS.md:939 · expected: an accurate claim, which is the point of this change · actual: "the same AI findings and the same docs always produce the same decision" isn't true as written, because `decide()` also takes the ticket and the time. README:117, two lines above, names both.
+  - The demo's own first screen contradicts it. On the same saved reading and the same docs, the 4-day reply is Hold on Ayesha, Ask first on Usman and Good to send on Hina. The rail picker alone does the same on one ticket.
+  - The time does it too: B5 is `CHANGE_SIGNALLED` on 30 Oct 2026 and `HOLD` on 1 Jun 2030, same reply, same reading, same docs.
+  - It hides no risk. I rate it major only because this sentence is what the change is for, and "always" is checkably false.
+  - Fix, a few words: "On the same ticket at the same time, the same AI findings and the same docs always produce the same decision." That keeps the words Abdullah dictated, so it's his call. If he wants his exact sentence, he can accept it as written and this is closed.
 
-### Checked
+### Minors: wording you missed
 
-1. **The filter.**
-   - Round 3's three shapes are now Double-check: the fragment-span fee and the second vague timeline are `CAUTION/UNSUPPORTED`, send 428; MCP with no ticket is Double-check / `UNSUPPORTED`.
-   - Every other attack with added words is Double-check or Hold.
-   - On the saved readings, P2, P3, P4, P5, P7 and P10 send through `handleSend` (`200`). In the browser at 1440 and 390, the whole P2 flow, the same reply for P3–P5, and P7 and P10 with B3 in the workspace store all send.
-   - MCP over HTTP: `suggested_reply` "Good to send"; `check_reply` on that text → Good to send / `SUPPORTED`; the plain reply → Good to send.
+- [severity: minor] docs/MCP_DEMO.md:46 · "To make the clip show the Hold every time". Claude writes its own wording, which goes through live AI, so a hedged version gets a Double-check. "Much more likely" is what's true.
+- [severity: minor] lib/mcp/tools.ts:138 · "Send suggested_reply instead (it passed the same check)". This tells an agent the Send will agree. A template's recheck uses SureSend's own claims, not an AI reading, which is how round 2's bug happened. "(the rules rechecked it)" is true. `tools.test.ts:20` asserts the string.
+- [severity: minor] README.md:402 · optional: "What not to claim" is where "that the same reply always gets the same verdict" belongs.
+- [severity: minor] components/tour/GuidedTour.tsx:123 · not this claim, and not new: "SureSend reads your docs live" on the step whose canonical edits replay saved responses (README:220).
 
-2. **The record.**
-   - The kept-fee reply carries `{"sourceId":"DRAFT","reason":"OWN_HOLDING_SENTENCE","snippet":"I'm confirming…"}`, visible in Raw JSON.
-   - D0a reads as a success: with a reading of only the sentence, the plain reply is `200 ALLOW/NO_POLICY_CLAIM`, because `rejectedCount` is computed separately.
-   - Readers: the only code that reads the array is `scripts/eval.ts:359`, a count in the note on a failed case, and no eval draft can add to it. `quoteRejections` comes from its own tally. The Check card, Why and Trace don't mention it, and MCP doesn't expose it. Nothing misreports it.
+### Minors: the rest
 
-3. **The new test.**
-   - On 6b665bc: `Ask first with a kept claim, on the demo's own preset` fails with `support_agent: expected 'CAUTION' to be 'ALLOW'`; `1 failed | 25 passed`.
-   - At HEAD it passes.
-   - The other new tests are real too: on 7c2ad93 the record test and the three shapes fail, 4 of 4.
+- [severity: minor] README.md:399 · "about 7%" is fair: the exact 95% bound on 0 of 40 is 7.2%, and the rule of three gives 7.5%. Two things it leaves out: it doesn't name the 95%, and it pools four sentences. For one sentence, 0 of 10 can't rule out about 26%. A clause would cover both.
+- [severity: minor] scripts/hedge-runs.ts:129 · `--provider gemini` or `--runs 20`, which the header documents, overwrites the Groq report README cites. Nothing else is at risk.
+- [severity: minor] scripts/hedge-runs.ts:67-70 · after a stopped run, a changed `--runs` without `--fresh` resets the results but keeps the `run-N` folders, so those rounds replay and get scored as live. It doesn't affect the published run: its folder is gone, and H18's readings vary.
 
-4. **Docs.**
-   - D-045's "words after the sentence get no pass from any span" is true now.
-   - README's 355 matches the run.
-   - What PROGRESS.md states is accurate. It has no evidence block for this commit yet: its last block says 350 and is labelled round 2. Add this round's output with the `GATE: PASSED` line.
+### Checked and fine
 
-5. **Evals.** The reasoning still holds. The filter's conditions only narrowed: for a reply not opening with the holding sentence, `raw` and `rejectedCount` are unchanged and nothing is recorded, and that's still 0 of the 47 drafts. `types.ts` only adds a reason. The diff touches no prompt, schema, saved response or report, and the snapshot is byte-identical. As before, the stamp changed, so use `--provider gemini` for the pending rerun.
+- **`hedge-runs.ts` classification.** A miss is any verdict or reason off expected; Good to send is unsafe; `AI_UNAVAILABLE` is counted apart; everything else is strict. That matches Abdullah's definition. Ask first would count as strict without the label saying so, but none occurred.
+- **Provider errors are never scored.** `createGuard` retries, then stops with exit 3 and the case unsaved. Invalid output stays the model's own answer, as in the eval.
+- **Frozen and live.** It refuses to run unless prompt version and fingerprint match the freeze. `only` means no fallback; its own cache folder means `data/ai-cache` is never read. `temperature: 0` is in the client. Runs took 17:22–17:38Z, after 81e112f; `lib/ai` is unchanged.
+- **Writes.** Only `evals/hedge-runs.*` and its own ignored folder, never the held-out report or `data/ai-cache`.
+- **The cases are the right ones.** I read all 22 held-out drafts. H2, H14, H18 and H20 are the only hedged ones: H1's "about" is "sorry about this", H4's "always" is emphatic, and H21 and H22 are vague, not hedged. None edits a doc.
+- **Numbers.** README's Limitations line, tests table, commands table and PROGRESS match `hedge-runs.md` and `.json`: 36/40, 4 strict, 0 unsafe, 0 couldn't check, H18 6/10 with 4 read as definite.
+  - H18 Holds across 1db5346, 5a0b026, 760ad28, HEAD and the hedge runs: 3, 0, 2, 1, 4 = **10 of 22**.
+  - H14: 3/3, 2/3, 3/3, 3/3, 10/10.
+- **Judged fine in context.**
+  - "deterministic" of the rules and detector: literal, and SPEC's uses are about the engine.
+  - "Fixed rules decide / made the call" and the "Rules decided" tag: each now sits by text saying the AI reads the reply, or by "AI extracted".
+  - "replay": saved responses by exact text, where the same verdict is true.
+  - "this time the check passes" (tour step 3): it replays there.
+  - "The AI never decides the outcome": the new sentence follows it.
+  - No "guarantee", and "always" appears only in the sentence above and an unrelated README:17.
+  - package.json and the GitHub description make no claim. The private script has 0 hits on the old phrases and says it reads the reply.
+- **D-051.** Its claims are true, apart from the sentence above. `SPEC.md` and the brief weren't changed, and they say nothing about the same reply. `copyRules.test.ts` bans the old phrase, whitespace flattened. No eval stamp changes: nothing under `lib/engine` or `lib/check` changed.
+- **Left as they are:** `/how-it-works` shows the new text; its link to the report renders as plain text, like its other relative links.
 
-6. **Gate.** All above.
-
-### Minors carried from round 3, for a later phase
-
-With a doc unread, replies carrying a value still get copy that treats the remaining docs as the answer (decisions right, same on `main`); the 404 page's missing label (SPEC.md:382).
-
-### Before merge
-
-D-050 quotes Abdullah asking to be shown that `e2e/` is re-locked before merging, so he still needs to see that. README:247's "local and live" holds only once this branch is deployed.
-
-## VERDICT: APPROVED
+## VERDICT: CHANGES_REQUIRED

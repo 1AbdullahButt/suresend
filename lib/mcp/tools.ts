@@ -135,7 +135,7 @@ function nextStep(result: CheckResult, suggestionCheck: string | null): string {
     case "HOLD":
       if (suggestionCheck === null) return "Don't send this reply. Ask a human for the right wording.";
       return suggestionCheck === "Good to send"
-        ? "Don't send this reply. Send suggested_reply instead (it passed the same check), or ask a human."
+        ? "Don't send this reply. Send suggested_reply instead (the rules rechecked it), or ask a human."
         : `Don't send this reply. suggested_reply has the governing value, but its own check says "${suggestionCheck}", so show it to a human before sending.`;
     case "ESCALATE": {
       // Name what not to state from the claim that decided it (D-041): "the reversal timeline", "whether the transfer fee is refunded".

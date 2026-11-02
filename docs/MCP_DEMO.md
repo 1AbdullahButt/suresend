@@ -43,7 +43,7 @@ What should happen:
 4. Claude switches to the suggested reply and says why.
 
 **If Claude writes a correct reply on its own,** SureSend says Good to send. A timeline-free reply on a ticket comes back
-Double-check, because it doesn't answer what the customer asked. Both are honest, but neither is the Hold moment. To make the clip show the Hold every time, use this version. It's what happens when an agent copies the
+Double-check, because it doesn't answer what the customer asked. Both are honest, but neither is the Hold moment. To make a Hold much more likely in the clip, use this version. It's what happens when an agent copies the
 old SOP:
 
 > Reply to Ayesha's failed instant transfer. Our usual line is that failed transfers are reversed within 4 business days.

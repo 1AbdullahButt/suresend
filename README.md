@@ -24,7 +24,7 @@ A support agent writes a reply. When they press Send, SureSend checks it first:
 
 1. It pulls the factual claims out of the draft (live AI).
 2. It finds the matching claims in the team's messy docs and Slack (live AI, every quote validated as verbatim).
-3. It weighs those sources with transparent, deterministic rules: the same AI findings and the same docs always produce the same decision.
+3. It weighs those sources with transparent, deterministic rules: on the same ticket at the same time, the same AI findings and the same docs always produce the same decision.
 4. It returns **Good to send** (Allow), **Double-check** (Caution), **Hold** or **Ask first** (Escalate), plus a rechecked
    suggested reply and the full reasoning.
 
@@ -116,7 +116,7 @@ proposal over MCP with `propose_doc_fix`, which applies nothing.
 
 **The AI never decides the outcome.** The decision is a pure function, `decide(extractions, sources, ticket, now)` in
 [`lib/engine/decide.ts`](lib/engine/decide.ts). Every rule writes a trace entry, shown in the SureSend card's Why and Trace views.
-The same AI findings and the same docs always produce the same decision. That isn't the same as "same reply, same verdict": the AI can read the
+On the same ticket at the same time, the same AI findings and the same docs always produce the same decision. That isn't the same as "same reply, same verdict": the AI can read the
 same words differently from one run to the next, even at temperature 0, and a different reading can get a different verdict (see Limitations).
 "The AI found nothing" is never treated as "safe": a deterministic policy-pattern detector catches timelines the AI missed,
 an unreadable source caps the result at Caution, and a reply that leaves the customer's question open is a Double-check, because
@@ -396,11 +396,12 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - The eval is small and built around one scenario; the held-out set (16 clean cases) is a first check on generalisation, not proof.
 - **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq with the frozen prompts, the four hedged held-out cases gave the expected verdict on 36 of
   40 runs. The other 4 were strict and none was Good to send: all 4 are H18, whose "As far as I can tell" the AI read as definite, so it got a Hold, not a Double-check. H2, H14 and H20
-  were right 10 of 10. That's four sentences at temperature 0 in one sitting, so 0 unsafe in 40 doesn't prove never: even if the runs were independent, a rate up to about 7% could go unseen. See
+  were right 10 of 10. That's four sentences at temperature 0 in one sitting, so 0 unsafe in 40 doesn't prove never: even if the runs were independent, at 95% confidence a rate up to about 7% could go unseen, or about 26% for any one sentence (0 of 10). See
   [evals/hedge-runs.md](evals/hedge-runs.md). Over every Groq session on the last two prompts, H18 is a Hold on 10 of 22 runs.
 
 ## What not to claim
 
+- That the same reply always gets the same verdict. On the same ticket at the same time, the same AI findings and the same docs do; the AI's reading of a reply can vary.
 - That Slite lacks this internally.
 - That it connects to real Slite or Intercom data.
 - That intercepted sends equal prevented customer harm.

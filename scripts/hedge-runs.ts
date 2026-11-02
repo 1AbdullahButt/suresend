@@ -1,6 +1,7 @@
 // How steady are verdicts on hedged wording? Runs the hedged held-out cases many times on one provider, live, on the frozen prompts,
 // and reports the verdict distribution per case and how many misses were strict (Hold, Double-check) or unsafe (Good to send).
-// Report only: it writes evals/hedge-runs.md and .json, and never touches the held-out report or data/ai-cache.
+// Report only: it writes evals/hedge-runs.md and .json (hedge-runs-<provider>-<runs> for other settings), and never touches the
+// held-out report or data/ai-cache.
 //   pnpm tsx scripts/hedge-runs.ts                 Groq, 10 runs per case; a run that stopped continues where it stopped
 //   pnpm tsx scripts/hedge-runs.ts --runs 20 --provider gemini --fresh
 // Each round is a new runtime, so docs and replies are all read again. Like the eval, a provider error is retried and never scored,
@@ -64,10 +65,11 @@ if (PROMPT_VERSION !== suite.frozen.prompt || promptFingerprint() !== suite.froz
 const dir = path.join(root, "evals", ".in-progress", `hedge-${provider}`);
 const progressFile = path.join(dir, "progress.json");
 const stamp = JSON.stringify([PROMPT_VERSION, promptFingerprint(), provider, runs, HEDGED]);
-if (args.includes("--fresh")) rmSync(dir, { recursive: true, force: true });
-mkdirSync(dir, { recursive: true });
 const saved = existsSync(progressFile) ? (JSON.parse(readFileSync(progressFile, "utf8")) as Progress) : null;
-const p: Progress = saved?.stamp === stamp ? saved : { stamp, startedAt: new Date().toISOString(), results: {}, retries: 0 };
+// A run with other settings starts clean: its saved responses would otherwise replay and score as live.
+if (args.includes("--fresh") || (saved && saved.stamp !== stamp)) rmSync(dir, { recursive: true, force: true });
+mkdirSync(dir, { recursive: true });
+const p: Progress = saved?.stamp === stamp && !args.includes("--fresh") ? saved : { stamp, startedAt: new Date().toISOString(), results: {}, retries: 0 };
 const save = () => writeFileSync(progressFile, JSON.stringify(p), "utf8");
 const done = () => Object.values(p.results).reduce((n, r) => n + r.length, 0);
 
@@ -126,8 +128,10 @@ ${cases
 
 Runs close together at temperature 0 may not be independent samples: earlier sessions on one prompt gave the same answer on all 3 runs and a different one in the next session.
 `;
-  writeFileSync(path.join(root, "evals", "hedge-runs.md"), md, "utf8");
-  writeFileSync(path.join(root, "evals", "hedge-runs.json"), `${JSON.stringify({ provider, model, promptVersion: PROMPT_VERSION, runs, startedAt: p.startedAt, finishedAt: finished, providerRetries: p.retries, rows }, null, 2)}\n`, "utf8");
+  // The README cites Groq × 10: any other settings get their own report.
+  const name = provider === "groq" && runs === 10 ? "hedge-runs" : `hedge-runs-${provider}-${runs}`;
+  writeFileSync(path.join(root, "evals", `${name}.md`), md, "utf8");
+  writeFileSync(path.join(root, "evals", `${name}.json`), `${JSON.stringify({ provider, model, promptVersion: PROMPT_VERSION, runs, startedAt: p.startedAt, finishedAt: finished, providerRetries: p.retries, rows }, null, 2)}\n`, "utf8");
   console.log(md);
   rmSync(dir, { recursive: true, force: true });
 }

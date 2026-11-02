@@ -17,7 +17,7 @@ describe("check_reply", () => {
     expect(r.suggested_reply?.text).toContain("1 business day");
     expect(r.suggested_reply?.check).toBe("Good to send");
     expect(r.governing).toMatchObject({ doc_id: "DOC-103", doc_title: "Instant Rail: Reversal Exception", value: "1 business day" });
-    expect(r.next_step).toBe("Don't send this reply. Send suggested_reply instead (it passed the same check), or ask a human.");
+    expect(r.next_step).toBe("Don't send this reply. Send suggested_reply instead (the rules rechecked it), or ask a human.");
     expect(r.rules_that_mattered.some((x) => x.startsWith("D5 (fired)"))).toBe(true);
     expect(r.ticket).toEqual({ id: "TCK-9001", rail: "instant" });
   });
