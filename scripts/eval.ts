@@ -430,6 +430,13 @@ ${exposed ? `\n**Exposed cases (${exposedCases.length}): regression only, not he
   };
 }
 
+/** What production runs, and why, when it differs from the eval's pick. Abdullah's decision, not the eval's (D-044). */
+const PRODUCTION = {
+  provider: "groq",
+  fallback: "gemini",
+  why: "Availability and latency matter more for the live path, and the accuracy gap changed no decision.",
+};
+
 function writeCombined() {
   const dir = path.join(root, "evals");
   const files = (["groq", "gemini"] as const).filter((p) => existsSync(path.join(dir, `results-${p}.json`)));
@@ -459,15 +466,19 @@ function writeCombined() {
     }
   }
   const selection = primary
-    ? `**Selection:** \`AI_PROVIDER=${primary.provider}\`${fallback ? `, \`AI_FALLBACK_PROVIDER=${fallback.provider}\`` : ""}. ${why}`
-    : "**Selection:** no provider passed the gate.";
+    ? `**The eval's pick:** \`AI_PROVIDER=${primary.provider}\`${fallback ? `, \`AI_FALLBACK_PROVIDER=${fallback.provider}\`` : ""}. ${why}`
+    : "**The eval's pick:** no provider passed the gate.";
+  const override =
+    primary && primary.provider !== PRODUCTION.provider
+      ? `\n\n**Production overrides this:** \`AI_PROVIDER=${PRODUCTION.provider}\`, \`AI_FALLBACK_PROVIDER=${PRODUCTION.fallback}\`. ${PRODUCTION.why} (D-044)`
+      : "";
   const md = `# Live-AI eval results
 
 ${golden.cases.length} golden cases (\`evals/golden.json\`: the 3 canonical tickets, Appendix B variants B1–B7, a 1-business-day ALLOW,
 a no-claim draft and the fee cases), each run 3× per provider, prompt version \`${PROMPT_VERSION}\`. The gate is the canonical tickets plus
 B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this prompt version are listed and used for selection.
 
-${selection}
+${selection}${override}
 ${unfinished.length ? `\nNot finished on this prompt: ${unfinished.join(", ")}.\n` : ""}
 ${reports.map((r) => r.markdown).join("\n")}`;
   writeFileSync(path.join(dir, "results.md"), md, "utf8");

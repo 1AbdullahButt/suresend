@@ -4,7 +4,9 @@
 a no-claim draft and the fee cases), each run 3× per provider, prompt version `2026-11-02.4`. The gate is the canonical tickets plus
 B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this prompt version are listed and used for selection.
 
-**Selection:** `AI_PROVIDER=gemini`, `AI_FALLBACK_PROVIDER=groq`. Both passed the gate with 0 quote rejections each; gemini had higher field accuracy.
+**The eval's pick:** `AI_PROVIDER=gemini`, `AI_FALLBACK_PROVIDER=groq`. Both passed the gate with 0 quote rejections each; gemini had higher field accuracy.
+
+**Production overrides this:** `AI_PROVIDER=groq`, `AI_FALLBACK_PROVIDER=gemini`. Availability and latency matter more for the live path, and the accuracy gap changed no decision. (D-044)
 
 ## groq · `openai/gpt-oss-120b`
 

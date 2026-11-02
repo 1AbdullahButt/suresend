@@ -182,7 +182,8 @@ flowchart TD
   (`openai/gpt-oss-120b`, strict JSON-schema output) and Google Gemini (`gemini-3.5-flash-lite`, native JSON-schema
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
   over. On the final prompts both pass the gate with no rejected quotes, so the eval's tie-break goes to field accuracy and
-  [evals/results.md](evals/results.md) reads `AI_PROVIDER=gemini`. Production still runs Groq as primary. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019.
+  picks Gemini. Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
+  the accuracy gap changed no decision. [evals/results.md](evals/results.md) shows both. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
   stored identity hashes to its name.

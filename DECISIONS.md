@@ -761,7 +761,7 @@ An independent-style review before sharing with Slite (security, correctness, UX
      schemas, so an edit with no version bump also counts as a change.
   - *H5 is exposed too.* It shares "be back within" with golden and preset drafts written after it, the same rule that
     exposed H13. QA called this Abdullah's decision; I applied the rule because it's the cautious reading and it only lowers
-    the published score. Undo it by removing `exposed` from H5 in `evals/heldout.json`.
+    the published score. Abdullah confirmed it: H5 stays exposed (D-044).
   - *Because the rules changed, Groq's evals were rerun from scratch* on the same frozen prompts. Golden stayed 57/57. On the
     same 13 clean cases, held-out went from 36/39 to 39/39 and the fee cases from 9/12 to 12/12, because H18 flipped from 0/3 to
     3/3. The rule fix doesn't touch H18's path and nothing was tuned, so that's model variance. H14 went the other way, 3/3 to
@@ -827,4 +827,13 @@ Phase 10's gate asked for both providers' evals. On 2 Nov Gemini's free tier was
   That's one session on the same frozen prompts, spread across the overload: the first 18 case runs were 09:07 to 09:10.
 - **The selection rule's pick changed.** Both providers pass the gate with 0 quote rejections, so D-019's tie-break goes to field
   accuracy (Gemini 100%, Groq 97.2%), and `evals/results.md` reads `AI_PROVIDER=gemini`. Production still runs Groq as primary. The
-  README says both. Whether to switch is Abdullah's call and is still open.
+  README says both. Abdullah kept Groq (D-044).
+
+### D-044 · Groq stays primary, overriding the eval's pick (Abdullah's decision, 2026-11-02)
+On the final prompts both providers pass the gate with 0 quote rejections, so D-019's tie-break goes to field accuracy (Gemini 100%,
+Groq 97.2%) and the eval picks Gemini. Abdullah overrode that: Groq stays primary and Gemini stays the fallback.
+- **Why:** availability and latency matter more for the live path, and the accuracy gap changed no decision.
+- **The rule isn't changed.** D-017 and D-019 still produce the eval's pick, and it stays visible. `evals/results.md` shows the pick
+  and the override side by side, from a constant in `scripts/eval.ts`, so a regenerated report can't contradict production.
+- **Production doesn't change.** It already runs `AI_PROVIDER=groq` and `AI_FALLBACK_PROVIDER=gemini`.
+- **Also confirmed by Abdullah:** H5 stays exposed (D-041, QA round 2), so the clean held-out set stays at 13 cases.

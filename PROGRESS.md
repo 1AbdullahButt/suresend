@@ -1326,9 +1326,9 @@ wrong claim. Each ticket has 3 "Try another reply" presets, and MCP `check_reply
 - **Honest reading of the numbers:** both providers score 100% on the final runs, but Groq's first session on the same frozen prompts
   scored 36/39 and 9/12 on fee cases, because H18 flipped from 0/3 to 3/3 with no prompt change. The README shows both sessions and
   calls hedges unstable. Gemini has one session.
-- **Open:** both providers pass the gate with no rejected quotes, so the eval's tie-break picks Gemini on field accuracy (100% vs
+- **Provider pick:** both providers pass the gate with no rejected quotes, so the eval's tie-break picks Gemini on field accuracy (100% vs
   97.2%) and `evals/results.md` reads `AI_PROVIDER=gemini`. Production still runs Groq as primary, and the README says both.
-  Whether to switch is Abdullah's call.
+  Resolved after the gate: Abdullah kept Groq, overriding the eval's pick (D-044). H5 stays exposed.
 - **Known, left as they are:** D-041 lists them.
 
 GATE: PASSED
