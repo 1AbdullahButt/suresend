@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AiTaskError, aiDeps, type AiRuntime } from "./aiDeps";
 import { createAiCache } from "./cache";
 import { AiRateLimitedError, quotaHit } from "./client";
-import { checkQuota, describeQuota, guarded } from "./quota";
+import { checkQuota, createGuard, describeQuota } from "./quota";
 import type { AiRunInfo, SourceForExtraction } from "@/lib/engine/types";
 
 const GROQ_DAY =
@@ -37,6 +37,9 @@ describe("reading a provider's limit message", () => {
   it("Gemini's per-minute requests", () => {
     expect(quotaHit(GEMINI_MINUTE)).toMatchObject({ window: "minute", retryAfterMs: 20000 });
   });
+  it("a spend limit counts as a daily stop", () => {
+    expect(quotaHit("Your organization has reached its spend limit.").window).toBe("day");
+  });
   it("a message that names no limit", () => {
     expect(quotaHit("Too many requests")).toEqual({ window: "unknown", retryAfterMs: null, detail: null });
   });
@@ -61,33 +64,76 @@ describe("guarded", () => {
     const fn = vi.fn(async () => {
       throw paused(GROQ_DAY);
     });
-    await expect(guarded("groq", fn, stop, noWait)).rejects.toThrow(/^STOP: groq daily limit reached/);
+    await expect(createGuard("groq", stop, noWait)(fn)).rejects.toThrow(/^STOP: groq daily limit reached/);
     expect(fn).toHaveBeenCalledTimes(1);
   });
   it("waits out a per-minute limit for as long as the provider says, then continues", async () => {
     const sleep = vi.fn(async () => undefined);
     const fn = vi.fn<() => Promise<string>>().mockRejectedValueOnce(paused(GROQ_MINUTE)).mockResolvedValueOnce("done");
-    await expect(guarded("groq", fn, stop, sleep)).resolves.toBe("done");
+    await expect(createGuard("groq", stop, sleep)(fn)).resolves.toBe("done");
     expect(sleep).toHaveBeenCalledWith(5750);
   });
   it("stops if a per-minute limit outlasts the retries", async () => {
     const fn = vi.fn(async () => {
       throw paused(GROQ_MINUTE);
     });
-    await expect(guarded("groq", fn, stop, noWait)).rejects.toThrow(/^STOP: groq per-minute limit reached/);
+    await expect(createGuard("groq", stop, noWait)(fn)).rejects.toThrow(/^STOP: groq per-minute limit reached/);
     expect(fn).toHaveBeenCalledTimes(7);
+  });
+  it("stops at once on a limit that names no window but a long wait", async () => {
+    const fn = vi.fn(async () => {
+      throw paused("Too many requests. Please retry in 5h52m7s.");
+    });
+    await expect(createGuard("groq", stop, noWait)(fn)).rejects.toThrow(/^STOP: groq rate limit reached/);
+    expect(fn).toHaveBeenCalledTimes(1);
+  });
+  it("stops after a run of provider errors, and a success clears the count", async () => {
+    const down = new AiTaskError("groq: provider error: 500", "provider_error", INFO);
+    const guard = createGuard("groq", stop, noWait);
+    const fail = async () => {
+      throw down;
+    };
+    for (let i = 0; i < 4; i++) await expect(guard(fail)).rejects.toBe(down);
+    await expect(guard(async () => "fine")).resolves.toBe("fine");
+    for (let i = 0; i < 4; i++) await expect(guard(fail)).rejects.toBe(down);
+    await expect(guard(fail)).rejects.toThrow(/^STOP: groq failed 5 calls in a row/);
   });
   it("lets other AI failures through as that step's real result", async () => {
     const err = new AiTaskError("groq: provider error: timeout", "provider_error", INFO);
     const fn = vi.fn(async () => {
       throw err;
     });
-    await expect(guarded("groq", fn, stop, noWait)).rejects.toBe(err);
+    await expect(createGuard("groq", stop, noWait)(fn)).rejects.toBe(err);
     expect(fn).toHaveBeenCalledTimes(1);
   });
 });
 
 describe("a limit reaches the scripts through the task runner", () => {
+  it("a provider error's text loses the organization id", async () => {
+    const rt: AiRuntime = {
+      chain: [
+        {
+          name: "groq",
+          model: "m",
+          provider: {
+            name: "groq",
+            model: "m",
+            complete: async () => {
+              throw new Error("413 Request too large for model in organization `org_abc123`");
+            },
+          },
+        },
+      ],
+      savedLookup: [],
+      cache: createAiCache(),
+      liveGate: async () => true,
+    };
+    const source: SourceForExtraction = { id: "DOC-1", title: "Doc", kind: "policy", version: 1, body: "A body." };
+    const e = await aiDeps(rt).extractSource(source).catch((x: unknown) => x);
+    expect((e as AiTaskError).kind).toBe("provider_error");
+    expect((e as AiTaskError).message).not.toContain("org_abc123");
+  });
+
   it("AiTaskError carries the window the provider reported", async () => {
     const rt: AiRuntime = {
       chain: [
@@ -142,10 +188,17 @@ describe("checkQuota", () => {
     const r = await checkQuota("groq", 90, http(200, "{}", { "x-ratelimit-remaining-requests": "12" }));
     expect(r.ok).toBe(false);
   });
-  it("warns when a run needs more than a day's tokens", async () => {
-    const r = await checkQuota("groq", 300, http(200, "{}", { "x-ratelimit-remaining-requests": "900" }));
+  it("warns when a run needs more than a day's tokens on the free tier, not on a paid one", async () => {
+    const free = await checkQuota("groq", 300, http(200, "{}", { "x-ratelimit-remaining-requests": "900", "x-ratelimit-limit-requests": "1000" }));
+    expect(free.ok).toBe(true);
+    expect(free.lines.join(" ")).toContain("expect a stop");
+    const paid = await checkQuota("groq", 300, http(200, "{}", { "x-ratelimit-remaining-requests": "9000", "x-ratelimit-limit-requests": "500000" }));
+    expect(paid.lines.join(" ")).not.toContain("expect a stop");
+  });
+  it("a missing header isn't read as zero requests left", async () => {
+    const r = await checkQuota("groq", 90, http(200, "{}"));
     expect(r.ok).toBe(true);
-    expect(r.lines.join(" ")).toContain("expect a stop");
+    expect(r.lines.join(" ")).toContain("? requests left");
   });
   it("Gemini out for the day: not ok", async () => {
     const r = await checkQuota("gemini", 90, http(429, GEMINI_DAY));

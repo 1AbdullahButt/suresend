@@ -32,7 +32,7 @@ describe("the decision rules are topic-agnostic", () => {
 
   it.each(RULE_FILES)("%s compares values only through the comparator registry", (file) => {
     const text = read(file);
-    expect(text).not.toMatch(/\.(amount|amountMax|unit|flag|quantity)\b/);
+    expect(text).not.toMatch(/\.(amount|amountMax|unit|flag|quantity|of)\b/);
     expect(text).not.toMatch(/\[\s*["'`](amount|amountMax|unit|flag|quantity|of)["'`]\s*\]/);
     expect(text).not.toMatch(/["'`](amount|amountMax|unit|flag|quantity)["'`]\s+in\b/);
     expect(text).not.toMatch(/\{\s*(amount|amountMax|unit|flag|quantity)\b[^}]*\}\s*=/);

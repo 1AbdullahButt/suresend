@@ -3,6 +3,7 @@
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
+import { promptFingerprint } from "./fingerprint";
 import { FIX_PROMPT_VERSION, PROMPT_VERSION, REPLY_PROMPT_VERSION } from "./prompts";
 import { SCHEMA_VERSION } from "./schemas";
 
@@ -14,7 +15,7 @@ interface HeldOutCase {
   overrides?: Array<{ body?: string }>;
 }
 interface HeldOut {
-  frozen: { prompt: string; reply: string; fix: string; schema: string };
+  frozen: { prompt: string; reply: string; fix: string; schema: string; fingerprint: string };
   cases: HeldOutCase[];
 }
 
@@ -25,7 +26,7 @@ const suite = JSON.parse(read("evals", "heldout.json")) as HeldOut;
 const topicFiles = readdirSync(path.join(root, "lib", "topics"))
   .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
   .map((f) => ["lib", "topics", f]);
-const WATCHED = [["lib", "ai", "prompts.ts"], ["lib", "ai", "schemas.ts"], ["evals", "golden.json"], ["lib", "workspace", "presets.ts"], ...topicFiles];
+const WATCHED = [["lib", "ai", "prompts.ts"], ["lib", "ai", "schemas.ts"], ["evals", "golden.json"], ["lib", "workspace", "presets.ts"], ["lib", "workspace", "variants.ts"], ...topicFiles];
 
 const words = (s: string) => s.toLowerCase().match(/[\p{L}\p{N}']+/gu) ?? [];
 const ngrams = (s: string, n: number) => {
@@ -44,7 +45,8 @@ const added = (c: HeldOutCase) => [
 ];
 
 describe("held-out integrity", () => {
-  // H1–H10 predate the fee topic and reuse phrases the older prompt already had; the report says so.
+  // The timeline cases predate the fee topic and reuse value phrases and wording the older prompt already had; the report
+  // says so. Three words is the line: two-word terms like "the fee" are the domain's own.
   const clean = suite.cases.filter((c) => !c.exposed && Number(/^H(\d+)/.exec(c.id)?.[1]) > 10);
 
   it("enough clean fee cases remain", () => {
@@ -62,6 +64,6 @@ describe("held-out integrity", () => {
   });
 
   it("the prompts have not changed since the freeze", () => {
-    expect({ prompt: PROMPT_VERSION, reply: REPLY_PROMPT_VERSION, fix: FIX_PROMPT_VERSION, schema: SCHEMA_VERSION }).toEqual(suite.frozen);
+    expect({ prompt: PROMPT_VERSION, reply: REPLY_PROMPT_VERSION, fix: FIX_PROMPT_VERSION, schema: SCHEMA_VERSION, fingerprint: promptFingerprint() }).toEqual(suite.frozen);
   });
 });

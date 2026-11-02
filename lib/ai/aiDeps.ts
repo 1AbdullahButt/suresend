@@ -157,7 +157,8 @@ async function callLive<W, T>(
         lastIssue = `invalid JSON: ${e.message}`;
         continue; // invalid output → retry once
       }
-      const message = e instanceof Error ? e.message : String(e);
+      // Providers can name the account in an error; this text reaches logs and the trace.
+      const message = (e instanceof Error ? e.message : String(e)).replace(/org_[A-Za-z0-9]+/g, "org_…");
       throw new AiTaskError(`${slot.name}: provider error: ${message}`, "provider_error", { ...base, mode: "unavailable", latencyMs });
     }
     const parsed = wire.safeParse(raw);

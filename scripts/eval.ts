@@ -14,11 +14,13 @@
 //   pnpm eval --saved               replay data/ai-cache only (AI_MODE=saved, no key needed), configured provider chain
 //   pnpm eval --heldout             the held-out cases in evals/heldout.json (D-035): live, both providers, report-only
 //                                   → evals/heldout.md; never touches results.md, the provider selection or data/ai-cache
-//   pnpm eval ... --fresh           drop an unfinished run of the same suite and provider and start over
+//   pnpm eval ... --fresh           run again from the start, even a provider that already finished
 //
-// Checks the provider's quota first and stops on the first daily limit (lib/ai/quota.ts, exit code 3). A provider's report
-// files are only written once all its runs finish. Until then its responses and scores are kept in evals/.in-progress, and
-// re-running the same command continues exactly where it stopped: same responses, same scores, no second attempts.
+// Checks the provider's quota first and stops on the first daily limit or an outage (lib/ai/quota.ts, exit code 3). A
+// provider's report files are only written once all its runs finish. Until then its responses and scores are kept in
+// evals/.in-progress, and re-running the same command continues where it stopped: finished cases keep their results and
+// only the case that was interrupted runs again, reusing the answers it already got. A provider whose report already
+// matches these prompts, rules, cases and model isn't run again.
 import { loadEnvConfig } from "@next/env";
 import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
@@ -26,9 +28,10 @@ import path from "node:path";
 import { runCheck } from "@/lib/check/runCheck";
 import { aiDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { createAiCache } from "@/lib/ai/cache";
-import type { ProviderName } from "@/lib/ai/client";
+import { configFor, type ProviderName } from "@/lib/ai/client";
+import { promptFingerprint } from "@/lib/ai/fingerprint";
 import { FIX_PROMPT_VERSION, PROMPT_VERSION, REPLY_PROMPT_VERSION } from "@/lib/ai/prompts";
-import { checkQuota, guarded, QUOTA_STOP_EXIT } from "@/lib/ai/quota";
+import { checkQuota, createGuard, QUOTA_STOP_EXIT } from "@/lib/ai/quota";
 import { SCHEMA_VERSION } from "@/lib/ai/schemas";
 import { isVerbatim } from "@/lib/engine/normalize";
 import { sameValue } from "@/lib/engine/values";
@@ -117,6 +120,8 @@ interface ProviderReport {
   gatePass: boolean;
   quoteRejections: number;
   markdown: string;
+  /** What the run was made with; a matching report isn't run again. */
+  stamp?: string;
 }
 
 /** Scores for one group of cases: the clean ones, or the exposed ones (held-out only). */
@@ -130,7 +135,7 @@ const emptyTally = (): Tally => ({ fieldsCorrect: 0, fieldsTotal: 0, quotesValid
 
 /** What a stopped run keeps in evals/.in-progress, written after every finished case. */
 interface Progress {
-  /** Prompts, schema, suite and model: a different stamp means these results no longer apply. */
+  /** Prompts, schema, rules, suite and model: a different stamp means these results no longer apply. */
   stamp: string;
   startedAt: string;
   run: number;
@@ -141,6 +146,30 @@ interface Progress {
   /** This run's scored inputs: each is scored once per run. */
   scoredSources: string[];
   scoredDrafts: string[];
+}
+
+/** The rules' own text: a changed rule means earlier scores no longer apply. */
+const ruleText = () =>
+  ["lib/engine", "lib/check"].flatMap((dir) =>
+    readdirSync(path.join(root, dir))
+      .filter((f) => f.endsWith(".ts") && !f.endsWith(".test.ts"))
+      .sort()
+      .map((f) => readFileSync(path.join(root, dir, f), "utf8").replace(/\r\n/g, "\n")),
+  );
+
+function stampFor(provider: ProviderName): string {
+  const parts = [PROMPT_VERSION, REPLY_PROMPT_VERSION, FIX_PROMPT_VERSION, SCHEMA_VERSION, promptFingerprint(), configFor(provider).model, runs, suite, ruleText()];
+  return createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+}
+
+/** A provider whose finished report matches this run keeps it, so re-running after a stop only does what's left. */
+function alreadyFinished(file: string, provider: ProviderName): boolean {
+  const full = path.join(root, "evals", file);
+  if (args.includes("--fresh") || !existsSync(full)) return false;
+  const report = JSON.parse(readFileSync(full, "utf8")) as ProviderReport;
+  if (report.stamp !== stampFor(provider)) return false;
+  console.log(`${provider}: already finished on these prompts, rules, cases and model; keeping its report (--fresh runs it again).`);
+  return true;
 }
 
 const progressDir = (provider: ProviderName) => path.join(root, "evals", ".in-progress", `${heldOutMode ? "heldout" : "golden"}-${provider}`);
@@ -178,9 +207,7 @@ function fieldOf(c: SourceClaim, name: string): unknown {
 async function evalProvider(provider: ProviderName | null): Promise<ProviderReport> {
   // Clean cases first, so the docs they share are scored with them and the exposed cases add only what's theirs.
   const ordered = [...suite.cases.filter((c) => !c.exposed), ...suite.cases.filter((c) => c.exposed)];
-  const stamp = createHash("sha256")
-    .update(JSON.stringify([PROMPT_VERSION, REPLY_PROMPT_VERSION, FIX_PROMPT_VERSION, SCHEMA_VERSION, runs, suite]))
-    .digest("hex");
+  const stamp = provider ? stampFor(provider) : "";
   const p: Progress = provider
     ? loadProgress(provider, stamp)
     : { stamp, startedAt: new Date().toISOString(), run: 1, results: {}, clean: emptyTally(), exposed: emptyTally(), fieldMisses: [], scoredSources: [], scoredDrafts: [] };
@@ -189,12 +216,15 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
   const saveProgress = () => {
     if (provider) writeFileSync(path.join(progressDir(provider), "progress.json"), JSON.stringify(p), "utf8");
   };
+  // Right away, so a stop inside the first case keeps the responses it already got.
+  saveProgress();
   const stop = (why: string): never => {
     console.error(`\n${provider}: stopped: ${why}.`);
-    console.error(`${caseRunsDone()} of ${caseRunsTotal} case runs are done and kept in evals/.in-progress. No report file was changed. Re-run the same command to continue.`);
+    console.error(`${caseRunsDone()} of ${caseRunsTotal} case runs are done and kept in evals/.in-progress. ${provider}'s report wasn't changed. Re-run the same command to continue; a provider that already finished isn't run again.`);
     process.exit(QUOTA_STOP_EXIT);
   };
-  const guard = <T>(fn: () => Promise<T>): Promise<T> => (savedMode ? fn() : guarded(provider!, fn, stop));
+  const live = provider ? createGuard(provider, stop) : null;
+  const guard = <T>(fn: () => Promise<T>): Promise<T> => (live ? live(fn) : fn());
 
   if (provider) {
     if (caseRunsDone() > 0) console.log(`${provider}: continuing an unfinished run (${caseRunsDone()} of ${caseRunsTotal} case runs done).`);
@@ -324,14 +354,20 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
 
   const pct = (a: number, b: number) => (b === 0 ? "n/a" : `${((100 * a) / b).toFixed(1)}%`);
   const gate = suite.gate ?? [];
-  const section = (cases: GoldenCase[], t: Tally) => {
+  const section = (cases: GoldenCase[], t: Tally, feeLine = false) => {
     let ok = 0;
     let total = 0;
+    let feeOk = 0;
+    let feeTotal = 0;
     const rows = cases.map((c) => {
       const rs = p.results[c.id] ?? [];
       const okCount = rs.filter((r) => r.ok).length;
       ok += okCount;
       total += rs.length;
+      if (c.id.includes("-fee-")) {
+        feeOk += okCount;
+        feeTotal += rs.length;
+      }
       const label = heldOutMode ? (c.note ?? "") : gate.includes(c.id) ? "gate" : "";
       return `| ${c.id} | ${label} | ${c.expect.decision} / ${c.expect.reasonCode} | ${rs
         .map((r) => (r.ok ? "✓" : `✗ ${r.decision}/${r.reasonCode}`))
@@ -339,7 +375,7 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     });
     const quoteRejections = t.quotesTotal - t.quotesValid;
     return {
-      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})
+      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}
 - Quote validity: **${pct(t.quotesValid, t.quotesTotal)}** (${t.quotesValid}/${t.quotesTotal} extracted quotes/spans verbatim; ${quoteRejections} rejected)`,
       table: `| Case | ${heldOutMode ? "What it probes" : ""} | Expected | Runs | Correct |
 |---|---|---|---|---|
@@ -352,7 +388,7 @@ ${rows.join("\n")}`,
   });
   const cleanCases = ordered.filter((c) => !c.exposed);
   const exposedCases = ordered.filter((c) => c.exposed);
-  const clean = section(cleanCases, p.clean);
+  const clean = section(cleanCases, p.clean, heldOutMode);
   const exposed = exposedCases.length ? section(exposedCases, p.exposed) : null;
   const fieldMisses = [...new Set(p.fieldMisses)];
   const markdown = `## ${providerName} · \`${model}\`${savedMode ? " (saved responses replay, AI_MODE=saved)" : ""}
@@ -373,6 +409,7 @@ ${exposed ? `\n**Exposed cases (${exposedCases.length}): regression only, not he
     gatePass,
     quoteRejections: p.clean.quotesTotal - p.clean.quotesValid,
     markdown,
+    stamp,
   };
 }
 
@@ -435,11 +472,13 @@ function writeHeldOut() {
 
 ${clean.length} clean held-out cases (\`evals/heldout.json\`), run with prompt \`${PROMPT_VERSION}\`. Each runs 3× per provider, live. Report only: no gate, not used for the provider selection, never recorded into \`data/ai-cache\`. Failures are reported as they are.
 
-- **H1–H10** (the timeline) were written after the prompts were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a calendar-day reply, a hedge, an unknown rail, an injection inside the draft and a no-claim reply. H1 and H5 reuse phrases that older prompt already had, so they're easier than they look.
-- **H12** (the fee) was written before any fee prompt text existed and shares no wording with the prompts, schema, golden set or presets.
-- **H17–H19** (the fee) were written after the prompts were frozen at \`${PROMPT_VERSION}\`, with wording used nowhere in those files: two claims after a doc edit, a hedge, and an amount outside coverage.
+- **The timeline cases** (H1–H4, H6–H10) were written after the prompts were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a hedge, an unknown rail, an injection inside the draft and a no-claim reply. They were in the repo, with published results, while the fee prompts were written, and they already passed on earlier prompts. H1 reuses phrases that older prompt already had, so it's easier than it looks.
+- **H12** (the fee) was written before any fee prompt text existed. It shares no three-word phrase with the prompts, schema, golden set or presets.
+- **H17–H19** (the fee) were written after the prompts were frozen at \`${PROMPT_VERSION}\`, and share no three-word phrase with those files: two claims after a doc edit, a hedge, and an amount outside coverage.
 
-${exposed.length} exposed cases (${exposed.map((c) => c.id.split("-")[0]).join(", ")}) no longer count as held-out and are reported separately as regression cases. Their wording was seen while the prompts or golden set were being written, even where it was later removed (D-041).
+The four fee cases are the real evidence for the new topic; the fee-only line below scores them on their own.
+
+${exposed.length} exposed cases (${exposed.map((c) => c.id.split("-")[0]).join(", ")}) no longer count as held-out and are reported separately as regression cases. Their wording reached the prompts or the golden set, or came from them, even where it was later removed (D-041).
 ${missing.length ? `\nNot run yet on this prompt: ${missing.join(", ")}.\n` : ""}
 ${reports.map((r) => r.markdown).join("\n")}`;
   writeFileSync(path.join(dir, "heldout.md"), md, "utf8");
@@ -449,6 +488,7 @@ ${reports.map((r) => r.markdown).join("\n")}`;
 async function main() {
   if (heldOutMode) {
     for (const p of providers) {
+      if (alreadyFinished(`heldout-${p}.json`, p)) continue;
       try {
         const r = await evalProvider(p);
         writeFileSync(path.join(root, "evals", `heldout-${p}.json`), JSON.stringify(r, null, 2), "utf8");
@@ -470,6 +510,7 @@ async function main() {
     process.exit(r.gatePass ? 0 : 1);
   }
   for (const p of providers) {
+    if (alreadyFinished(`results-${p}.json`, p)) continue;
     try {
       const r = await evalProvider(p);
       writeFileSync(path.join(root, "evals", `results-${p}.json`), JSON.stringify(r, null, 2), "utf8");

@@ -1,12 +1,18 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
-import type { CheckResult, ClaimResult, Evidence, OverallDecision, Unit, Value } from "@/lib/engine/types";
+import type { CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
 import { patternNoun } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
 import { isCovered, topicDef, wordsFor } from "@/lib/topics";
 import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format";
 
 export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
+
+/** What the "nothing found" net flagged. A gap entry names its own hits; with no gap entry, every hit counts. */
+function gapMatches(result: CheckResult): PatternMatch[] {
+  const named = result.claims.filter((c) => c.reasonCode === "EXTRACTION_GAP").map((c) => c.draftClaim.valueText);
+  return named.length ? result.patternMatches.filter((m) => named.some((text) => text.includes(m.text))) : result.patternMatches;
+}
 
 export interface OutcomeMeta {
   /** The plain-language name shown in the white pill tag. */
@@ -118,7 +124,7 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
       // EXTRACTION_GAP names what the detector found: "Couldn't confirm the timing".
       const headline =
         result.reasonCode === "EXTRACTION_GAP"
-          ? `Couldn't confirm ${patternNoun(result.patternMatches)}`
+          ? `Couldn't confirm ${patternNoun(gapMatches(result))}`
           : (CAUTION_HEADLINE[result.reasonCode] ?? CAUTION_HEADLINE[claim?.reasonCode ?? "SUPPORTED"] ?? "Double-check before sending");
       return { ...base, headline, sentence: cautionSentence(result, claim), strong: null };
     }
@@ -158,8 +164,9 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
         : "The doc behind this answer is trusted less right now.";
     }
     case "EXTRACTION_GAP": {
-      const hits = result.patternMatches.map((m) => `“${m.text}”`).join(", ");
-      const noun = patternNoun(result.patternMatches);
+      const flagged = gapMatches(result);
+      const hits = flagged.map((m) => `“${m.text}”`).join(", ");
+      const noun = patternNoun(flagged);
       return hits ? `SureSend found ${hits} but couldn't confirm ${noun}. Check it manually.` : `SureSend couldn't confirm ${noun}. Check it manually.`;
     }
     case "SOURCE_UNREAD": {
@@ -487,8 +494,11 @@ function topSummary(row: TraceEntryLike, ctx: TraceCtx): string {
     case "D0a:pass":
       return `The reply was read: ${result.claims.length} claim${result.claims.length === 1 ? "" : "s"} found.`;
     case "D0b:fired": {
-      const said = [...new Set(result.patternMatches.map((m) => `“${m.text}”`))].join(", ");
-      return `No claim SureSend checks was extracted, but the reply mentions ${said || patternNoun(result.patternMatches)}. Check it by hand.`;
+      const flagged = gapMatches(result);
+      const said = [...new Set(flagged.map((m) => `“${m.text}”`))].join(", ");
+      // Beside other claims, only this topic's claim is missing.
+      if (result.claims.some((c) => c.reasonCode === "EXTRACTION_GAP")) return `No claim on ${patternNoun(flagged)} was extracted, but the reply mentions ${said}. Check it by hand.`;
+      return `No claim SureSend checks was extracted, but the reply mentions ${said || patternNoun(flagged)}. Check it by hand.`;
     }
     case "D0c:fired":
       return "The reply makes a claim outside the topics checked here. Check it by hand.";

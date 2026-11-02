@@ -36,7 +36,7 @@ export interface QuotaHit {
 
 /** Reads a provider's 429 message: Groq names the limit in words, Gemini in its quota metric and description. */
 export function quotaHit(message: string): QuotaHit {
-  const window: QuotaWindow = /per[\s_-]*day|\b[TR]PD\b|daily/i.test(message) ? "day" : /per[\s_-]*minute|\b[TR]PM\b/i.test(message) ? "minute" : "unknown";
+  const window: QuotaWindow = /per[\s_-]*day|\b[TR]PD\b|daily|spend(?:ing)?\s*limit/i.test(message) ? "day" : /per[\s_-]*minute|\b[TR]PM\b/i.test(message) ? "minute" : "unknown";
   const wait = /(?:try again|retry) in ([\d.hms]+)/i.exec(message)?.[1];
   let retryAfterMs: number | null = null;
   if (wait) {
@@ -79,7 +79,7 @@ const statusOf = (e: unknown): number | undefined => {
 export function isRateLimit(e: unknown): boolean {
   if (statusOf(e) === 429) return true;
   const msg = e instanceof Error ? e.message : String(e);
-  return /RESOURCE_EXHAUSTED|rate limit|quota/i.test(msg);
+  return /RESOURCE_EXHAUSTED|rate limit|quota|spend(?:ing)?\s*limit/i.test(msg);
 }
 
 function rethrow(e: unknown): never {

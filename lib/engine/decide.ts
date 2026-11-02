@@ -120,10 +120,11 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   let reasonCode: ReasonCode;
 
   // D0b per topic: "nothing found" is never proof of safety (SPEC §6.6.2). A topic's detector hit counts when no claim on
-  // that topic was extracted and no extracted claim's span accounts for the hit; a hit with no topic (a currency amount)
-  // counts only when no claim on any covered topic was extracted. With one topic this is SPEC D0b exactly (D-041).
+  // that topic was extracted, unless an out-of-topic claim's span accounts for it. Another covered topic's claim never
+  // does, however wide its span. A hit with no topic (a currency amount) counts only when no claim on any covered topic
+  // was extracted. With one topic this is SPEC D0b exactly (D-041).
   const claimed = new Set<string>(covered.map((c) => c.topic));
-  const spans = [...covered, ...outside].map((c) => normalizeText(c.span).toLowerCase());
+  const spans = outside.map((c) => normalizeText(c.span).toLowerCase());
   const uncovered = patternMatches.filter((m) => {
     const topic = patternTopic(m.kind);
     const open = topic === null ? covered.length === 0 : !claimed.has(topic);
@@ -164,7 +165,7 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
       trace.push({
         rule: "D0b",
         outcome: "fired",
-        detail: `The policy-pattern detector found ${quoted(uncovered)}, which no extracted claim covers, and no claim on that topic was extracted. SureSend couldn't confirm ${gapNoun}; check it manually.`,
+        detail: `The policy-pattern detector found ${quoted(uncovered)}, and no claim on that topic was extracted. SureSend couldn't confirm ${gapNoun}; check it manually.`,
       });
     } else {
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted claim on its topic." });

@@ -2,6 +2,7 @@
 // quotes are the seed docs' own sentences, so runCheck's quote validation runs for real.
 import { describe, expect, it } from "vitest";
 import { runCheck } from "@/lib/check/runCheck";
+import { summarize, traceRows } from "@/lib/client/outcome";
 import { detectPolicyPatterns } from "@/lib/engine/patterns";
 import { present } from "@/lib/mcp/tools";
 import { ESCALATE_TEMPLATE, escalateTemplate } from "@/lib/replies/templates";
@@ -198,10 +199,49 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
     expect(r.claims[1]?.draftClaim.valueText).toBe("4 business days");
   });
 
-  it("a timeline word inside the fee claim's own words isn't a gap", async () => {
+  // QA round 2: the model often gives the whole sentence as a claim's span, so a span says nothing about other topics.
+  it("a fee claim with a whole-sentence span doesn't vouch for the timeline in that sentence", async () => {
+    const draft = "The transfer fee is refunded with your money, and it will be back in 4 business days.";
+    const r = await check("TCK-9001", "instant", draft, [fee(true, draft)]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+    expect(r.claims.map((c) => c.draftClaim.topic)).toEqual(["fee_refund", "reversal_window"]);
+  });
+
+  it("a wrong timeline inside a fee claim's span is flagged, not Good to send", async () => {
+    const draft = "Your money and the transfer fee will be refunded within 4 business days.";
+    const r = await check("TCK-9001", "instant", draft, [fee(true, draft)]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+  });
+
+  it("a wrong fee statement inside a timeline claim's span is flagged, not Good to send", async () => {
+    const draft = "Your money will be back in 1 business day, but the transfer fee isn't refundable.";
+    const r = await check("TCK-9001", "instant", draft, [timeline(1, draft)]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+    expect(r.claims.map((c) => c.draftClaim.topic)).toEqual(["reversal_window", "fee_refund"]);
+  });
+
+  it("the card and the trace name only what was missed, not the claim that was found", async () => {
+    const draft = "The transfer fee is refunded with your money, and it will be back in 4 business days.";
+    const r = await check("TCK-9001", "instant", draft, [fee(true, "The transfer fee is refunded with your money")]);
+    const card = summarize(r, "instant");
+    expect(card.headline).toBe("Couldn't confirm the timing");
+    expect(card.sentence).toContain("“4 business days”");
+    expect(card.sentence).not.toContain("transfer fee");
+    const row = traceRows(r).find((x) => x.rule === "D0b" && x.outcome === "fired");
+    expect(row?.summary).toBe("No claim on the timing was extracted, but the reply mentions “4 business days”. Check it by hand.");
+  });
+
+  it("a timeline word inside a fee claim's own words gets a Double-check: the safe direction", async () => {
     const draft = "The transfer fee is refunded within the same transfer.";
-    const r = await check("TCK-9003", "standard", draft, [fee(true, "The transfer fee is refunded within the same transfer")]);
-    expect([r.decision, r.reasonCode]).toEqual(["ALLOW", "SUPPORTED"]);
+    const r = await check("TCK-9003", "standard", draft, [fee(true, draft)]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "EXTRACTION_GAP"]);
+  });
+
+  it("an out-of-topic claim's span still accounts for a hit, as the spec says", async () => {
+    const draft = "There's a PKR 25 fee on every transfer.";
+    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 25, of: "PKR" }, valueText: "PKR 25", span: draft, definitive: true };
+    const r = await check("TCK-9003", "standard", draft, [amount]);
+    expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "OUTSIDE_COVERAGE"]);
   });
 
   it("a timeline claim doesn't vouch for a fee statement the AI missed", async () => {

@@ -19,7 +19,7 @@
 //
 // Every check that suggests a reply also records "Use this reply → Send" on that suggestion.
 import { loadEnvConfig } from "@next/env";
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
 import path from "node:path";
 import { runCheck } from "@/lib/check/runCheck";
 import { AI_CACHE_DIR, aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
@@ -27,7 +27,7 @@ import { fixOverride, proposeFix, type FixDeps } from "@/lib/fix/propose";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
 import { cacheKey, createAiCache, type AiCache } from "@/lib/ai/cache";
 import { providerChain, type ProviderName } from "@/lib/ai/client";
-import { checkQuota, guarded, QUOTA_STOP_EXIT } from "@/lib/ai/quota";
+import { checkQuota, createGuard, QUOTA_STOP_EXIT } from "@/lib/ai/quota";
 import { draftSave, seedBody, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
 import { tourStep5Edits } from "@/lib/workspace/variantBodies";
 import { PRESETS } from "@/lib/workspace/presets";
@@ -80,14 +80,17 @@ function publishRecording(used: Set<string>): void {
   for (const f of jsonFiles(RECORDING_DIR)) {
     if (!used.has(f.replace(/\.json$/, ""))) rmSync(path.join(RECORDING_DIR, f));
   }
-  rmSync(AI_CACHE_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  // Moved aside first, so a failed swap leaves the old folder in place, never a partial one.
+  const old = `${AI_CACHE_DIR}.old`;
+  rmSync(old, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  renameSync(AI_CACHE_DIR, old);
   try {
     renameSync(RECORDING_DIR, AI_CACHE_DIR);
-  } catch {
-    // Windows can refuse a rename while something still holds the folder.
-    cpSync(RECORDING_DIR, AI_CACHE_DIR, { recursive: true });
-    rmSync(RECORDING_DIR, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
+  } catch (e) {
+    renameSync(old, AI_CACHE_DIR);
+    throw e;
   }
+  rmSync(old, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }
 
 /** One check, then "Use this reply → Send" on its suggestion. Returns how many results were unexpected. */
@@ -215,13 +218,14 @@ async function main() {
   if (!slot.provider) throw new Error(`No live provider for ${only} (check the key and AI_MODE); data/ai-cache left untouched`);
   const before = jsonFiles(dir).length;
   const base = aiDeps(rt);
+  const guard = createGuard(only, stop);
   const deps: CheckDeps = {
-    extractSource: (s) => guarded(only, () => base.extractSource(s), stop),
-    extractDraft: (d) => guarded(only, () => base.extractDraft(d), stop),
-    suggestReply: (r) => guarded(only, () => base.suggestReply!(r), stop),
+    extractSource: (s) => guard(() => base.extractSource(s)),
+    extractDraft: (d) => guard(() => base.extractDraft(d)),
+    suggestReply: (r) => guard(() => base.suggestReply!(r)),
   };
   const fixBase = aiFixDeps(rt);
-  const fixDeps: Required<FixDeps> = { draftDocFix: (r) => guarded(only, () => fixBase.draftDocFix(r), stop) };
+  const fixDeps: Required<FixDeps> = { draftDocFix: (r) => guard(() => fixBase.draftDocFix(r)) };
 
   let bad = 0;
   if (mode === "all" || mode === "presets") {

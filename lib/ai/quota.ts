@@ -1,6 +1,7 @@
-// Quota guard for the scripts that spend provider quota (pnpm record, pnpm eval; D-041). Free tiers: Groq 1,000 requests
-// and 200,000 tokens a day (a rolling bucket, ~8,300 tokens back per hour), Gemini 500 requests a day (resets at midnight
-// Pacific). Each script checks first, then stops on the first daily limit instead of failing every remaining call.
+// Quota guard for the scripts that spend provider quota (pnpm record, pnpm eval; D-041). Groq's free tier is 1,000 requests
+// and 200,000 tokens a day (a rolling bucket, ~8,300 tokens back per hour); this project's key is on its Developer tier
+// (D-042). Gemini's free tier is 500 requests a day. Each script checks first, then stops on the first daily limit or a
+// provider outage instead of failing every remaining call.
 import { AiTaskError } from "./aiDeps";
 import { configFor, quotaHit, type ProviderName, type QuotaHit } from "./client";
 
@@ -8,9 +9,14 @@ import { configFor, quotaHit, type ProviderName, type QuotaHit } from "./client"
 export const QUOTA_STOP_EXIT = 3;
 
 const MINUTE_RETRIES = 6;
+/** A longer wait than this isn't a per-minute limit, whatever the message calls it. */
+const MAX_WAIT_MS = 5 * 60_000;
+/** This many provider errors in a row is an outage or a spend limit, not a bad call: a report from it would mean nothing. */
+const OUTAGE_STREAK = 5;
 /** What one real call costs on Groq, measured on the saved-response runs. */
 const TOKENS_PER_CALL = 1_600;
 const GROQ_DAILY_TOKENS = 200_000;
+const GROQ_FREE_DAILY_REQUESTS = 1_000;
 const GEMINI_DAILY_REQUESTS = 500;
 /** About 1,200 tokens: Groq's daily token limit only shows once a request doesn't fit, so a tiny probe would always pass. */
 const GROQ_PROBE = "Say ok. ".repeat(400);
@@ -28,30 +34,35 @@ export function describeQuota(provider: string, hit: QuotaHit | undefined): stri
 }
 
 /**
- * Runs one AI step. A per-minute limit waits and retries; a daily limit, or a limit that outlasts the retries, calls
- * `stop` at once. Other AI errors are logged and rethrown: they count as that step's real result.
+ * Wraps a script's AI steps. A per-minute limit waits and retries. A daily limit, a limit that outlasts the retries, or an
+ * outage calls `stop` at once. Other AI errors are logged and rethrown: they count as that step's real result.
  */
-export async function guarded<T>(
+export function createGuard(
   provider: string,
-  fn: () => Promise<T>,
   stop: (why: string) => never,
   sleep: (ms: number) => Promise<unknown> = (ms) => new Promise((r) => setTimeout(r, ms)),
-): Promise<T> {
-  for (let attempt = 0; ; attempt++) {
-    try {
-      return await fn();
-    } catch (e) {
-      if (!(e instanceof AiTaskError)) throw e;
-      if (e.kind !== "paused") {
-        process.stderr.write(`  AI error (${e.kind}): ${e.message}\n`);
-        throw e;
+) {
+  let failures = 0;
+  return async function guard<T>(fn: () => Promise<T>): Promise<T> {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const out = await fn();
+        failures = 0;
+        return out;
+      } catch (e) {
+        if (!(e instanceof AiTaskError)) throw e;
+        if (e.kind !== "paused") {
+          process.stderr.write(`  AI error (${e.kind}): ${e.message}\n`);
+          if (e.kind === "provider_error" && ++failures >= OUTAGE_STREAK) stop(`${provider} failed ${failures} calls in a row (${e.message})`);
+          throw e;
+        }
+        const wait = e.quota?.retryAfterMs ?? 20_000 * (attempt + 1);
+        if (e.quota?.window === "day" || attempt >= MINUTE_RETRIES || wait > MAX_WAIT_MS) stop(describeQuota(provider, e.quota));
+        process.stderr.write(`  rate limited, waiting ${Math.ceil(wait / 1000)}s…\n`);
+        await sleep(wait + 500);
       }
-      if (e.quota?.window === "day" || attempt >= MINUTE_RETRIES) stop(describeQuota(provider, e.quota));
-      const wait = e.quota?.retryAfterMs ?? 20_000 * (attempt + 1);
-      process.stderr.write(`  rate limited, waiting ${Math.ceil(wait / 1000)}s…\n`);
-      await sleep(wait + 500);
     }
-  }
+  };
 }
 
 export interface QuotaCheck {
@@ -72,14 +83,20 @@ async function checkGroq(apiKey: string, model: string, calls: number, http: typ
     return { ok: hit.window === "minute", lines };
   }
   if (!res.ok) return { ok: false, lines: [`groq answered ${res.status} to the quota check`] };
-  const left = Number(res.headers.get("x-ratelimit-remaining-requests"));
+  const header = (name: string) => {
+    const v = res.headers.get(name);
+    return v === null ? null : Number(v);
+  };
+  const left = header("x-ratelimit-remaining-requests");
+  const limit = header("x-ratelimit-limit-requests");
   const tokens = calls * TOKENS_PER_CALL;
   const lines = [
-    `groq: ${Number.isFinite(left) ? left : "?"} requests left today; this run needs about ${calls} calls and ${Math.round(tokens / 1000)}K tokens.`,
+    `groq: ${left ?? "?"} requests left today; this run needs about ${calls} calls and ${Math.round(tokens / 1000)}K tokens.`,
     "groq doesn't report its daily tokens until the limit is reached, so this only proves the next call fits.",
   ];
-  if (tokens > GROQ_DAILY_TOKENS) lines.push(`On Groq's free tier (${GROQ_DAILY_TOKENS / 1000}K tokens a day), expect a stop, then re-run the same command to continue.`);
-  if (Number.isFinite(left) && left < calls) return { ok: false, lines: [`groq: only ${left} requests left today; this run needs about ${calls}.`] };
+  const freeTier = limit !== null && limit <= GROQ_FREE_DAILY_REQUESTS;
+  if (freeTier && tokens > GROQ_DAILY_TOKENS) lines.push(`That's more than a day's ${GROQ_DAILY_TOKENS / 1000}K tokens on the free tier: expect a stop, then re-run the same command to continue.`);
+  if (left !== null && left < calls) return { ok: false, lines: [`groq: only ${left} requests left today; this run needs about ${calls}.`] };
   return { ok: true, lines };
 }
 

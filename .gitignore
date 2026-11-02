@@ -16,4 +16,5 @@ design/build-screens/
 docs/VIDEO_SCRIPT.md
 # Unfinished runs that stopped on a quota limit (D-041): replaced or removed when the run completes
 data/.ai-cache-recording/
+data/ai-cache.old/
 evals/.in-progress/

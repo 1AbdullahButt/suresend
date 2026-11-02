@@ -1,10 +1,11 @@
 {
-  "about": "Held-out cases (D-035, D-041). Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. H1–H10 were written after the prompts were frozen at 2026-10-30.2; H1 and H5 reuse phrases that older prompt already had, so they are easier than they look. H12 (fee_refund) was written on 2026-11-02 before any fee_refund prompt text existed and shares no wording with the prompts, schema, golden set or presets. H17–H19 (fee_refund) were written after the freeze below, with wording used nowhere in those files. Cases marked \"exposed\" (H11, H13, H14, H15, H16) no longer count as held-out: their wording was seen while the prompts or golden set were being written, even where it was later removed. They stay as extra regression cases and are reported separately. `frozen`: the versions the published held-out results rely on; lib/ai/heldoutIntegrity.test.ts fails if they change.",
+  "about": "Held-out cases (D-035, D-041). Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. The timeline cases (H1–H4, H6–H10) were written after the prompts were frozen at 2026-10-30.2, were in the repo while the fee prompts were written, and already passed on earlier prompts; H1 reuses phrases that older prompt already had. H12 (fee_refund) was written on 2026-11-02 before any fee_refund prompt text existed and shares no three-word phrase with the prompts, schema, golden set or presets. H17–H19 (fee_refund) were written after the freeze below and share no three-word phrase with those files. Cases marked \"exposed\" (H5, H11, H13, H14, H15, H16) no longer count as held-out: their wording reached the prompts or the golden set, or came from them, even where it was later removed. They stay as extra regression cases and are reported separately. `frozen`: the versions and the fingerprint of the prompts and schemas the published results rely on; lib/ai/heldoutIntegrity.test.ts fails if they change.",
   "frozen": {
     "prompt": "2026-11-02.4",
     "reply": "2026-11-02.2",
     "fix": "2026-11-01.1",
-    "schema": "2026-11-02.3"
+    "schema": "2026-11-02.3",
+    "fingerprint": "602c474d4eebee7fab1852c1e088d21e9ff92877f90ec1b3fd4e10082c499a07"
   },
   "decisionTime": "2026-10-30T12:00:00Z",
   "saveTime": "2026-10-29T09:00:00Z",
@@ -63,7 +64,9 @@
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "UNIT_MISMATCH"
-      }
+      },
+      "exposed": true,
+      "exposedWhy": "Shares \"be back within\" with golden and preset drafts written after it."
     },
     {
       "id": "H6-sop-reworded-standard",
