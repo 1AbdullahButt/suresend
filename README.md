@@ -261,8 +261,8 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 | Groq · `openai/gpt-oss-120b` | 98.7% (74/75) | 100% (115/115) | 96.1% (173/180) | PASS |
 | Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
 
-Groq's one miss: it read "less the small charge for the transfer" as vague on 1 of 3 runs, so that run got a Double-check, not a Hold. These score against the expected reason, and no
-reply reached Good to send.
+Groq's one miss: it read "less the small charge for the transfer" as vague on 1 of 3 runs, so that run got a Double-check, not a Hold. These score against the expected reason, and no miss
+reached Good to send.
 
 Groq's field accuracy is below 100% because it read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say "unstated". Over this phase's three sessions it went
 170, 178, then 173 of 180. The prompt for reading docs didn't change in this phase, so that's the model varying. No decision changed.
@@ -287,7 +287,7 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 - **The vague replies are the evidence for this phase's prompt change.** H20–H22 were committed before any prompt work on valueless
   claims, and the same test checks them for shared phrases. They're three cases, so it's a first check. They score against the reason, so a
   reply the AI misses and rule D0e catches still counts as a miss here: Gemini's two are that (H22).
-- **H23–H25 are the evidence for reading a fee taken off the money as not refunded.** They say it in other words ("with the service cost taken off", "once we deduct what the send cost you", "short of
+- **H23–H25 are the evidence for reading a fee taken off the money as not refunded.** They say it in other words, though H23 shares "taken off" with the new rule, below the three-word line ("with the service cost taken off", "once we deduct what the send cost you", "short of
   our handling charge"), and were committed before that prompt change (e00cd5d), under the same test for shared phrases. Groq: 9 of 9.
 - **Three expected results changed with the rule, not the case:** H10, H12 and H13 leave the customer's question open, so they're
   now Double-check where they were Good to send (D-045).
@@ -308,7 +308,7 @@ frozen prompt, Groq returned Hold on all 3 runs of one session and Double-check 
 
 **A fee taken off the money reads as not refunded.** The previous prompt listed "minus the processing charge" as vague wording, and that had a cost: H11 ("the transfer charge stays with us", a plain "not refunded")
 fell from Hold on 3 of 3 to 4 of 6, so a wrong reply sometimes got only a Double-check. This prompt says money back with the fee taken off means the fee isn't refunded. H11 is back to 3 of 3 and H23–H25 are 9 of 9, so
-those replies are held. The detector catches the same wording too, so if the AI misses it, the reply is a Double-check, not Good to send.
+those replies are held. The detector also catches "minus", "less", "after deducting", "deducting" and "net of" before a fee word, so if the AI misses those, the reply is a Double-check, not Good to send. Other wording, like H23–H25's, rests on the AI alone (see Limitations).
 
 **Exposed cases (6): regression only, not held-out.** H5, H11, H13, H14, H15 and H16. Their wording reached the prompts or the
 golden set, or shares a phrase with drafts written after them. Where it could be removed, it was, and they still don't count
@@ -375,7 +375,7 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   an out-of-topic claim already covers those words. If a reply makes two claims on the same topic and the AI catches only
   one, the other isn't flagged.
 - The detector only knows common wording. A fee statement in unusual words, such as "we also repay the service charge", gets
-  past it, so if the AI misses that too and the reply answers what the customer asked, it reads as Good to send. Its words aren't added, since those come from the
+  past it, so if the AI misses that too and the reply answers what the customer asked, it reads as Good to send. The words the detector does know can misfire: "not deducting the fee", with the fee claim missed, gets a Double-check. That's the safe direction. Its words aren't added, since those come from the
   held-out cases.
 - A fee statement with a timing word in it ("refunded within the same transfer") gets a Double-check even when it's right,
   because a claim on one topic never vouches for another. That's the safe direction.

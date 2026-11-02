@@ -1812,3 +1812,11 @@ ui-audit: Serious/critical axe violations: 0. Horizontal page scroll: none. Stat
 playwright: 1 passed
 ```
 
+**QA: APPROVED** at e197ab1, no blockers or majors. It reran the gate itself (typecheck, lint, 372 tests, build, snapshots, `pnpm e2e`, MCP e2e, axe, all browser checks), reproduced the tests-first run at e00cd5d (6 failed, 113 passed), and confirmed the Groq evals stand despite the later value check: decisions and tallies are unaffected, and each `suggestionIncludes` string is a value the template states. Its minors are taken, all wording: README overstated what the detector catches, "no reply reached Good to send" should say no miss did, H23 shares "taken off" with the rule, and the 404's SPEC reference. Left: the detector's false hits, as a Limitations line, since tightening it was optional and they only ever cost a Double-check.
+
+```
+$ git worktree list
+D:/Project/slite [phase-11]
+```
+GATE: PASSED
+

@@ -957,6 +957,6 @@ D-045 listed "minus the processing charge" as valueless, as the brief asked. I d
 - **A rewrite has to state the value.** The re-recording's rewrite for the tour's digit-only edit copied the doc's typo: "within 2 business day". The replay test caught it, and re-recording gave the same words. The prompt says to state each value exactly as given, and now the server checks that on what the reply had wrong: if it doesn't, the template is used. That's a check on AI output, like quote validation, not a decision rule. It can only make `suggestionIncludes` pass more often, and every scored case with one passed already, so the evals stand.
 - **Same-decision sentence:** Abdullah kept the clause ("on the same ticket at the same time").
 - **Tour:** "SureSend reads your docs live" was false on a step whose edit replays a saved reading. It now says "The answer comes from the doc. Nothing is hard-coded." A longer sentence that also explained the replay made the card cover the doc's text box at phone width, so it stays this short; the README explains the replay.
-- **404:** `app/not-found.tsx` carries the disclaimer (SPEC §15's "every screen").
+- **404:** `app/not-found.tsx` carries the disclaimer (SPEC §18's "every screen").
 - **Codex files:** `.agents/`, `.codex/` and `AGENTS.md` came from Codex Desktop (3 sessions started in this folder one second after they were written). Abdullah confirmed that and asked for them to be ignored. They're in `.gitignore` and `.vercelignore`.
 

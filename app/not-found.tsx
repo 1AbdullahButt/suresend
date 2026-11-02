@@ -1,4 +1,4 @@
-// The 404 page. Next's default has no disclaimer, and every screen needs one (SPEC §16).
+// The 404 page. Next's default has no disclaimer, and every screen needs one (SPEC §18).
 import type { Metadata } from "next";
 import Link from "next/link";
 import s from "./how-it-works/page.module.css";
