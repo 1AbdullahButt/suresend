@@ -18,3 +18,8 @@ docs/VIDEO_SCRIPT.md
 data/.ai-cache-recording/
 data/ai-cache.old/
 evals/.in-progress/
+
+# Codex Desktop migration of this repo's Claude config, local to that tool
+.agents/
+.codex/
+AGENTS.md
