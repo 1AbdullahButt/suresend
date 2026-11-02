@@ -304,6 +304,39 @@
         "decision": "CAUTION",
         "reasonCode": "UNSUPPORTED"
       }
+    },
+    {
+      "id": "H23-fee-cost-taken-off",
+      "note": "The timeline is right; the fee is taken off the money, in other words, so it isn't refunded",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "Expect it after four working days, with the service cost taken off.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H24-fee-we-deduct",
+      "note": "The timeline is right; the amount is reduced by what the send cost, so the fee isn't refunded",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "One working day and it's with you, once we deduct what the send cost you.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H25-fee-short-of-charge",
+      "note": "The timeline is right; what lands is short of a charge, so the fee isn't refunded",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "Four working days from now the sum lands, short of our handling charge.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
     }
   ]
 }

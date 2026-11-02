@@ -166,6 +166,41 @@ describe("the AI finds nothing in a vague reply: the customer's question is stil
   });
 });
 
+describe("the fee taken off the money reads as not refunded (D-052)", () => {
+  const fee = (span: string): DraftClaim => ({ claimId: "f", topic: "fee_refund", value: { flag: false }, valueText: span, span, definitive: true });
+
+  it("the repro: a Hold, naming the fee, with a suggested reply that states both values", async () => {
+    const c = CASES[0]!;
+    const claims = [vague("reversal_window", "after the weekend", 0), fee("minus the processing charge")];
+    const r = await runCheck(input(c), depsFor(claims));
+    expect(r.decision).toBe("HOLD");
+    expect(r.reasonCode).toBe("CONTRADICTS_GOVERNING");
+    const { headline, sentence } = summarize(r, c.rail);
+    expect(headline).toBe("Don't send this yet");
+    expect(sentence).toBe("The transfer fee is refunded for instant transfers. Your reply says it's not refunded.");
+    expect(r.suggestion?.text).toContain("1 business day");
+    expect(r.suggestion?.text).toContain("refunded");
+    expect(r.suggestion?.recheckDecision).toBe("ALLOW");
+  });
+
+  it("Send is blocked, not waiting for an OK", async () => {
+    const c = CASES[0]!;
+    const send = await handleSend(
+      { ticketId: c.ticketId, rail: c.rail, draft: c.draft, role: "support_agent", overrides: [] },
+      depsFor([vague("reversal_window", "after the weekend", 0), fee("minus the processing charge")]),
+    );
+    expect(send.status).toBe(409);
+  });
+
+  it("if the AI misses the fee and states the timeline, the detector still stops it going out as Good to send", async () => {
+    const draft = "Back within 1 business day, minus the processing charge.";
+    const timeline: DraftClaim = { claimId: "t", topic: "reversal_window", value: { amount: 1, unit: "business_days" }, valueText: "1 business day", span: "within 1 business day", definitive: true };
+    const r = await runCheck({ ...input(CASES[1]!), draft }, depsFor([timeline]));
+    expect(r.decision).toBe("CAUTION");
+    expect(r.reasonCode).toBe("EXTRACTION_GAP");
+  });
+});
+
 describe("the AI reads the vague words as a claim with no value", () => {
   const claimsOf = (c: Case) => c.vague.map(([topic, span], i) => vague(topic, span, i));
 

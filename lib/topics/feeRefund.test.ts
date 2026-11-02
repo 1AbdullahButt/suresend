@@ -111,6 +111,15 @@ const check = (ticketId: string, rail: "instant" | "standard" | "unknown", draft
   runCheck({ ticketId, rail, draft, role: "support_agent", overrides, decisionTime: NOW }, deps(claims));
 
 describe("fee_refund: the detector", () => {
+  // D-052: money back with the fee taken off is a claim about the fee, so if the AI misses it, the net catches it.
+  it.each(["minus the processing charge", "less the fee", "less the small charge for the transfer", "after deducting the transfer fee", "net of the fee"])("catches %s", (s) => {
+    expect(detectPolicyPatterns(`Your money will be back, ${s}.`).map((m) => m.kind)).toContain("fee");
+  });
+
+  it.each(["No less than you sent.", "The refund is on its way, minus nothing."])("leaves %s alone", (s) => {
+    expect(detectPolicyPatterns(s).map((m) => m.kind)).not.toContain("fee");
+  });
+
   it("catches fee-refund statements the AI might miss", () => {
     for (const s of [
       "the transfer fee isn't refundable",
