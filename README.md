@@ -151,7 +151,7 @@ coverage, not missed), and values got their topic's wording.
 
 QA then found that the refactor had generalised the "nothing found" net too coarsely: one claim on any topic switched it
 off for the others, so a fee claim could let a missed 4-day promise through as Good to send.
-[The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3b50c916eed89e781c9118963c0fd50c50) makes the net per topic, as the spec states it for one topic. That was a one-time logic correction to how
+[The fix](https://github.com/1AbdullahButt/suresend/commit/576a6b3b50c916eed89e781c9118963c0fd50c50) makes the net per topic, as the spec states it for one topic. That was a logic correction to how
 the rules were generalised, in `decide.ts`, and nothing in it names a topic. With one topic it's the old rule exactly. A
 second QA round found the same gap in one more place: a claim whose span was the whole sentence still vouched for the
 other topic in that sentence. [That fix](https://github.com/1AbdullahButt/suresend/commit/d8a9d61da69be3080ec0c8725f3155d86230bda5) closes it, again in `decide.ts` and again naming no topic.

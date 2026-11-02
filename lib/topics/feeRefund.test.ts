@@ -246,6 +246,31 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
     expect(whyModel(outside).noDocs).toBe("SureSend doesn't check this topic against your docs. Check it by hand.");
   });
 
+  it("Why says a doc couldn't be read, not that the docs are silent", async () => {
+    const unreadDeps: CheckDeps = {
+      extractDraft: async () => ({ claims: [fee(false, "The transfer fee isn't refundable")], info: INFO }),
+      extractSource: async (s) => {
+        if (s.id === "DOC-101") throw new Error("unreadable");
+        return { claims: sourceClaims(s.id, s.body), info: INFO };
+      },
+    };
+    const r = await runCheck({ ticketId: "TCK-9003", rail: "standard", draft: "The transfer fee isn't refundable.", role: "support_agent", overrides: [], decisionTime: NOW }, unreadDeps);
+    const m = whyModel(r);
+    expect(m.governing).toBeNull();
+    expect(m.noDocs).toBe("DOC-101 couldn't be read, so SureSend can't say what your docs say about this. Check it by hand.");
+  });
+
+  it("the card quotes words that aren't a duration", async () => {
+    const r = await check("TCK-9003", "standard", "We keep the fee.", [fee(false, "We keep the fee")]);
+    expect(r.decision).toBe("HOLD");
+    const noPolicy = await runCheck(
+      { ticketId: "TCK-9003", rail: "standard", draft: "The transfer fee isn't refundable.", role: "support_agent", overrides: [], decisionTime: NOW },
+      { extractDraft: deps([fee(false, "isn't refundable")]).extractDraft, extractSource: async () => ({ claims: [], info: INFO }) },
+    );
+    expect(noPolicy.reasonCode).toBe("UNSUPPORTED");
+    expect(summarize(noPolicy, "standard").sentence).toContain("No doc supports “isn't refundable”.");
+  });
+
   it("a detector hit inside another topic's hit doesn't change which topic the card names", async () => {
     const draft = "The fee in 4 days is refunded, and your money will be back in 1 business day.";
     const r = await check("TCK-9001", "instant", draft, [timeline(1, "your money will be back in 1 business day")]);

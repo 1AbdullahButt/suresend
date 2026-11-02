@@ -792,6 +792,15 @@ An independent-style review before sharing with Slite (security, correctness, UX
     or variant docs, so those need `--fresh` after an edit (the eval header and the README wording say so). H6 and H7 share
     "the transfer fee", a plain noun phrase in timeline cases, so they stay clean. A card's quote can be the model's whole-sentence
     span, sitting above the gap entry for the words it missed; the overall result is still Double-check.
+- **QA round 4: APPROVED, no majors.** Five minors. Fixed after approval, with tests: Why says a doc couldn't be read rather
+  than that the docs are silent; a stop keeps the retry count; fee copy quotes its words ("No doc supports “isn't refundable”");
+  README wording. Left: with no gap entry, the card can name an amount a claim already accounted for (narrow, same on main).
+  - *An incident during this round, recorded so it's on file.* One of QA's scripts ran in the real project folder instead of its
+    scratch copy. It deleted `evals/.in-progress` while Gemini's held-out eval was running, and rewrote Gemini's golden report
+    files from a stub. No source, test, seed or doc file changed, and no live AI call came from it. The results stand, and this
+    was checked independently of QA: the golden files equal the real run's own log apart from the finish time, which was
+    restored, and `heldout.md` equals the held-out run's log exactly, since that process held its scores in memory and finished
+    by itself.
 
 ### D-042 · Groq moves to the paid Developer tier, with a spend limit (Abdullah's decision, 2026-11-02)
 Groq's free tier allows 200,000 tokens a day, so the Phase 10 re-record and 3-run evals would have taken about 2 days. Abdullah

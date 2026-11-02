@@ -8,6 +8,13 @@ import { mostSevereClaim, shortDate, valueWords, WEAKENER_WORDS } from "./format
 
 export type OutcomeTone = "good" | "check" | "hold" | "ask" | "off";
 
+/** A claim's value inside a sentence: "5 days" reads as it is, while words like "isn't refundable" need quotes. */
+function saidValue(claim: ClaimResult | null | undefined): string {
+  if (!claim) return "this";
+  const { value, valueText } = claim.draftClaim;
+  return value && isDuration(value) ? valueText : `“${valueText}”`;
+}
+
 /** What the "nothing found" net flagged. A gap entry names its own hits; with no gap entry, every hit counts. */
 function gapMatches(result: CheckResult): PatternMatch[] {
   const topics = new Set<string>(result.claims.filter((c) => c.reasonCode === "EXTRACTION_GAP").map((c) => c.draftClaim.topic));
@@ -174,9 +181,9 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
       return `${ids || "A doc"} couldn't be read, so this can't be confirmed as right. It might hold a contradiction.`;
     }
     case "PROPOSAL_ONLY":
-      return `Only a proposal mentions ${claim?.draftClaim.valueText ?? "this"}. Don't promise it until a policy confirms it.`;
+      return `Only a proposal mentions ${saidValue(claim)}. Don't promise it until a policy confirms it.`;
     case "UNSUPPORTED":
-      return `No doc supports ${claim?.draftClaim.valueText ?? "this"}. Check it with the policy owner.`;
+      return `No doc supports ${saidValue(claim)}. Check it with the policy owner.`;
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
     case "HEDGED_CONTRADICTION":
@@ -319,14 +326,17 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
     }
   }
 
-  // A gap or an outside-coverage claim was never compared with the docs, so saying the docs are silent would be false.
+  // A gap, an outside-coverage claim or an unread doc means the docs weren't fully compared, so saying they're silent would be false.
   const reason = claim?.reasonCode ?? result.reasonCode;
+  const unread = result.caps.map((c) => c.sourceId).join(", ");
   const noDocs =
     reason === "EXTRACTION_GAP"
       ? "SureSend didn't compare this with your docs, because the AI didn't pick it up as a claim. Check it by hand."
       : reason === "OUTSIDE_COVERAGE"
         ? "SureSend doesn't check this topic against your docs. Check it by hand."
-        : "No doc makes a claim about this.";
+        : unread
+          ? `${unread} couldn't be read, so SureSend can't say what your docs say about this. Check it by hand.`
+          : "No doc makes a claim about this.";
   return { title: WHY_TITLE[result.decision], replySays, governing, others, didntCount, noDocs, so: soSentence(result, claim, govEv, only !== undefined) };
 }
 

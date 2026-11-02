@@ -226,6 +226,12 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
   // Right away, so a stop inside the first case keeps the responses it already got.
   saveProgress();
   const stop = (why: string): never => {
+    // Only the retry count: the interrupted case's partial scores must stay unsaved, or a resume would count them twice.
+    if (provider) {
+      const file = path.join(progressDir(provider), "progress.json");
+      const saved = JSON.parse(readFileSync(file, "utf8")) as Progress;
+      writeFileSync(file, JSON.stringify({ ...saved, providerRetries: p.providerRetries }), "utf8");
+    }
     console.error(`\n${provider}: stopped: ${why}.`);
     console.error(`${caseRunsDone()} of ${caseRunsTotal} case runs are done and kept in evals/.in-progress. ${provider}'s report wasn't changed. Re-run ${args.includes("--fresh") ? "without --fresh" : "the same command"} to continue; a provider that already finished isn't run again.`);
     process.exit(QUOTA_STOP_EXIT);
