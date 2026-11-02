@@ -727,3 +727,21 @@ An independent-style review before sharing with Slite (security, correctness, UX
     - The presets close on focus leaving; Why uses h5 inside claim cards.
     - AI run info shows the reply prompt's version.
     - The guard test catches more ways of reading a value.
+- **Held-out integrity (Abdullah's decision, 2026-11-02).** A case seen while the prompts were being written no longer counts
+  as held-out, even after its wording is removed.
+  - Exposed: H11, H14, H15 and H16 (the leak above), and H13, which shares "with your money" with a prompt example and golden
+    `fee-correct`, both written after it. They stay as regression cases and are reported apart.
+  - New: H17, H18 and H19, committed in 8e68016 before any further eval, with wording used nowhere in the prompts, schema,
+    golden set or presets. Their expected outcomes were checked with hand-written extractions, with no AI call.
+  - Clean fee cases: H12, H17, H18, H19.
+  - H1–H10 stay clean: they were written after the `2026-10-30.2` freeze. H1 and H5 reuse phrases that older prompt already
+    had, so they're easier than they look. The report says so.
+  - The prompts are frozen at `2026-11-02.4` (reply `2026-11-02.2`, fix `2026-11-01.1`, schema `2026-11-02.3`).
+    `lib/ai/heldoutIntegrity.test.ts` fails if those change, or if a clean fee case's wording appears in those files.
+- **Quota (after a re-record and an eval ran out halfway).** Groq's real limit is 200,000 tokens a day, refilling at about
+  8,300 an hour. Its headers don't report it, so it stayed hidden behind 900+ requests left. Gemini's is 500 requests a day.
+  - `pnpm record` and `pnpm eval` check the provider first and stop on the first daily limit (exit code 3).
+  - A full recording is built in `data/.ai-cache-recording` and replaces `data/ai-cache` only if it finishes with nothing
+    unexpected. `pnpm record --resume` continues one that stopped.
+  - An eval writes its report files only when all its runs finish. Until then its responses and scores stay in
+    `evals/.in-progress`, and re-running continues with the same responses and scores, so nothing gets a second attempt.
