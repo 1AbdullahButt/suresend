@@ -49,10 +49,14 @@ export function holdingTopics(reply: string, claims: DraftClaim[]): string[] {
   return /[\p{L}\p{N}]/u.test(rest) ? [] : held.topics;
 }
 
-/** The AI read part of SureSend's own holding sentence as a claim with no value. That sentence states nothing (SPEC §6.7), so it isn't one. */
-export function insideHoldingSentence(reply: string, claim: DraftClaim): boolean {
+/**
+ * The AI read part of SureSend's own holding sentence as a claim with no value. That sentence states nothing (SPEC §6.7), so it
+ * isn't one, but only when the whole reply is SureSend's own text: a span is just words, and with anything added it might be
+ * about those.
+ */
+export function insideHoldingSentence(reply: string, claim: DraftClaim, claims: DraftClaim[]): boolean {
   const held = holdingSentence(reply);
-  return !!held && claim.value === null && held.sentence.includes(flat(claim.span));
+  return !!held && claim.value === null && held.sentence.includes(flat(claim.span)) && holdingTopics(reply, claims).length > 0;
 }
 
 /** The canonical Ask-first reply (the reversal timeline). */

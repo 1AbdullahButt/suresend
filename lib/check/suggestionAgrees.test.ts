@@ -7,6 +7,7 @@ import { describe, expect, it } from "vitest";
 import { aiDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { runCheck } from "@/lib/check/runCheck";
 import type { CheckInput, Role, SourceOverride } from "@/lib/engine/types";
+import { PRESETS } from "@/lib/workspace/presets";
 import { variantOverrides, type VariantId } from "@/lib/workspace/variants";
 
 const golden = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "golden.json"), "utf8")) as {
@@ -18,6 +19,20 @@ const ROLES: Role[] = ["support_agent", "ops_lead"];
 const deps = aiDeps(createRuntime({ liveGate: async () => false }));
 
 describe("a suggestion's check matches its Send", () => {
+  // No golden case reaches an Ask first with a kept claim. This is the reply QA round 2 found refused at Send.
+  it("Ask first with a kept claim, on the demo's own preset", async () => {
+    const preset = PRESETS["TCK-9002"]!.find((p) => p.id === "usman-both")!;
+    for (const role of ROLES) {
+      const input: CheckInput = { ticketId: "TCK-9002", rail: "unknown", draft: preset.draft, role };
+      const r = await runCheck(input, deps);
+      expect(r.decision).toBe("ESCALATE");
+      expect(r.suggestion?.recheckDecision).toBe("ALLOW");
+      const sent = await runCheck({ ...input, draft: r.suggestion!.text }, deps);
+      expect(sent.ai.mode, role).toBe("saved");
+      expect(sent.decision, role).toBe("ALLOW");
+    }
+  });
+
   it.each(golden.cases.map((c) => [c.id, c] as const))("%s", async (_id, c) => {
     for (const role of ROLES) {
       const overrides: SourceOverride[] = c.variant ? variantOverrides(c.variant, golden.saveTime) : [];

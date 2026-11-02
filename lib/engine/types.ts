@@ -152,7 +152,7 @@ export interface ClaimResult {
 
 export interface RejectedExtraction {
   sourceId: string; // the source ID, or "DRAFT"
-  reason: "QUOTE_NOT_FOUND" | "SPAN_NOT_FOUND" | "SUPERSEDES_QUOTE_NOT_FOUND" | "INVALID_OUTPUT" | "EXTRACTION_ERROR" | "ALL_CLAIMS_REJECTED";
+  reason: "QUOTE_NOT_FOUND" | "SPAN_NOT_FOUND" | "SUPERSEDES_QUOTE_NOT_FOUND" | "INVALID_OUTPUT" | "EXTRACTION_ERROR" | "ALL_CLAIMS_REJECTED" | "OWN_HOLDING_SENTENCE";
   snippet: string;
 }
 

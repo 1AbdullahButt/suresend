@@ -856,7 +856,7 @@ the sent card said "Ayesha got the right answer."
     timeline", and QA showed "We never share the exact reversal timeline" sending as Good to send when the AI also missed it. One consequence: Ask first on the
     fee alone (only after a doc edit makes the fee rail-specific) confirms the fee, and the timeline is still open, so that reply is a Double-check. That's honest.
   - An AI reading of SureSend's own sentence. QA round 2 found the prompt's new rule made the model read the holding sentence as a timeline with no value, so the demo's own suggestion, tagged "Checked against
-    your docs", was refused at Send. Such a claim (no value, span inside that sentence, the reply opening with it word for word) is dropped in `runCheck` with the other checks on AI output, before the rules see it.
+    your docs", was refused at Send. Such a claim (no value, span inside that sentence, and the whole reply SureSend's own text) is set aside in `runCheck` with the other checks on AI output, before the rules see it, and recorded in `rejectedExtractions`. "The whole reply" matters: a span is just words, and QA round 3 showed a span like "for your transfer" could be about words added after the sentence.
     CLAUDE.md rule 3 says to fix the prompt, not the rules, and I took neither literally. The prompt already says this isn't a claim and the model read it anyway, which is the point of this decision. And no rule bends: the
     sentence is SureSend's own text, so it's known to state nothing. The rest of the reply is judged as ever, and words after the sentence get no pass from any span. A suggestion's check now has to match its Send in `pnpm record`
     and the preset replay, which is what would have caught this.

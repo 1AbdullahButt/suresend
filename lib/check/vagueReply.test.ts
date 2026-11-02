@@ -319,6 +319,41 @@ describe("only SureSend's own holding reply gets past D0e", () => {
     expect((await handleSend({ ...base, draft: ESCALATE_TEMPLATE }, depsFor([own]))).status).toBe(200);
   });
 
+  it("the claim set aside stays on the record, without counting as the AI failing", async () => {
+    const own: DraftClaim = { claimId: "o", topic: "reversal_window", value: null, valueText: "", span: "the exact reversal timeline", definitive: true };
+    const r = await runCheck({ ...input(CASES[4]!), draft: ESCALATE_TEMPLATE }, depsFor([own]));
+    expect(r.decision).toBe("ALLOW");
+    expect(r.rejectedExtractions).toEqual([{ sourceId: "DRAFT", reason: "OWN_HOLDING_SENTENCE", snippet: "the exact reversal timeline" }]);
+  });
+
+  // QA round 3: a span is just words. With anything added to the reply, one that happens to match the sentence is about those words.
+  describe("with words added, a span that matches the sentence is still a claim", () => {
+    const timeline: DraftClaim = { claimId: "t", topic: "reversal_window", value: { amount: 1, unit: "business_days" }, valueText: "1 business day", span: "Back within 1 business day", definitive: true };
+    const ayesha = CASES[1]!;
+
+    it("a vague fee whose span is a fragment of the sentence", async () => {
+      const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: null, valueText: "minus the charge", span: "for your transfer", definitive: true };
+      const draft = `${ESCALATE_TEMPLATE} Back within 1 business day, minus the charge for your transfer.`;
+      const r = await runCheck({ ...input(ayesha), draft }, depsFor([timeline, fee]));
+      expect(r.decision).toBe("CAUTION");
+      expect(r.rejectedExtractions).toEqual([]);
+    });
+
+    it("a second, vague timeline claim", async () => {
+      const second: DraftClaim = { claimId: "s", topic: "reversal_window", value: null, valueText: "as soon as I have it", span: "as soon as I have it", definitive: true };
+      const draft = `${ESCALATE_TEMPLATE} Back within 1 business day, or as soon as I have it.`;
+      const r = await runCheck({ ...input(ayesha), draft }, depsFor([timeline, second]));
+      expect(r.decision).toBe("CAUTION");
+    });
+
+    it("MCP with no ticket, where D0e can't step in: the AI read only the sentence", async () => {
+      const own: DraftClaim = { claimId: "o", topic: "reversal_window", value: null, valueText: "", span: "the exact reversal timeline", definitive: true };
+      const out = await checkReply({ reply: `${ESCALATE_TEMPLATE} You'll see it reflected after the weekend.` }, depsFor([own]));
+      expect(out.ok && out.value.engine_decision).toBe("CAUTION");
+      expect(out.ok && out.value.reason_code).toBe("UNSUPPORTED");
+    });
+  });
+
   it("that doesn't reach past the sentence: a vague claim on words after it still counts, and so does one in any other reply", async () => {
     const after: DraftClaim = { claimId: "a", topic: "reversal_window", value: null, valueText: "after the weekend", span: "after the weekend", definitive: true };
     const r = await runCheck({ ...input(CASES[4]!), draft: `${ESCALATE_TEMPLATE} You'll see it after the weekend.` }, depsFor([after]));

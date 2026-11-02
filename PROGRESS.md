@@ -1633,7 +1633,7 @@ was refused at Send, because the AI read SureSend's own sentence as a timeline w
 Fixed in `runCheck` (D-045): a no-value claim whose span is inside that sentence is dropped before the rules see it. Also taken: only SureSend's own sentences count as accounted for after the holding sentence (`holdingTopics`), since two AI readings still got past it;
 the key-repeat guard on the Demo button; "field-accuracy gap"; the Gemini row's label. Left for a later phase, not from this one: with a doc unread, replies that do carry a value still get copy that treats the remaining docs as the answer (decisions right, copy only), and the 404 page's missing label.
 
-**After round 2's fixes, on a saved-mode build.** `lib/check/suggestionAgrees.test.ts` and the preset replay now require a suggestion's check to match its Send on the saved reading.
+**After round 2's fixes, on a saved-mode build.** The preset replay now requires a suggestion's check to match its Send on the saved reading, and that's what catches this bug. `lib/check/suggestionAgrees.test.ts` applied it to the golden cases, and QA found it would have passed on the old code (25 of 25), since no golden case reaches an Ask first with a kept claim. So it now has that case too.
 ```
 $ pnpm test: 350 passed
 $ snapshot against evals/snapshots/phase11.json: 80 identical, 0 different, 0 missing
@@ -1650,4 +1650,6 @@ ui-audit: Serious/critical axe violations: 0. Horizontal page scroll: none. Stat
 playwright: 1 passed
 ```
 **Evals weren't rerun for this round, on purpose.** Prompts and schemas are unchanged, so saved responses stand. The fix only acts on a reply that opens with SureSend's holding sentence, and that's 0 of the 47 eval drafts, so no scored result can change. A re-run of `pnpm eval` would still run them again, because the rule text changed.
+
+**QA round 3: APPROVED**, no blockers or majors, at 7c2ad93. Round 2's major is fixed on the real saved reading, through a real Send, at 1440 and 390 and over MCP, and QA agreed the evals needn't rerun: it went through the diff line by line. I took its three minors before merging: the filter now needs the whole reply to be SureSend's own text (three shapes reached Good to send without that), what it sets aside is recorded in `rejectedExtractions`, and the replay test has the case that would have caught the bug. Left for a later phase: copy with a doc unread on replies that carry a value (same on `main`), and the 404 page's missing label.
 

@@ -140,8 +140,13 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   if (draftOutcome!.ok) {
     infos.push(draftOutcome!.value.info);
-    // Before the rules see it, and not a rejection: the AI answered, it just read SureSend's own sentence as a claim (D-045).
-    const raw = draftOutcome!.value.claims.filter((c) => !insideHoldingSentence(input.draft, c));
+    // Before the rules see it (D-045). Recorded, but not counted for D0a: the AI answered, it just read SureSend's own sentence as a claim.
+    const read = draftOutcome!.value.claims;
+    const raw = read.filter((c) => {
+      if (!insideHoldingSentence(input.draft, c, read)) return true;
+      rejected.push({ sourceId: "DRAFT", reason: "OWN_HOLDING_SENTENCE", snippet: snippet(c.span) });
+      return false;
+    });
     const claims = validateDraftClaims(input.draft, raw, rejected);
     extractions.draft = { ok: true, text: input.draft, claims, rejectedCount: raw.length - claims.length };
   } else {
