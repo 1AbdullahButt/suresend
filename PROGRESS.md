@@ -1456,3 +1456,26 @@ D:/Project/slite 340a189 [phase-10]
 ```
 ## VERDICT: APPROVED
 ```
+
+**Deployed to https://suresend-demo.vercel.app, live checks:**
+```
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+PASS check_reply 4 days on TCK-9001: Hold · suggestion "Failed transfers are reversed within 1 business day." (Good to send) · governing Instant Rail: Reversal Exceptio
+PASS check_reply 4 days on TCK-9002: Ask first (ai_mode saved)
+PASS check_reply 1 day on TCK-9001: Good to send (ai_mode saved)
+PASS check_reply two claims on TCK-9001: Hold [reversal window: Good to send; fee refund: Hold], suggestion keeps "1 business day" (ai_mode saved)
+ALL PASS
+p10-ui (live): exit 0 pass=46 fail=0
+step5-ayesha (live): exit 0 pass=43 fail=0
+mcp-menu (live): exit 0 pass=31 fail=0
+step6-phone-fix (live): exit 0 pass=12 fail=0
+tour-step6 (live): exit 0 pass=29 fail=0
+tour-menu (live): exit 0 pass=231 fail=0
+$ security headers
+Content-Security-Policy: frame-ancestors 'none'
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+$ GET /api/mcp (stateless, so 405 is expected)
+405
+```
