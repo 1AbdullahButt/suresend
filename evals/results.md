@@ -6,7 +6,7 @@ B1, B2, B3 and B7 correct on every run. Only complete 3-run reports for this pro
 
 **The eval's pick:** `AI_PROVIDER=gemini`, `AI_FALLBACK_PROVIDER=groq`. Both passed the gate with 0 quote rejections each; gemini had higher field accuracy.
 
-**Production overrides this:** `AI_PROVIDER=groq`, `AI_FALLBACK_PROVIDER=gemini`. Availability and latency matter more for the live path, and the accuracy gap changed no decision. (D-044)
+**Production overrides this:** `AI_PROVIDER=groq`, `AI_FALLBACK_PROVIDER=gemini`. Availability and latency matter more for the live path, and the field-accuracy gap changed no decision. (D-044)
 
 ## groq · `openai/gpt-oss-120b`
 

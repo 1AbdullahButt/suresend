@@ -103,9 +103,10 @@ async function withReply(deps: CheckDeps, input: CheckInput, label: string, want
   let note = "";
   if (r.suggestion) {
     const re = await runCheck({ ...input, draft: r.suggestion.text }, deps);
-    const ok = re.decision === "ALLOW" || re.decision === "CAUTION";
+    // What the suggestion's tag promised is what its Send has to get, on the AI's real reading of it (D-045).
+    const ok = re.decision === r.suggestion.recheckDecision;
     if (!ok) bad++;
-    note = ` · suggestion (${r.suggestion.origin}) rechecks ${re.decision}/${re.reasonCode}${ok ? "" : " ✗"}`;
+    note = ` · suggestion (${r.suggestion.origin}) rechecks ${re.decision}/${re.reasonCode}${ok ? "" : ` ✗ its check said ${r.suggestion.recheckDecision}`}`;
   }
   console.log(`${bad ? "✗" : "✓"} ${label}: ${r.decision}/${r.reasonCode}${note}`);
   return bad;

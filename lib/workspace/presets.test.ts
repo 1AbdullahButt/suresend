@@ -27,7 +27,8 @@ describe("composer presets", () => {
       if (r.suggestion) {
         const sent = await runCheck({ ticketId, rail, draft: r.suggestion.text, role }, deps);
         expect(sent.ai.mode, `${p.id} suggestion (${role})`).toBe("saved");
-        expect(["ALLOW", "CAUTION"]).toContain(sent.decision);
+        // What the suggestion's tag promised is what its Send gets, on the AI's saved reading of it (D-045).
+        expect(sent.decision, `${p.id} suggestion (${role})`).toBe(r.suggestion.recheckDecision);
       }
     }
   });

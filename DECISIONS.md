@@ -855,6 +855,11 @@ the sent card said "Ayesha got the right answer."
     system would Double-check its own holding reply, on the path that must send (SPEC §6.7). My first version only looked for the words "the exact reversal
     timeline", and QA showed "We never share the exact reversal timeline" sending as Good to send when the AI also missed it. One consequence: Ask first on the
     fee alone (only after a doc edit makes the fee rail-specific) confirms the fee, and the timeline is still open, so that reply is a Double-check. That's honest.
+  - An AI reading of SureSend's own sentence. QA round 2 found the prompt's new rule made the model read the holding sentence as a timeline with no value, so the demo's own suggestion, tagged "Checked against
+    your docs", was refused at Send. Such a claim (no value, span inside that sentence, the reply opening with it word for word) is dropped in `runCheck` with the other checks on AI output, before the rules see it.
+    CLAUDE.md rule 3 says to fix the prompt, not the rules, and I took neither literally. The prompt already says this isn't a claim and the model read it anyway, which is the point of this decision. And no rule bends: the
+    sentence is SureSend's own text, so it's known to state nothing. The rest of the reply is judged as ever, and words after the sentence get no pass from any span. A suggestion's check now has to match its Send in `pnpm record`
+    and the preset replay, which is what would have caught this.
   - Over MCP with no `ticket_id`, where the seed ticket only supplies the rail, so its customer's question isn't this reply's. The flag isn't
     in the API body, so a client can't switch the rule off on `/api/send`.
 - **Suggested replies.** A `TOPIC_GAP` recheck is accepted only when the draft made no claim on that topic: the AI's rewrite was understood, and the question

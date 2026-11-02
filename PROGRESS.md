@@ -1628,3 +1628,26 @@ pnpm mcp:e2e: ALL PASS
 **Evals after the fixes, published as they came.** Groq, prompt `2026-11-02.5`: golden 74/75 (the miss is a Hold on `vague-monday-less-charge`), quotes 107/107, fields 178/180, gate PASS. Held-out clean 47/48, fee 11/12, vague 9/9, quotes 97/97. Exposed 16/18, quotes 41/41: H13 1/3, read as a timeline with no value, still a Double-check. H11 was 3/3 this time, so Hold on 4 of 6 over the two sessions.
 **Gemini's reports are from before these fixes.** My first rerun command was wrong: a `;` went to `pnpm` as an argument, so Groq's held-out and Gemini's golden never ran. I caught it in the log and reran Groq's. Gemini's held-out rerun hit its daily limit at 22 of 66 ("retry in 16h 22m"). Its reports stay as committed, and the rerun follows in its own commit, as the brief allows.
 
+**QA round 2: CHANGES_REQUIRED, one major, real, and a regression from this phase's prompt.** Round 1's three majors held. The new one: on the demo's own preset (Usman, "Timeline and fee"), the holding reply tagged "Checked against your docs"
+was refused at Send, because the AI read SureSend's own sentence as a timeline with no value. The recheck uses SureSend's own claims, so it never saw that. Round 1 and I both missed it for the same reason: we looked at the recheck, not at a Send.
+Fixed in `runCheck` (D-045): a no-value claim whose span is inside that sentence is dropped before the rules see it. Also taken: only SureSend's own sentences count as accounted for after the holding sentence (`holdingTopics`), since two AI readings still got past it;
+the key-repeat guard on the Demo button; "field-accuracy gap"; the Gemini row's label. Left for a later phase, not from this one: with a doc unread, replies that do carry a value still get copy that treats the remaining docs as the answer (decisions right, copy only), and the 404 page's missing label.
+
+**After round 2's fixes, on a saved-mode build.** `lib/check/suggestionAgrees.test.ts` and the preset replay now require a suggestion's check to match its Send on the saved reading.
+```
+$ pnpm test: 350 passed
+$ snapshot against evals/snapshots/phase11.json: 80 identical, 0 different, 0 missing
+p11-ui-check (now sends Usman's preset's holding reply): pass=31 fail=0
+p11-offer: pass=27 fail=0
+p10-ui: pass=46 fail=0
+step5-ayesha: pass=43 fail=0
+mcp-menu: pass=31 fail=0
+step6-phone-fix: pass=12 fail=0
+tour-step6: pass=29 fail=0
+tour-menu: pass=231 fail=0
+pnpm mcp:e2e: ALL PASS
+ui-audit: Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+playwright: 1 passed
+```
+**Evals weren't rerun for this round, on purpose.** Prompts and schemas are unchanged, so saved responses stand. The fix only acts on a reply that opens with SureSend's holding sentence, and that's 0 of the 47 eval drafts, so no scored result can change. A re-run of `pnpm eval` would still run them again, because the rule text changed.
+

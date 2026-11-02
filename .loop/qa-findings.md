@@ -1,119 +1,139 @@
-# QA findings · Phase 11 · 2026-11-02T14:18:04Z
+# QA findings · Phase 11 · 2026-11-02T16:24:27Z
 
-Branch `phase-11`, HEAD 760ad28. No live AI call, no `pnpm eval`, no `pnpm record`. Replies with no saved response went through `runCheck` / `handleSend` / `checkReply` with hand-written draft extractions, over the real saved source extractions. Scripts and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa11\`.
+Round 2. Branch `phase-11`, HEAD 6b665bc. No live AI call, no `pnpm eval`, no `pnpm record`. Replies with no saved response went through `runCheck` / `handleSend` / `checkReply` with hand-written draft extractions, over the real saved source extractions. Scripts and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa11r2\`.
 
 ## Commands run
 
 **Gate**
 - `pnpm typecheck` → exit 0.
-- `pnpm lint` → exit 0, no findings. `eslint --print-config lib/engine/decide.ts`: 98 rules active, `no-explicit-any` is an error. CI runs it.
-- `pnpm test` → exit 0. `Test Files 29 passed (29)`, `Tests 303 passed (303)`.
+- `pnpm lint` → exit 0, no findings.
+- `pnpm test` → exit 0. `Test Files 29 passed (29)`, `Tests 319 passed (319)`.
 - `pnpm build` → exit 0.
 - `AI_MODE=saved AI_PROVIDER=groq AI_FALLBACK_PROVIDER=gemini pnpm start -p 3100`. Stopped at the end; port 3100 is free.
-- `pnpm tsx scripts/snapshot-results.ts <temp>/snap.json --compare evals/snapshots/after.json` → exit 1, which this script returns on any difference. `80 results … (0 not on saved responses)`, `66 identical, 2 different, 0 missing`. The 2 are `golden no-claim`, both personas, now `CAUTION/TOPIC_GAP`. The 80-row output is byte-identical to `evals/snapshots/phase11.json`.
-- `replay.ts` (mine, read-only, every golden case and preset on saved responses): `golden: 25 ok, 0 bad`, presets 9 of 9. Expected results differ from `main` only for `no-claim`, `fee-correct`, `fee-unknown-rail`.
-- `data/ai-cache`: 46 files. `source_extraction` 12 and `draft_extraction` 26 at `2026-11-02.5`, `safe_reply` 7, `doc_fix` 1.
+- `pnpm tsx scripts/snapshot-results.ts <temp>/snap.json --compare evals/snapshots/after.json` → exit 1, which this script returns on any difference. `80 results … (0 not on saved responses)`, `66 identical, 2 different, 0 missing`. The 2 are `golden no-claim`, both personas, `CAUTION/TOPIC_GAP`. The output is byte-identical to `evals/snapshots/phase11.json`.
 - `pnpm mcp:e2e http://127.0.0.1:3100/api/mcp` → exit 0, `ALL PASS`.
-- `pnpm tsx scripts/ui-audit.ts http://127.0.0.1:3100` → exit 0. 30 state and width screens, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.` It rewrote 3 PNGs; I read the result and ran `git checkout -- design/audit`.
-- `pnpm exec playwright test` (the locked spec) → exit 1. The only failure is `e2e/demo.spec.ts:30`, `Held by Slite Agent`.
-- `pnpm exec playwright test --config …\p11-e2e\pw.config.ts` → exit 0, `1 passed`. `diff` against the locked spec shows the 3 status strings and the import path, nothing else.
-- `git diff main..phase-11 --stat -- tests e2e SPEC.md IMPLEMENTATION_BRIEF.md data/seed` → empty.
-- `git worktree list` → `D:/Project/slite 760ad28 [phase-11]` only.
+- `pnpm e2e` → exit 0, `1 passed`.
+- `pnpm tsx scripts/ui-audit.ts http://127.0.0.1:3100` → exit 0. 30 state and width screens, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.` It rewrote 4 PNGs; I read the result and ran `git checkout -- design/audit`.
+- `git worktree list` → `D:/Project/slite 6b665bc [phase-11]` only.
+- `git diff main..HEAD --stat -- tests SPEC.md IMPLEMENTATION_BRIEF.md data/seed` → empty. `git diff main..HEAD -- .loop/locked` → empty.
 
-**Tests written first.** `git archive 40878c8` into my temp folder, `vitest run` on the two test files → `Tests 43 failed | 7 passed (50)`, as PROGRESS.md says. Five of the six fail with `expected 'ALLOW' to be 'CAUTION'`. `monday-less-charge` fails with `expected 'EXTRACTION_GAP' to be 'TOPIC_GAP'` (minor below). At HEAD all 50 pass.
+**The e2e unlock**
+- `git diff --numstat main..HEAD -- e2e` → `3 3 e2e/demo.spec.ts`. The six lines are the three in D-050, and no others.
+- `hook-test.mjs`, synthetic JSON piped to `.claude/hooks/protect-locked.mjs`: Write, Edit (backslash and relative paths), MultiEdit, a new file under `e2e/`, `sed -i` and `Set-Content` on the spec, `tests/`, `SPEC.md` → exit 2 each. Controls (the findings file, a read-only `git diff` on `e2e`, `pnpm e2e`) → exit 0.
+- The real hook also refused two of my own commands before they ran: one whose test string contained the blocked worktree phrase, and one that mentioned `git checkout` and `e2e/` together. I split the second into separate commands and dropped the first case.
 
-**Builder's browser scripts, re-run:** p11-ui-check 26/0, p11-offer 25/0, p10-ui 46/0, step5-ayesha 43/0, mcp-menu 31/0, step6-phone-fix 12/0, tour-step6 29/0, tour-menu 231/0.
+**Builder's browser scripts, re-run:** p11-ui-check 29/0, p11-offer 27/0, p10-ui 46/0, step5-ayesha 43/0, mcp-menu 31/0, step6-phone-fix 12/0, tour-step6 29/0, tour-menu 231/0. All as PROGRESS.md says.
 
-**My own:** `slide.cjs` 39 pass, 0 fail. `offer.cjs` 64 pass, 0 fail. `states.cjs` 30 pass, 0 fail (1440, 1024, 390). `misc.cjs`, `ui1.cjs`, `engine.ts`, `engine2.ts`, `engine3.ts`. Screenshots read: `og.png`, GIF contact sheet, tour step 1, repro at 390, sent card at 390, fee-only at 1024, unread-doc Why, slide-over at 900, tour step 5 at 900, `/how-it-works` at 390.
+**My own**
+- `ui.cjs` 19 pass, 2 fail (the major below).
+- Round 1's `slide.cjs` 39/0, `offer.cjs` 64/0, `states.cjs` 30/0.
+- `engine.ts`, `engine2.ts`, `api.mjs`.
+- `replay.ts`, read-only: golden 25 of 25, presets 9 of 9, and each of the 12 suggestions sent on its saved reading.
 
-**Other:** `curl` of the source page. Held-out cases compared between 40878c8 and HEAD. Three-word overlap computed independently.
+Screenshots read: the refused holding reply at 1440, unread-doc Why at 390. The rest of the UI I judged from the text and checks in `ui.txt` and `states.txt`; I re-read no other screenshots this round.
 
 ## Findings
 
-### Majors
+### Major
 
-- [severity: major] components/tour/GuidedTour.tsx:44-45 · expected: "SureSend" as the actor and one tag per screen (brief P0-3, D-047: "the tour … now say SureSend") · actual: step 1 of the guided tour reads "Press Send: Slite Agent checks the reply against your docs first, and holds it if it's wrong."
-  - Seen in the browser at 1440 and 390 (`tour1-1440.png`); the page then has `"Slite Agent" count=2`.
-  - It got past the guard because the source wraps between "Slite" and "Agent". `lib/client/copyRules.test.ts:33` uses `.includes("Slite Agent")`, and `p11-ui-check` counts only on the home page.
-  - Fix: the word, and `/Slite\s+Agent/` in the test.
-
-- [severity: major] lib/engine/decide.ts:339-346, lib/client/outcome.ts:205 and :209 · expected: no value named when the docs can't give one for this ticket (D-046). SPEC §6.6.2, source side: an unread source "might hold the contradiction" · actual: when the doc that governs fails to read, the next doc's value is presented as what the docs say.
-  - Real server and real UI at 1440 and 390: DOC-103 edited in the Docs tab (no saved response, so unread), the repro on Ayesha, instant rail. Card: **"Your docs say 4 business days; your reply gives no number."** The true answer is DOC-103's 1 business day. Nothing in the Check view mentions an unread doc.
-  - Why (`1440-unread-why.png`) lists the SOP as "Applies" and says "Your docs agree on this." The result is `caps=DOC-103`, `reason UNSUPPORTED`; only the trace names the unread doc.
-  - Same wrong value on the other paths: the silent reply ("Your docs say 4 business days; your reply doesn't say."), the engine headline ("the policy says 4 business days"), MCP `governing` and `docs_say`, and a Hold's suggested reply when a vague claim sits beside the wrong one ("…a reversal window of 4 business days. The transfer fee is refunded.").
-  - It's a regression. On `main` this state gave no value. 4 days on an instant transfer is exactly the answer this product exists to stop, and P1-1 now offers it to the agent as the docs' answer.
-  - Reachable live when one source's extraction fails and the draft's succeeds. Saved mode: any edit to DOC-103.
-  - Fix: `docsValue` returns null when any visible, non-excluded source is unread, with a sentence that says so (`outcome.ts:366` already has the wording). `isVague`'s fallback ("Your docs don't give one answer") would be the wrong reason there. Add the repro as a test.
-
-- [severity: major] lib/topics/index.ts:37-39, lib/engine/decide.ts:141 · expected: the exemption covers a reply that "says the answer is being confirmed" (D-045); "Only SureSend's own holding wording … goes through" (README:351) · actual: it's a substring test on the noun phrase, `the exact reversal timeline`, so the words around it don't matter.
-  - With the AI reading 0 claims, `handleSend` returns 200 and the card reads "Sent. Nothing in the docs contradicted it." for each of these:
-    - "I'm confirming the exact reversal timeline for your transfer, but you'll see it reflected after the weekend, minus the processing charge."
-    - "Don't worry about the exact reversal timeline: you'll see it reflected after the weekend, minus the processing charge."
-    - "We never share the exact reversal timeline, so please stop asking."
-  - "THE EXACT REVERSAL TIMELINE IS AFTER THE WEEKEND." is `ALLOW/NO_POLICY_CLAIM` too. MCP with `ticket_id` returns Good to send.
-  - That is P0-1's bug in a narrower form, and rule D0e exists because, per D-045, "the rules must not depend on" the AI.
-  - The first sentence is the likely one: an agent editing the holding reply already in the composer. The new prompt line that a promise to follow up isn't a claim ("I'm confirming the timeline and will get back to you") pushes the AI toward 0 claims there.
-  - I can't say how often it does without a live call, and a good read gives `CAUTION/UNSUPPORTED` (`engine.txt`). So this needs the AI to miss as well. D0e is the net for exactly that case, and here the net is off.
-  - Fix: exempt only SureSend's own holding sentence, with nothing else in the reply outside it and the extracted claims' spans. Add the three sentences as tests.
+- [severity: major] lib/check/runCheck.ts:322, lib/engine/decide.ts:420, data/ai-cache/2655a29f….json · expected: the replies SureSend itself suggests go out (D-045: "the path that must send", SPEC §6.7) · actual: **Ask first with a kept or corrected claim is refused at Send, on the demo's own preset.**
+  - **Repro in the browser, 1440 and 390:** Usman → Try another reply → "Timeline and fee" → Send → Ask first. The holding reply reads "…as soon as I have it. The transfer fee is refunded." and is tagged **"Checked against your docs"**. Use holding reply → Send → **not sent**. Card: "Double-check · Your reply is vague on this · Your docs don't give one answer for this ticket; your reply gives no number." It quotes SureSend's own holding sentence as the vague claim (`1440-usman-both-after-send.png`).
+  - **Real server:** `/api/send` → `428 CAUTION/UNSUPPORTED`.
+  - **MCP:** `check_reply` says "Send suggested_reply", with its check "Good to send". `check_reply` on that same text returns Double-check / `UNSUPPORTED`.
+  - **Cause:** the recorded reading of that text has two claims. One is `reversal_window`, no value, span = the holding sentence. The other is the fee. The recheck at `runCheck.ts:322` uses hand-built claims, so it never sees this and shows ALLOW. `holdingTopics` isn't the problem: the no-value claim goes through `decideClaim` and comes out `UNSUPPORTED`.
+  - **It's a regression from this phase's prompt.** On `main` (prompt `.4`) the saved reading is the fee claim alone, so this reply sent.
+  - **Reach:** paths P2, P3, P4, P5 and P10 in `engine.txt` (a right, wrong, vague or hedged fee beside the Ask first, and a doc conflict with a right fee) all produce this exact text, so they all hit this reading. Saved responses are tried first, so production should behave the same. A person can still tick the box and press Send anyway, so it's not a dead end, but the check tag was false and the sentence blames the agent for SureSend's own words.
+  - **The other suggestions are fine.** The plain Ask-first reply sends (`200`), including after B3. Of 12 suggestions replayed, this is the only one whose own check disagrees with the Send.
+  - **Why nothing caught it:**
+    - The test at `vagueReply.test.ts:289` stubs the AI with the fee claim only, so it passes on a reading the AI didn't give.
+    - `scripts/record-ai-cache.ts:106` accepts CAUTION on a suggestion, so `record` said "Unexpected: 0".
+    - `p10-ui.cjs` stops before sending, and the snapshot has no presets.
+  - **I missed this in round 1.** The reading dates from 12:39Z, before that review. I listed "Ask first keeps and corrects a vague fee and rechecks ALLOW" as fine, having looked only at the recheck and not at a Send on the saved reading.
+  - **Fix.** Two options, and the choice is yours:
+    - In the rules: a no-value claim whose span lies wholly inside SureSend's holding sentence isn't a claim. That also protects the plain reply if a live read goes the same way. It must not widen the exemption: the span has to be inside the sentence, not after it.
+    - In the prompt: CLAUDE.md rule 3 prefers this, but the prompt is frozen, so it means a version bump, a re-record and new evals, and D-045 itself says temperature 0 doesn't make the model consistent.
+    - Either way, add a test with the real reading's shape, and a replay test that a suggestion shown as "Checked against your docs" comes back ALLOW on its saved reading. Tighten `record-ai-cache.ts:106` the same way.
 
 ### Minors
 
-- [severity: minor] lib/client/outcome.ts:142-143, :72; components/tour/GuidedTour.tsx:415 · copy that still claims a reply is right. Your call, Abdullah's brief names only the sent card.
-  - "Your reply is right" shows on a re-check with no Send: on Hina, send the 4-day reply, type it again, switch persona (`1440-your-reply-is-right.png`).
-  - It can be false. "Your money is back within 1 business day, minus the processing charge." with only the timeline claim extracted is `ALLOW/SUPPORTED`, headline "Your reply is right". The customer didn't ask about the fee, and the fee detector doesn't know those words. README:362 states the limitation but not this headline.
-  - Also "Right today, changing soon" and the tour offer's "send the right one".
+- [severity: minor] lib/replies/templates.ts:40 · two AI readings still get a wrong reply past `holdingTopics`, because any claim's span counts as "accounted for".
+  - Both start with the exact holding sentence. Both give Good to send, and `handleSend` would send.
+    - `other`, no value, with the span over the added words: "…as I have it. You'll see it reflected after the weekend, minus the processing charge." → `ALLOW/NO_POLICY_CLAIM`. The rules ignore that claim, yet it still accounts for the words.
+    - A right fee claim whose span covers timing words: "…as I have it. The transfer fee is refunded and you'll see the money after the weekend." → `ALLOW/SUPPORTED`. `decide.ts:124-127` already says another topic's claim never vouches for this one, however wide its span. This doesn't follow that.
+  - Why minor and not major, unlike round 1: the 0-claims reading, which the AI really does produce (Gemini did on 6 golden runs), is closed. All 7 of the test's wordings and my 16 wordings with 0 claims behave: the 5 of mine that pass are the sentence itself (line breaks, both topics named) or punctuation or an emoji after it. Neither remaining shape appears in the 26 saved draft readings: `other` is defined as "with a value", and mixed sentences came back split into two claims. It's your call if you weigh it higher.
+  - Fix: delete line 40. Only SureSend's own sentences (line 39, `replyTemplate`) then count as accounted for. The kept-claim test still passes, and so does the real reading's fee claim. Worth doing with the major, since it's the same function.
 
-- [severity: minor] app/how-it-works/page.tsx:41 · expected: the README's image shows · actual: `GET /demo.gif` → 404, `naturalWidth 0`, broken image and alt text at the top of the page. `public/demo.gif` was deleted in ad705bf and the page still maps `docs/demo.gif` to `/demo.gif`. Minor because nothing links to the page (DECISIONS.md:373). One line to fix.
+- [severity: minor] components/shell/Header.tsx:24 · at phone width, a held Enter on "Not now" opens the Demo menu, since focus lands on that button and only the tour button got the repeat guard (`[390] … Demo menu open=1`). 1440 and 900 are fixed, and a deliberate press still starts the tour. It only arises with a keyboard at that width.
 
-- [severity: minor] lib/check/runCheck.ts:221 · D-045's reason for accepting `TOPIC_GAP` ("the question was missing from the draft too") is false on a timeline Hold. With 4 days on Ayesha and an AI rewrite that drops the timeline, the suggestion is `ai→CAUTION`: "Thanks for your patience, our team is on it." or "The transfer fee is refunded.", where the template rechecks ALLOW with 1 business day. It's more honest than `main`, which called it Good to send, but it offers a non-answer over a right one. Accept the gap only when the draft had no claim on that topic.
+- [severity: minor] scripts/eval.ts:443, README.md:201, evals/results.md:9 · "the accuracy gap changed no decision" now sits right after "Groq scores higher on decisions" (74/75 against 65/75). It's true of the field-accuracy gap the tie-break uses, but it reads as false. "Field-accuracy gap" fixes it.
 
-- [severity: minor] lib/replies/templates.ts:15-19 · SureSend's own holding reply can be a Double-check, against D-045's "the path that must send". Ask first on the fee alone (a doc edit makes the fee rail-specific, unknown rail): "I'm confirming the transfer fee details…" → `CAUTION`, `handleSend` 428. Only after a doc edit. It's honest, since it doesn't answer the timeline, but D-045 should say so or the template should name the asked topic.
+- [severity: minor] README.md:259 · the golden table's Gemini row has no "(before QA's fixes)" label, unlike the held-out and exposed rows. The bold paragraph below it covers this. See the disclosure note under Numbers.
 
-- [severity: minor] lib/engine/decide.ts:339 · no qualifier on a weak basis. B6 and B7 (doc edited after verification, `EDITED_AFTER_VERIFICATION`) give "Your docs say 4 business days" and "Your docs say 2 business days" plainly, where the comparison path says the doc is trusted less. Literally true.
+- [severity: minor] lib/client/outcome.ts:213, lib/engine/decide.ts · not from this phase, the same on `main`: with a doc unread, replies that do carry a value still get copy that treats the remaining docs as the answer.
+  - DOC-103 unread, "within 2 business days" on Ayesha: Hold, "Instant transfers now reverse in 4 business days", with a suggested reply stating 4 days and tagged Double-check.
+  - DOC-103 unread, "within 4 business days": "Your reply matches the policy".
+  - DOC-101 unread, "The transfer fee isn't refundable.": "No doc backs this up" (Phase 10 QA's minor, still open).
+  - SPEC §6.6.2 allows a Hold from other sources, so the decisions are right and it's copy only. For a later phase.
 
-- [severity: minor] lib/check/vagueReply.test.ts:149, :163 · the Monday variant's expected reason changed to `EXTRACTION_GAP` after 40878c8, with the decision unchanged and a stricter assertion added. The correction looks right: before the fix that reply was already Double-check through the detector, so it was never a Good-to-send case. PROGRESS.md doesn't say so. Brief item 1d's "recorded failing" holds for 5 on the decision and for this one only on the reason code.
+- [severity: minor] Agreeing with the two you left:
+  - `/how-it-works` showing the concept wording twice: fine, the page is an unlinked README render.
+  - The 404 page's missing label: not this phase. SPEC.md:382 does say "every screen", so it's a real small gap for a later phase.
 
-- [severity: minor] Published numbers:
-  - README:244 says `302 passed`; the run gives 303.
-  - README:296 says H14 "has gone 3/3, 2/3 and 2/3"; `evals/heldout.md` on this prompt is 3/3, so it's 3/3, 2/3, 3/3.
-  - PROGRESS.md Phase 11 lists "H14 2/3" beside "Exposed 16/18", which only adds up with H14 at 3/3.
-  - README:383 says "3 of 6" Hold on H18; with this prompt it's 5 of 9.
-  - The headline numbers all match (see below).
+### Before merge
 
-- [severity: minor] docs/MCP_DEMO.md:45 · "If Claude writes a correct or timeline-free reply on its own, SureSend says Good to send." A timeline-free reply with `ticket_id` is now a Double-check (MCP returns `CAUTION/TOPIC_GAP`). Line 13's "three tools" was already stale; there are four.
+- README.md:247 "passed (local and live)": local is proven; live can't be until this branch is deployed.
+- **Untracked items that aren't mine.** `.agents/`, `.codex/` and `AGENTS.md` appeared at 16:22:34Z, during this review. No command of mine creates them. I didn't open or change them, so `git status` isn't clean. Check what they are before the next commit, so they aren't swept in by accident.
 
-- [severity: minor] design/v2/UI-CONTRACT.md:32 · a replace-all error: the footer row now reads "Independent concept for SureSend". The footer says "Slite Agent".
+### Round 1's majors: fixed
 
-- [severity: minor] `/how-it-works` shows the concept wording twice, README:5 in the body and the footer. In the app it's once at every width (see below). The 404 page has no disclaimer label at all (`GET /nope`, 0 matches); that's not from this phase.
+- **Major 1.** Tour step 1 reads "Press Send: SureSend checks the reply". "Slite Agent" appears once on all 6 tour steps at 1440, 1024 and 390. `copyRules.test.ts` now flattens whitespace, and no source line ends in "Slite".
+- **Major 2.** DOC-103 unread, in the real UI at 1440 and 390: "DOC-103 couldn't be read, so SureSend can't say what your docs give; your reply gives no number." Why says "Can't confirm" and "A doc couldn't be read", and no longer says the docs agree. The silent reply, MCP (`governing` null, `docs_say` null) and a Hold's suggestion name no value. A flagged doc (DOC-104) failing doesn't remove the value, and neither does a restricted one that's never read.
+- **Major 3.** The 4 sentences from round 1 are Double-check with 0 claims, as are additions after the sentence, words before it, upper case, a curly apostrophe and free text in the list. Remaining shapes: the first minor above.
 
-- [severity: minor] lib/mcp/tools.ts:198 · on a gap, `claims[].says` is "Nothing on the reversal timeline", which isn't something the reply said. The web UI handles this with `quoted`; MCP has no equivalent.
+### Minors taken in this round: checked
 
-- [severity: minor] Builder's `p11-ui-check.cjs` slide-over check doesn't test a change of conversation. `click({force:true})` lands on the scrim, which closes the panel; the ticket never changes. Replay printed `before=Ayesha K. after force click: ticket=Ayesha K. open=false` at 700, 900, 1099. The behaviour itself is right, by my test below. PROGRESS.md's evidence for P1-3 isn't.
+- `dropsAnAnswer`: a rewrite that drops the timeline loses to the template (`1 business day`, ALLOW); a fee-only draft's rewrite stands.
+- Held Enter on "Not now" at 1440 and 900.
+- `public/demo.gif` is back, identical to `docs/demo.gif`, and `/how-it-works` shows it at 960×570 with no failed requests.
+- MCP `in_reply`: false on a gap, true on a claim.
+- "Matches your docs" on an Allow, "Matches today, changing soon", "send a checked one". No "right answer", "never reached" or "your reply is right" in the source or on the pages checked.
+- A doc in doubt: "Your docs say 2 business days, but that doc is in doubt".
+- `docs/MCP_DEMO.md`, `UI-CONTRACT.md:32`, the notes on H20–H22 (their drafts unchanged since 40878c8), the `eslint-disable` reason.
+- The README's snapshot row, and 319 tests, are right.
 
-- [severity: minor] components/shell/App.tsx:165-170 · Enter on "Not now" moves focus to "Guided tour", so a second Enter or a held key starts the tour (`dialogs open=1`). This is the only path I found back to anything after "Not now" with working storage, and it's the tour, not the offer.
+### The e2e, reviewed against the old test
 
-- [severity: minor] Small things: `lib/client/outcome.ts:48` still has "never reached" in a comment (brief: "everywhere"). `evals/heldout.md`'s "What it probes" column is empty for H20–H22. The `eslint-disable` at `GuidedTour.tsx:301` has no reason, unlike the App.tsx one.
+- The journey and selectors are unchanged, and the footer assertion still reads "Independent concept for Slite Agent" (`e2e/demo.spec.ts:54`).
+- Only the actor's name changed. The `toHaveCount(0)` line had to change too: left on the old string it would pass whatever the UI did.
+- `pnpm e2e` passes, and the test still proves a held reply isn't sent. No commit touches `.loop/locked` on this branch, and the hook refuses the path.
+- On the approval: D-050 records Abdullah's words. I can confirm the record, not the conversation behind it.
 
-### Conditions, not findings
+### Numbers: all checked against the reports, and they match
 
-- **The locked e2e.** Confirmed: those strings are the only failure. It needs Abdullah's one-time unlock. `.github/workflows/ci.yml:42` runs `pnpm e2e`, so CI fails on merge until then. README:248's "passed" isn't true of the locked file today.
-- README:247's "passed (local and live)": local is proven; live can't be until this branch is deployed.
-- Gemini: the five modified files under `evals/` are the Gemini run's, not mine, and I didn't review them. No eval process was running at the end of my review. README's Gemini rows, and "The eval's pick" in `evals/results.md`, go in the separate commit.
+- **Golden.** Groq 74/75, 107/107, 178/180, PASS. Gemini 65/75, 107/107, 180/180, PASS.
+- **"Every miss … on the six vague replies, and none reached Good to send":** true, row by row.
+  - Groq: `vague-monday-less-charge` once, Hold.
+  - Gemini: `vague-repro` once and `vague-monday-less-charge` 3 times, Hold (4 runs); `vague-very-soon` and `vague-unknown-rail` 3 times each, `TOPIC_GAP` (6 runs).
+- **Held-out.** Groq 47/48, fee 11/12, vague 9/9, 97/97. Gemini 44/48, 10/12, 7/9, 91/91; its two vague misses are H22, `TOPIC_GAP`.
+- **Exposed.** Groq 16/18, 41/41, both misses H13, `CAUTION/UNSUPPORTED`. Gemini 17/18, 39/39.
+- **Across sessions** (1db5346, 5a0b026, 760ad28, HEAD).
+  - H18 correct 0/3, 3/3, 1/3, 2/3: Hold on 6 of 12.
+  - H14 3/3, 2/3, 3/3, 3/3.
+  - H11 3/3, 3/3, 1/3, 3/3: on this prompt Hold on 4 of 6, vague on 2 of 6.
+- **Earlier-session row** and PROGRESS's figures match 760ad28's reports: 75/75, 105/105, 170/180; 46/48, 10/12, 9/9, 98/98; exposed 16/18.
+- **`evals/results.md`.** Pick: Gemini, on field accuracy. Override: Groq (D-044). It holds both golden reports verbatim, and `heldout.md` holds both held-out reports verbatim.
+- **Gemini's disclosure: clear enough.**
+  - The times bear it out. Gemini's golden ran 13:42:23–13:50:35Z and its held-out 13:50:37–14:00:12Z, before f93910e (15:14:34Z). Groq's ran 15:15:21–15:35:46Z and 15:39:23–16:03:55Z, after it and before 6b665bc (16:05:28Z).
+  - README says this in bold, says which fixes it doesn't reflect, and points to the times. None of those fixes touch a scored path.
+  - I can't verify the limit at 22 of 66 from here; PROGRESS.md states it and quotes the provider's message.
 
-### Checked and found fine
+### Checked and found fine again
 
-- **Silent or wrong replies, the rest of D0e.** Silent replies on all three seed tickets, a fee-only reply, an `other` claim with no value, and a claim rejected by quote validation are all Double-check. Right answers still pass: 1 day on Ayesha, 4 on Hina, both claims right, the holding reply. A detector hit stays `EXTRACTION_GAP`.
-- **Pure and generic.** Same input gives the same output; `asks` has no `g` flag; `topicAgnostic.test.ts` passes. It's in the trace on every branch past D0a. No hidden source: `DOC-105` isn't in any gap or vague response for the support agent.
-- **`noCustomerMessage`.** On the real server, in the body of `/api/check`, `/api/send` and `/api/fix`: stripped. Result `CAUTION/TOPIC_GAP`, send 428. Only `checkReply` sets it, and only with no ticket. An empty `ticket_id` behaves as no ticket, which README:355 discloses.
-- **`docsValue` otherwise.** Right on instant, standard, unknown (null, "don't give one answer"), an unknown rail with an any-rail fee ("refunded"), B1, B2, B3 (null), B5, and proposal-only ("No doc backs this up"). It changes no decision.
-- **Suggested replies.** Hold with a vague claim beside it states both values and rechecks ALLOW. Ask first keeps and corrects a vague fee and rechecks ALLOW. Gap entries never reach the facts.
-- **Sent and Double-check cards**, at 1440, 1024 and 390. "Sent. Nothing in the docs contradicted it." with "The 4-business-day reply was held and not sent." or "SureSend checked it…"; "Sent with your OK." past a Double-check. Each has an icon and a word label, 0 serious or critical axe findings on the screens scanned. The ack checkbox shows a focus ring when reached by Tab, and Space and Enter work. "got the right answer" and "never reached" are on no page.
-- **P0-3 elsewhere.** `public/og.png` (1200×630): SureSend, "Held by SureSend", the footer tag. OG and Twitter tags point to it. `<title>` is right. `docs/demo.gif` (sampled every 1.5 s, 12 frames): only the footer tag, and it shows the new sent card. In the app, the tag appears once at each width on every card state I scanned; tour step 1 is the exception above.
-- **P1-3, with a real change of ticket.** At 700, 900 and 1099: activating a row closes the panel and it stays closed. Going back to a held ticket doesn't reopen it. Esc returns focus to the toggle. Another ticket's in-flight result doesn't open it, including on a blocked ticket. Tour: step 5 opens it itself on the ticket change; step 4 keeps it closed, as its `enter` says. A resize from 1200 to 900 on a held ticket opens it, which isn't a change of conversation and is unchanged.
-- **P1-4: D-049's reasoning holds.** The offer's only setter is one effect, guarded by a key it writes when the offer shows, and no code removes that key (`removeKey` touches only metrics and overrides). It stayed gone at 1440, 900 and 390 through persona switch, Reset demo, reload, a new tab, the client-side back link, history, and a Send. Blocked, null, throwing and silently dropping storage: no offer, the tour still starts, no page errors. One thing D-049 understates: most private windows allow storage for the session, so `canPersist()` is true and each new private window offers again. That can't be detected, and it may be what the review saw.
-- **Expected results.** Each change is forced by the rule. The replay shows `fee_refund:ALLOW/SUPPORTED` beside `reversal_window:CAUTION/TOPIC_GAP` on `fee-correct` and `fee-unknown-rail`. `feeRefund.test.ts` keeps the claim-level assertions and the old headline under `noCustomerMessage`, and adds the top-level result, so nothing is weakened. H10, H12, H13 are the only held-out cases changed since 40878c8, each marked `expectChanged`.
-- **H20–H22.** Identical at 40878c8 and HEAD. My own overlap against prompts, schemas, golden, presets, variants, templates and topic files: none.
-- **Published numbers.** README matches the reports: golden 75/75, 105/105, 170/180, PASS; clean 46/48, fee 10/12, vague 9/9, quotes 98/98; exposed 16/18, 36/36; earlier-prompt rows match `main`'s report. The H11 claim is right: 3/3 on `main`; here ✓ then 2 × `CAUTION/UNSUPPORTED`.
-- **The 41% line** matches the source page: "We asked 143 founders, operators, and engineers", "76% had an AI tool surface a stale doc and produce a wrong answer", "Among them", "41% said that the wrong info has reached a customer". No team-size claim about Slite anywhere in the repo. README grew from 362 to 396 lines. P1-2 and item 1e are in.
+- **The rest of Ask first.** Plain reply after a 4-day draft, after B3 on all rails, with a limit dropped (P6), both topics named (P12), and the fee named with the timeline kept (`200` on a stubbed read). The fee alone (P11, P13) is a Double-check, which D-045 now says.
+- **Rule D0e.** Silent and fee-only replies are Double-check. Right answers pass.
+- **Sent and Double-check cards** at 1440, 1024 and 390, with the tag once and visible.
+- **Slide-over** at 700, 900 and 1099, with a real change of ticket and in-flight results; the tour's panel at those widths.
+- **Tour offer** through every way back and with blocked storage.
+- **`noCustomerMessage`** isn't in the API bodies; the code that strips it hasn't changed since round 1.
 
 ## VERDICT: CHANGES_REQUIRED

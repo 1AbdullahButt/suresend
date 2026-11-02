@@ -21,25 +21,38 @@ export function escalateTemplate(topics: string[]): string {
   return `${HOLDING_OPEN}${list}${HOLDING_CLOSE}`;
 }
 
-/**
- * The topics a reply says are being confirmed, only if it's SureSend's own Ask-first reply (D-045): that sentence word for
- * word, and nothing after it but what the extracted claims account for. Any other wording gets no pass from rule D0e, whatever
- * words it shares with this one.
- */
-export function holdingTopics(reply: string, claims: DraftClaim[]): string[] {
-  const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+const flat = (s: string) => s.replace(/\s+/g, " ").trim();
+
+/** SureSend's holding sentence, if a reply opens with it word for word: the sentence, the topics it names, and what follows it. */
+function holdingSentence(reply: string): { sentence: string; topics: string[]; rest: string } | null {
   const text = flat(reply);
   const end = text.indexOf(HOLDING_CLOSE);
-  if (!text.startsWith(HOLDING_OPEN) || end < 0) return [];
-  const named = text.slice(HOLDING_OPEN.length, end).split(/, | and /);
-  const topics = named.map((phrase) => TOPICS.find((t) => t.confirming === phrase)?.id);
-  if (topics.some((t) => !t)) return [];
-  let rest = text.slice(end + HOLDING_CLOSE.length);
+  if (!text.startsWith(HOLDING_OPEN) || end < 0) return null;
+  const topics = text.slice(HOLDING_OPEN.length, end).split(/, | and /).map((phrase) => TOPICS.find((t) => t.confirming === phrase)?.id);
+  if (topics.some((t) => !t)) return null;
+  const close = end + HOLDING_CLOSE.length;
+  return { sentence: text.slice(0, close), topics: topics as string[], rest: text.slice(close) };
+}
+
+/**
+ * The topics a reply says are being confirmed, only if it's SureSend's own Ask-first reply (D-045): that sentence word for
+ * word, and after it nothing but SureSend's own sentences for the claims it kept. Any other wording gets no pass from rule D0e,
+ * whatever words it shares with this one, and an AI reading of the extra words accounts for nothing.
+ */
+export function holdingTopics(reply: string, claims: DraftClaim[]): string[] {
+  const held = holdingSentence(reply);
+  if (!held) return [];
+  let rest = held.rest;
   for (const c of claims) {
     if (c.value && isCovered(c.topic)) rest = rest.replace(flat(topicDef(c.topic).replyTemplate(c.value)), "");
-    rest = rest.replace(flat(c.span), "");
   }
-  return /[\p{L}\p{N}]/u.test(rest) ? [] : (topics as string[]);
+  return /[\p{L}\p{N}]/u.test(rest) ? [] : held.topics;
+}
+
+/** The AI read part of SureSend's own holding sentence as a claim with no value. That sentence states nothing (SPEC §6.7), so it isn't one. */
+export function insideHoldingSentence(reply: string, claim: DraftClaim): boolean {
+  const held = holdingSentence(reply);
+  return !!held && claim.value === null && held.sentence.includes(flat(claim.span));
 }
 
 /** The canonical Ask-first reply (the reversal timeline). */

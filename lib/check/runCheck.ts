@@ -23,7 +23,7 @@ import { recheckNote, type CheckedSuggestion } from "@/lib/check/recheckNote";
 import { MAX_SOURCES_PER_CHECK, mergeOverrides } from "@/lib/workspace/merge";
 import { visibleSources } from "@/lib/workspace/permissions";
 import { seedSources, seedTickets } from "@/lib/workspace/seed";
-import { escalateTemplate, holdTemplate } from "@/lib/replies/templates";
+import { escalateTemplate, holdTemplate, insideHoldingSentence } from "@/lib/replies/templates";
 import { describeValue, isCovered } from "@/lib/topics";
 
 export class CheckInputError extends Error {
@@ -140,7 +140,8 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
 
   if (draftOutcome!.ok) {
     infos.push(draftOutcome!.value.info);
-    const raw = draftOutcome!.value.claims;
+    // Before the rules see it, and not a rejection: the AI answered, it just read SureSend's own sentence as a claim (D-045).
+    const raw = draftOutcome!.value.claims.filter((c) => !insideHoldingSentence(input.draft, c));
     const claims = validateDraftClaims(input.draft, raw, rejected);
     extractions.draft = { ok: true, text: input.draft, claims, rejectedCount: raw.length - claims.length };
   } else {

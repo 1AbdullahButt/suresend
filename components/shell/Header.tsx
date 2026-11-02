@@ -3,6 +3,11 @@ import { forwardRef } from "react";
 import { cx, Mark, ui } from "@/components/ui/atoms";
 import s from "./shell.module.css";
 
+/** Focus lands on these buttons after "Not now": a held Enter's repeat isn't a request for what they open. */
+const ignoreRepeat = (e: React.KeyboardEvent) => {
+  if (e.repeat) e.preventDefault();
+};
+
 /** Design v2 header: the mark and name, Demo menu and Guided tour. Nothing else; the footer carries the concept tag (D-047). */
 export const Header = forwardRef<
   HTMLButtonElement,
@@ -21,6 +26,7 @@ export const Header = forwardRef<
           aria-expanded={menuOpen}
           aria-haspopup="dialog"
           onClick={onMenu}
+          onKeyDown={ignoreRepeat}
           data-demo-menu-trigger=""
           data-tour="demo-menu"
         >
@@ -35,10 +41,7 @@ export const Header = forwardRef<
           className={cx(ui.btn, ui.primary, ui.sm, s.tourBtn)}
           aria-expanded={tourOpen}
           onClick={onTour}
-          // Focus lands here after "Not now": a held Enter's repeat isn't a request for the tour.
-          onKeyDown={(e) => {
-            if (e.repeat) e.preventDefault();
-          }}
+          onKeyDown={ignoreRepeat}
           data-tour="tour-button"
         >
           Guided tour

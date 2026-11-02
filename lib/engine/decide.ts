@@ -153,7 +153,16 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     topicGaps.length > 0
       ? { rule: "D0e", outcome: "fired", detail: topicGaps.map((g) => g.trace[0]!.detail).join(" ") }
       : ticket.message
-        ? { rule: "D0e", outcome: "pass", detail: asked.length > 0 ? "The reply addresses every checked topic the customer asked about." : "The customer's message asks about no checked topic." }
+        ? {
+            rule: "D0e",
+            outcome: "pass",
+            detail:
+              holding.length > 0
+                ? "The reply is SureSend's own holding reply: it says the answer is being confirmed."
+                : asked.length > 0
+                  ? "The reply addresses every checked topic the customer asked about."
+                  : "The customer's message asks about no checked topic.",
+          }
         : { rule: "D0e", outcome: "skipped", detail: "No customer message behind this check, so there's no question to compare the reply with." };
 
   let gapNoun = "";

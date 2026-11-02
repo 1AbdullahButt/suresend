@@ -198,7 +198,7 @@ flowchart TD
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
   over. On the current prompt both pass the gate with no rejected quotes, so the eval's tie-break goes to field accuracy and picks Gemini, though Groq scores higher on
   decisions (below). Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
-  the accuracy gap changed no decision. [evals/results.md](evals/results.md) shows both. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
+  the field-accuracy gap changed no decision. [evals/results.md](evals/results.md) shows both. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
   stored identity hashes to its name.
@@ -241,7 +241,7 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 319 passed |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 350 passed |
 | `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 66 of 68 identical. The other 2 are the no-claim reply (both personas), now a Double-check by rule D0e |
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
@@ -256,7 +256,7 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 98.7% (74/75) | 100% (107/107) | 98.9% (178/180) | PASS |
-| Gemini (fallback) · `gemini-3.5-flash-lite` | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
+| Gemini (fallback) · `gemini-3.5-flash-lite` (before QA's fixes) | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
 
 Every miss on both providers is on the six vague replies, and none reached Good to send. These score against the expected reason. Groq read
 one fee wording as "not refunded" once, which gives a Hold. Gemini did that on 4 runs, and on 6 it found no claim, so rule D0e's Double-check caught them.

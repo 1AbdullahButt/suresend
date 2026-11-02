@@ -286,6 +286,48 @@ describe("only SureSend's own holding reply gets past D0e", () => {
     expect(send.status).toBe(428);
   });
 
+  // The two readings QA built: words after the sentence that the AI's own span "covers" account for nothing.
+  it("a claim the rules ignore can't vouch for words added after the sentence", async () => {
+    const added = "You'll see it reflected after the weekend, minus the processing charge.";
+    const draft = `${ESCALATE_TEMPLATE} ${added}`;
+    const other: DraftClaim = { claimId: "o", topic: "other", value: null, valueText: "", span: added, definitive: true };
+    const r = await runCheck({ ...input(CASES[4]!), draft }, depsFor([other]));
+    expect(r.decision).toBe("CAUTION");
+    expect(r.reasonCode).toBe("TOPIC_GAP");
+  });
+
+  it("a right fee claim with a wide span can't vouch for timing words", async () => {
+    const added = "The transfer fee is refunded and you'll see the money after the weekend.";
+    const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: true }, valueText: "refunded", span: added, definitive: true };
+    const r = await runCheck({ ...input(CASES[4]!), draft: `${ESCALATE_TEMPLATE} ${added}` }, depsFor([fee]));
+    expect(r.decision).toBe("CAUTION");
+    expect(r.claims.map((c) => c.reasonCode)).toEqual(["SUPPORTED", "TOPIC_GAP"]);
+  });
+
+  // The real saved reading of "…as soon as I have it. The transfer fee is refunded." (QA round 2): the AI read SureSend's own sentence as a timeline with no value.
+  it.each([
+    ["the whole sentence", ESCALATE_TEMPLATE],
+    ["part of it", "the exact reversal timeline"],
+    ["the promise", "I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it."],
+  ])("the AI reads %s as a claim with no value: not a claim, so the reply goes out", async (_label, span) => {
+    const own: DraftClaim = { claimId: "o", topic: "reversal_window", value: null, valueText: "", span, definitive: true };
+    const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: true }, valueText: "refunded", span: "The transfer fee is refunded", definitive: true };
+    const kept = `${ESCALATE_TEMPLATE} The transfer fee is refunded.`;
+    const base = { ticketId: "TCK-9002", rail: "unknown" as const, role: "support_agent" as const, overrides: [] };
+    expect((await handleSend({ ...base, draft: kept }, depsFor([own, fee]))).status).toBe(200);
+    // Alone, it's the only claim: it mustn't count as "every claim rejected", which would read as the AI failing.
+    expect((await handleSend({ ...base, draft: ESCALATE_TEMPLATE }, depsFor([own]))).status).toBe(200);
+  });
+
+  it("that doesn't reach past the sentence: a vague claim on words after it still counts, and so does one in any other reply", async () => {
+    const after: DraftClaim = { claimId: "a", topic: "reversal_window", value: null, valueText: "after the weekend", span: "after the weekend", definitive: true };
+    const r = await runCheck({ ...input(CASES[4]!), draft: `${ESCALATE_TEMPLATE} You'll see it after the weekend.` }, depsFor([after]));
+    expect(r.reasonCode).toBe("UNSUPPORTED");
+    const similar = "I'm confirming the exact reversal timeline for your transfer.";
+    const own: DraftClaim = { claimId: "o", topic: "reversal_window", value: null, valueText: "", span: similar, definitive: true };
+    expect((await runCheck({ ...input(CASES[4]!), draft: similar }, depsFor([own]))).reasonCode).toBe("UNSUPPORTED");
+  });
+
   it("the holding reply with a kept claim after it, as Ask first suggests it, still goes out", async () => {
     const draft = `${ESCALATE_TEMPLATE} The transfer fee is refunded.`;
     const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: { flag: true }, valueText: "refunded", span: "transfer fee is refunded", definitive: true };

@@ -440,7 +440,7 @@ ${exposed ? `\n**Exposed cases (${exposedCases.length}): regression only, not he
 const PRODUCTION = {
   provider: "groq",
   fallback: "gemini",
-  why: "Availability and latency matter more for the live path, and the accuracy gap changed no decision.",
+  why: "Availability and latency matter more for the live path, and the field-accuracy gap changed no decision.",
 };
 
 function writeCombined() {
