@@ -1866,3 +1866,21 @@ Held-out, 08:15–08:26 UTC: clean 50/57, fee 21/21, vague 2/9, quotes 119/119; 
 ```
 Every miss is Gemini finding no claim in a vague reply, and rule D0e catching it: the right verdict, Double-check, for a different reason. On the verdict alone it's 75/75, 57/57 and 18/18. Vague replies fell from 7/9 on the previous prompt to 2/9, though the prompt's timeline wording didn't change. I don't know why, and I didn't tune anything. `evals/results.md` again shows the eval's pick (Gemini, on field accuracy) with the override (Groq, D-044). Phase 11 has nothing left open.
 
+**Deployed, Gemini's rows.** Abdullah said yes. `vercel deploy --prod` from 191fbc5, whose CI passed. Only reports and docs changed since the last deploy, so no app code moved. Live checks:
+```
+PASS /how-it-works status 200
+PASS shows "92.0% (69/75)"
+PASS shows "111/111"
+PASS shows "87.7% (50/57)"
+PASS shows "22.2% (2/9)"
+PASS shows "119/119"
+PASS shows "100% (18/18)"
+PASS shows "Gemini's 6 misses are two vague replies"
+PASS no longer shows "Gemini's rows are from the previous prompt"
+PASS no longer shows "`gemini-3.5-flash-lite`, previous prompt"
+PASS / status 200
+PASS the demo renders
+PASS /no-such-page status 404
+all passed
+```
+
