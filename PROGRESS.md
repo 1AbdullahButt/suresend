@@ -2290,3 +2290,44 @@ D:/Project/slite 3f10951 [phase-12]
 ```
 GATE: PASSED
 
+**Merged and deployed.** `main` fast-forwarded to b48ce06 and pushed, branch deleted, `vercel deploy --prod`. Live checks, with a few live AI calls for wording no saved response covers:
+```
+PASS / status 200
+PASS conversations: Léa K. · Instant transfer | Lukas R. · Transfer type unknown | Sofia S. · Standard transfer
+PASS the first ticket shows €250
+PASS no old name, currency or rail on the first screen
+PASS the canonical Hold: Hold | Don't send this yet | Instant transfers now reverse in 1 business day. Your reply says 4.
+PASS the OG image is referenced
+PASS /og.png status 200
+PASS /demo.gif status 200
+PASS /how-it-works status 200
+PASS how-it-works shows Groq's numbers on this prompt
+PASS how-it-works shows the Hold rate
+PASS how-it-works has no old name or currency
+PASS /no-such-page status 404
+PASS "The refund reaches your wallet within a couple of work…" → HOLD/CONTRADICTS_GOVERNING (live, 981 ms): Hold: instant transfers reverse in 1 business day (Instant Transfers: Reversal Exception, 
+PASS "The reversal takes a few days.…" → CAUTION/UNSUPPORTED (live, 813 ms): Caution: the policy says 1 business day (Instant Transfers: Reversal Exception, effective 
+PASS "Hi Léa, so sorry about this! The money from a failed t…" → HOLD/CONTRADICTS_GOVERNING (live, 1116 ms): Hold: instant transfers reverse in 1 business day (Instant Transfers: Reversal Exception, 
+PASS "Your transfer fee will be refunded with the money.…" → CAUTION/TOPIC_GAP (saved, 0 ms): Caution: the draft doesn't answer the customer's question about timing. The policy says 1 
+PASS "Nothing to do on your side: the reversal is automatic …" → HOLD/CONTRADICTS_GOVERNING (saved, 0 ms): Hold: the transfer fee is refunded (Outgoing Transfers: Reversal SOP). The draft says it's
+PASS /api/send on that reply, even with an OK: 409
+all passed
+$ pnpm tsx scripts/slide-over-check.ts https://suresend-demo.vercel.app   (51 checks; 1024 shown)
+PASS 1024: with the panel open, on top: 3 pills and the Demo menu
+PASS 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1024: Esc closes the panel with focus outside it
+PASS 1024: closing leaves focus on a control, not the page
+PASS 1024: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1024: the Demo menu can be clicked with the panel open
+PASS 1024: the Demo menu opens
+PASS 1024: a pill can be clicked with the panel open, and switches the conversation
+PASS 1024: changing the conversation closes the panel (D-049)
+PASS 1024: arrow keys bring the last pill into view
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1024: in the tour, Send is uncovered once the suggested reply is in the composer
+all passed
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+ALL PASS
+```
+**Still open:** Gemini's rerun on `2026-11-03.2`, scheduled for 08:07 UTC on 4 Nov, in its own commit. D-059's decision for Abdullah.
+
