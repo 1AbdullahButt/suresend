@@ -337,6 +337,174 @@
         "decision": "HOLD",
         "reasonCode": "CONTRADICTS_GOVERNING"
       }
+    },
+    {
+      "id": "H26-para-couple-working-instant",
+      "note": "A wrong timeline in number words: \"a couple of\" is 2, and 2 business days contradicts 1",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "The refund reaches your wallet within a couple of working days.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING",
+        "suggestionIncludes": "1 business day"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H27-para-couple-working-standard",
+      "note": "The same wording on a standard transfer: 2 business days contradicts 4",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "You'll see the full sum again in a couple of working days.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING",
+        "suggestionIncludes": "4 business days"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H28-para-few-days-instant",
+      "note": "\"A few\" stays vague: no value to compare, so Double-check, with the docs' value",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "The reversal takes a few days.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H29-para-few-working-standard",
+      "note": "\"A few working days\" stays vague too",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "It will be a few working days before the funds are back.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H30-para-about-week-instant",
+      "note": "\"About a week\" is 7 calendar days, hedged. The units differ, so rule D8 makes it a Double-check, not a Hold",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "Allow about a week for the money to return.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNIT_MISMATCH"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H31-para-about-week-standard",
+      "note": "The same on a standard transfer",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "Your balance is restored in about a week.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNIT_MISMATCH"
+      },
+      "exposed": true,
+      "exposedWhy": "Abdullah's Phase 12 brief names this wording, for the prompt rule on number words."
+    },
+    {
+      "id": "H32-para-two-to-three-instant",
+      "note": "A wrong range in words: 2–3 business days contradicts 1",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "Give it two to three working days and the sum is yours again.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H33-para-three-working-instant",
+      "note": "A wrong number in a word: 3 business days contradicts 1",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "Count on three working days before the funds reappear.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H34-para-seven-business-standard",
+      "note": "A wrong number in a word on a standard transfer: 7 business days contradicts 4",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "Seven business days is what it takes for the sum to reappear.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H35-para-one-or-two-instant",
+      "note": "A range that only starts at the right value: 1–2 business days isn't within 1",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "One or two working days and the sum reappears.",
+      "expect": {
+        "decision": "HOLD",
+        "reasonCode": "CONTRADICTS_GOVERNING"
+      }
+    },
+    {
+      "id": "H36-para-day-or-two-instant",
+      "note": "\"A day or two\" is 1–2 calendar days. The units differ, so Double-check",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "A day or two at most and it's all yours again.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNIT_MISMATCH"
+      }
+    },
+    {
+      "id": "H37-para-handful-days-standard",
+      "note": "A count with no number, like \"a few\", in words the prompt never uses: vague",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "A handful of days and the cash is home.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "H38-para-several-working-instant",
+      "note": "\"Several\" is a count with no number too: vague",
+      "ticketId": "TCK-9001",
+      "rail": "instant",
+      "draft": "The bank needs several working days to hand it over.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNSUPPORTED"
+      }
+    },
+    {
+      "id": "H39-para-fortnight-standard",
+      "note": "A fortnight is 14 calendar days. The units differ, so Double-check",
+      "ticketId": "TCK-9003",
+      "rail": "standard",
+      "draft": "You're looking at a fortnight before the cash comes home.",
+      "expect": {
+        "decision": "CAUTION",
+        "reasonCode": "UNIT_MISMATCH"
+      }
     }
   ]
 }

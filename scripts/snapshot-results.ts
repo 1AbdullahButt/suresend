@@ -3,16 +3,17 @@
 // a change that re-records data/ai-cache, then diff the two files:
 //   pnpm tsx scripts/snapshot-results.ts evals/snapshots/before.json
 //   pnpm tsx scripts/snapshot-results.ts evals/snapshots/after.json --compare evals/snapshots/before.json
-// Covers the golden cases (both personas, plus "Use this reply → Send"), the guided tour's doc edit (both ways of typing
-// it, saved with verify and with re-check), and Fix the doc (the proposal, the reply after approval, and the tour's edit
-// on top of it). The MCP tools run the same runCheck, so their results are these too.
+// Covers the golden cases and the composer presets (both personas, plus "Use this reply → Send"), the guided tour's doc edit
+// (both ways of typing it, saved with verify and with re-check), and Fix the doc (the proposal, the reply after approval, and
+// the tour's edit on top of it). The MCP tools run the same runCheck, so their results are these too.
 import { loadEnvConfig } from "@next/env";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { aiDeps, aiFixDeps, createRuntime } from "@/lib/ai/aiDeps";
 import { runCheck } from "@/lib/check/runCheck";
 import { fixOverride, proposeFix } from "@/lib/fix/propose";
-import { seedSources } from "@/lib/workspace/seed";
+import { PRESETS } from "@/lib/workspace/presets";
+import { seedSources, seedTickets } from "@/lib/workspace/seed";
 import { draftSave, seedBody, variantOverrides, verifiedSave, type VariantId } from "@/lib/workspace/variants";
 import { tourStep5Edits } from "@/lib/workspace/variantBodies";
 import type { CheckInput, CheckResult, Role, SourceOverride } from "@/lib/engine/types";
@@ -63,11 +64,18 @@ async function withReply(rows: Row[], id: string, input: CheckInput): Promise<vo
 
 async function main() {
   const rows: Row[] = [];
-  // Golden cases that existed before Phase 10 (the fee cases, ids "fee-…", are new and have no "before").
   for (const role of ROLES) {
-    for (const c of golden.cases.filter((x) => !x.id.startsWith("fee-"))) {
+    for (const c of golden.cases) {
       const overrides: SourceOverride[] = c.variant ? variantOverrides(c.variant, golden.saveTime) : [];
       await withReply(rows, `golden ${c.id} (${role})`, { ticketId: c.ticketId, rail: c.rail, draft: c.draft, role, overrides, decisionTime: golden.decisionTime });
+    }
+  }
+  // The composer's presets, named by ticket and label so a renamed customer keeps its row.
+  for (const role of ROLES) {
+    for (const t of seedTickets()) {
+      for (const p of PRESETS[t.id] ?? []) {
+        await withReply(rows, `preset ${t.id} ${p.label} (${role})`, { ticketId: t.id, rail: t.rail, draft: p.draft, role });
+      }
     }
   }
   // Guided tour step 6: the doc edit typed two ways, saved with verify or re-check, then Send on the suggestion.

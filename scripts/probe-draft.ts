@@ -1,6 +1,7 @@
 // Debug helper: one provider's live reading of the vague golden replies (or any reply), through the full check.
 //   pnpm tsx scripts/probe-draft.ts groq                     every golden case whose id starts with "vague-"
 //   pnpm tsx scripts/probe-draft.ts groq TCK-9001 "A reply"  one reply on one seed ticket, at that ticket's rail
+//   pnpm tsx scripts/probe-draft.ts groq --para 3            the held-out paraphrased wrong timelines, N fresh readings each
 import { loadEnvConfig } from "@next/env";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -14,10 +15,35 @@ import { seedTickets } from "@/lib/workspace/seed";
 
 loadEnvConfig(process.cwd());
 
-type Row = { id: string; ticketId: string; rail: CheckInput["rail"]; draft: string };
+type Row = { id: string; ticketId: string; rail: CheckInput["rail"]; draft: string; expect?: { decision: string; reasonCode: string } };
+
+/** Each round is a new runtime, so the docs and replies are read again. Prints the verdicts per case and the totals. */
+async function paraphrases(provider: string, runs: number) {
+  const suite = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "heldout.json"), "utf8")) as { decisionTime: string; cases: Row[] };
+  const rows = suite.cases.filter((c) => c.id.includes("-para-"));
+  const verdicts = new Map<string, string[]>(rows.map((c) => [c.id, []]));
+  for (let run = 1; run <= runs; run++) {
+    const deps = aiDeps(createRuntime({ only: provider as ProviderName, throttle: true, cache: createAiCache() }));
+    for (const c of rows) {
+      const r = await runCheck({ ticketId: c.ticketId, rail: c.rail, draft: c.draft, role: "support_agent", overrides: [], decisionTime: suite.decisionTime }, deps);
+      const read = r.claims.filter((x) => x.reasonCode !== "TOPIC_GAP").map((x) => `${JSON.stringify(x.draftClaim.value)} ${x.draftClaim.definitive ? "definite" : "hedged"}`);
+      verdicts.get(c.id)!.push(`${r.decision}/${r.reasonCode} [${read.join(" + ") || "no claims"}]`);
+    }
+  }
+  const all = [...verdicts.values()].flat();
+  const count = (d: string) => all.filter((v) => v.startsWith(`${d}/`)).length;
+  for (const c of rows) {
+    console.log(`${c.id} (expected ${c.expect?.decision}/${c.expect?.reasonCode})
+  reply: ${c.draft}`);
+    for (const v of new Set(verdicts.get(c.id))) console.log(`  ${verdicts.get(c.id)!.filter((x) => x === v).length}× ${v}`);
+  }
+  console.log(`
+Total ${all.length} readings: Hold ${count("HOLD")}, Double-check ${count("CAUTION")}, Ask first ${count("ESCALATE")}, Good to send ${count("ALLOW")}, couldn't check ${count("AI_UNAVAILABLE")}`);
+}
 
 async function main() {
   const [provider = "groq", ticketId, reply] = process.argv.slice(2);
+  if (ticketId === "--para") return paraphrases(provider, Number(reply) || 3);
   const golden = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "golden.json"), "utf8")) as { decisionTime: string; cases: Row[] };
   const ticket = seedTickets().find((t) => t.id === ticketId);
   const rows: Row[] = ticket && reply ? [{ id: "reply", ticketId: ticket.id, rail: ticket.rail, draft: reply }] : golden.cases.filter((c) => c.id.startsWith("vague-"));
