@@ -390,8 +390,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
     }
   }
 
-  // A doc that lost a claim is listed for what it did say, and here for what it lost.
-  for (const cap of result.caps) if (!seen.has(cap.sourceId) || cap.partial) didntCount.push({ id: cap.sourceId, text: `${capName(cap)} couldn't be read.` });
+  for (const cap of result.caps) if (!seen.has(cap.sourceId)) didntCount.push({ id: cap.sourceId, text: `${capName(cap)} couldn't be read.` });
 
   // A gap, an outside-coverage claim or an unread doc means the docs weren't fully compared, so saying they're silent would be false.
   const reason = claim?.reasonCode ?? result.reasonCode;

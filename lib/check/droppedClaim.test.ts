@@ -199,6 +199,10 @@ describe("the cap only caps", () => {
     expect(r.reasonCode).toBe("CLAIM_UNVERIFIED");
     expect(r.claims.find((c) => c.reasonCode === "CLAIM_UNVERIFIED")?.governing).toBeNull();
     expect(summarize(r, "instant").sentence).not.toContain("Your docs say");
+    // Why neither: its card says the part wasn't compared, and lists no doc as if it had been.
+    const entry = r.claims.find((c) => c.reasonCode === "CLAIM_UNVERIFIED")!;
+    expect(whyModel(r, entry).others).toEqual([]);
+    expect(whyModel(r, entry).noDocs).toContain("didn't compare this part");
   });
 
   it("a rewrite that echoes the placeholder loses to the template", async () => {
@@ -294,8 +298,9 @@ describe("a doc's claim dropped for a bad quote caps the reply too", () => {
     const r = await run([exception(), { ...feeClaim, quote: "For instant transfers, the transfer fee isn't refunded." }]);
     expect([r.decision, r.reasonCode]).toEqual(["HOLD", "CONTRADICTS_GOVERNING"]);
     expect(r.caps.map((c) => c.partial)).toEqual([true]);
-    // The doc is listed as evidence, for what it did say. Why still says what it lost.
-    expect(whyModel(r).didntCount.map((x) => x.text)).toContain("Part of DOC-103 couldn't be read.");
+    // One line per doc: React keys them by id, and "2 sources didn't count" would be one doc counted twice.
+    const ids = whyModel(r).didntCount.map((x) => x.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("no value is named while part of a doc is missing (D-046)", async () => {

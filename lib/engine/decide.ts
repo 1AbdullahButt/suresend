@@ -373,7 +373,7 @@ function unverifiedPart(topic: string, i: number, pool: EvaluatedClaim[], docsSa
     draftClaim: dc,
     decision: "CAUTION",
     reasonCode: "CLAIM_UNVERIFIED",
-    evidence: pool.filter((e) => e.claim.topic === topic).map((e) => toEvidence(e, dc)),
+    evidence: isCovered(topic) ? pool.filter((e) => e.claim.topic === topic).map((e) => toEvidence(e, dc)) : [],
     trace: [
       {
         rule: "D0a",

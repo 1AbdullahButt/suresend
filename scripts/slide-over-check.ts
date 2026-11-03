@@ -48,8 +48,10 @@ async function openPanel(page: Page) {
   await page.waitForTimeout(300); // the slide-in, and the focus move inside the panel
 }
 
+let server: ChildProcess | null = null;
+
 async function main() {
-  const server = process.argv.includes("--serve") ? await startServer() : null;
+  if (process.argv.includes("--serve")) server = await startServer();
   // Headless Chromium hides scrollbars by default, which would hide the bug this looks for.
   const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
   for (const width of WIDTHS) {
@@ -145,7 +147,22 @@ async function main() {
     await tourPage.waitForTimeout(400);
     await card.getByRole("button", { name: /^Next/ }).click();
     await tourPage.waitForTimeout(400);
-    await tourPage.getByRole("button", { name: "Use this reply", exact: true }).click();
+    const used = await tourPage.getByRole("button", { name: "Use this reply", exact: true }).click({ timeout: 8000 }).then(() => true, () => false);
+    if (!used) {
+      const seen = await tourPage.evaluate(() => {
+        const aside = document.querySelector('aside[aria-label="SureSend"]');
+        return {
+          step: document.querySelector('[role="dialog"]')?.textContent?.slice(0, 60),
+          panel: aside ? getComputedStyle(aside).visibility : "none",
+          decision: aside?.querySelector('[aria-label="Decision"]')?.textContent?.slice(0, 90),
+          buttons: aside ? [...aside.querySelectorAll("button")].map((b) => b.textContent?.trim()).filter(Boolean).slice(0, 8) : [],
+        };
+      });
+      check(false, `${width}: in the tour, "Use this reply" wasn't there: ${JSON.stringify(seen)}`);
+      await tourPage.screenshot({ path: process.env.SLIDE_OVER_FAIL ?? "design/audit/slide-over-tour-fail.png" });
+      await tourCtx.close();
+      continue;
+    }
     await tourPage.waitForTimeout(600);
     const free = await tourPage.getByRole("button", { name: "Send", exact: true }).click({ timeout: 3000, trial: true }).then(() => true, () => false);
     check(free, `${width}: in the tour, Send is uncovered once the suggested reply is in the composer`);
@@ -174,12 +191,15 @@ async function main() {
   check(await send.evaluate(onTop), "844×390: focus on Send brings it into view, on top");
   await ctx.close();
   await browser.close();
-  if (server) stopServer(server);
   console.log(failures ? `${failures} failed` : "all passed");
-  process.exit(failures ? 1 : 0);
 }
 
-main().catch((e) => {
-  console.error(e);
-  process.exit(2);
-});
+main()
+  .catch((e) => {
+    console.error(e);
+    failures = -1;
+  })
+  .finally(() => {
+    if (server) stopServer(server);
+    process.exit(failures < 0 ? 2 : failures ? 1 : 0);
+  });

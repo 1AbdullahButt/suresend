@@ -2411,3 +2411,62 @@ $ pnpm eval --heldout --provider groq --fresh
 ```
 Held-out is report-only, so "passes" has no line to cross. I read it as: no wrong reply reached Good to send, and none did. On the paraphrased wrong timelines the count is Hold 18, Double-check 24, Good to send 0, the same as the earlier session. The one miss that's less strict than it should be is H23, read as vague on 2 of 3 runs: a Double-check, not a Hold.
 
+**QA: APPROVED at 9b15dee**, no blockers or majors, 9 minors. It couldn't get a wrong reply to Good to send through the cap in 71 hand-written cases. What it couldn't test: no saved path drops a claim, so no real model has been given the placeholder in a rewrite, and the template is the fallback. It reads the docs' side as past Abdullah's copy, flagged honestly, and his to keep or remove. It also notes the unlock for the rename was inferred from his instruction, not stated.
+
+**I took the minors that were real, tests first (7d6d801):** the card's line says "Not verified" or "Not answered". "Your docs say the transfer fee is refunded", since "it" read as the money. A dropped claim outside the topics names no value from the docs. A rewrite echoing the placeholder loses to the template.
+
+**QA's short confirmation: APPROVED at 7d6d801**, no blockers or majors, with 3 minors and one correction: the scorer reads a suggestion's text too, so the placeholder check does touch something scored, though it can't move a published number, since both Groq reports show 0 quote rejections.
+
+**After it, with no further QA pass, so check these first if anything looks off:** the README's test count. The Why card for a dropped claim outside the topics no longer lists a doc as if it had been compared. And I reverted one line of my own: Why listing a partly read doc a second time, which gave React a duplicate key and "2 sources" for one doc. So on a Hold from a partly read doc, Why doesn't mention the lost part; the card's Hold stands.
+
+**A failure I couldn't explain.** The slide-over check crashed twice in the tour at 900 and 1024 px, waiting for "Use this reply", both times on one server instance that also passed in between. The script didn't stop its server when it crashed, so the instance carried over. I couldn't reproduce it after that: 40 runs of that tour sequence, 60 direct sends (all a saved Hold, so it isn't the rate limiter), and 8 full runs, 3 of them on one long-running server, were clean. The script now stops its server in every case, and reports what's on screen if it recurs. It may still be a real intermittent, so if the tour's step 3 ever misses its button, this is where to start.
+
+**The gate, final run on this code:**
+```
+$ pnpm typecheck && pnpm lint: clean
+$ pnpm test
+ Test Files  34 passed (34)
+      Tests  484 passed (484)
+$ pnpm e2e
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1
+  1 passed (44.7s)
+$ pnpm tsx scripts/ui-audit.ts --serve
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+$ pnpm mcp:e2e (local, saved mode)
+ALL PASS
+$ the guided tour at 1024 and 800, every step
+all passed
+$ pnpm tsx scripts/snapshot-results.ts <temp> --compare evals/snapshots/phase12b-after.json
+132 results (0 not on saved responses). Compared: 132 identical, 0 different, 0 missing.
+$ pnpm tsx scripts/slide-over-check.ts --serve   (51 checks; 1024 and the short screen shown)
+PASS 1024: with the panel open, on top: 3 pills and the Demo menu
+PASS 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1024: Esc closes the panel with focus outside it
+PASS 1024: closing leaves focus on a control, not the page
+PASS 1024: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1024: the Demo menu can be clicked with the panel open
+PASS 1024: the Demo menu opens
+PASS 1024: a pill can be clicked with the panel open, and switches the conversation
+PASS 1024: changing the conversation closes the panel (D-049)
+PASS 1024: arrow keys bring the last pill into view
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1024: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 844×390: the panel keeps its height (338 px)
+PASS 844×390: Tab stays inside the panel, since it covers the pills
+PASS 844×390: focus on Send brings it into view, on top
+all passed
+```
+
+**The re-lock, proven with a real attempt.** `.loop/locked` is back, with no diff against main:
+```
+$ touch SPEC.md data/seed/sources.json tests/helpers/fixtures.ts e2e/demo.spec.ts
+BLOCKED by protect-locked: "touch" on "tests/", "spec.md", "data/seed/", "e2e/" is locked (SPEC is the contract; see CLAUDE.md rule 1). If a locked test or doc is wrong, write .loop/BLOCKER.md with the test, line, expected vs actual and SPEC section, then stop.
+$ git diff main --stat -- .loop/locked IMPLEMENTATION_BRIEF.md tests/engine tests/ai e2e .claude lib/ai
+(no output)
+$ git diff main -U0 -- SPEC.md | grep "^@@"
+@@ -389 @@  @@ -393 @@  @@ -409 @@  @@ -424 @@  @@ -427 @@     (all inside Appendix A, lines 387–449)
+$ git worktree list
+D:/Project/slite 7d6d801 [phase-12b]
+```
+GATE: PASSED
+
