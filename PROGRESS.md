@@ -2154,7 +2154,7 @@ all passed
 ```
 
 **QA's second pass: APPROVED at 845c464**, no blockers or majors, 15 minors. It reran the gate itself and counted every published number by hand against the reports. What I did with the minors:
-- **Fixed in code:** `overflow: clip` had stopped a short screen scrolling to Send, so it's now only where the slide-over needs it. Tour step 6 falls back to Send, and scrolls to a doc that renders late. The phone's hanging dot is gone. The copy check's allowlist is scoped: a bare "rail" only outside JSX, MCP's phrases only in MCP. The eval's report keeps what each miss said.
+- **Fixed in code:** `overflow: clip` had stopped a short screen scrolling to Send, so it's now only where the slide-over needs it. Tour step 6 falls back to Send. (Its scroll to the doc only worked on tall screens at this point; QA's confirmation showed that, and it's fixed below.) The phone's hanging dot is gone. The copy check's allowlist is scoped: a bare "rail" only outside JSX, MCP's phrases only in MCP. The eval's report keeps what each miss said.
 - **Fixed in words:** "previous prompt" meant two prompts in the README. "Groq 74/75", "65/75", "22 of its first 28", the unsourced line about Gemini's quota, and README's account of the golden misses, which now separates what's on disk from what's inferred.
 - **Left, and why (D-059):** a claim dropped for a bad quote can leave Good to send, which is a rule change for Abdullah. The tour's card over the doc from 700 to 793 px. Esc after the reset dialog. `inert` dropping the landmark while the panel is open, and "resolves for an unknown transfer type" behind Details: QA agrees with both.
 
@@ -2163,4 +2163,130 @@ all passed
 You can relax, the funds retur...: 1 of 10 not verbatim | the funds return on its own by Monday
 Hi Léa, so sorry about this! T...: 0 of 10 not verbatim |
 ```
+
+**The same probe with the committed script (prompt `2026-11-03.2`), so anyone can run it:**
+```
+$ pnpm tsx scripts/probe-draft.ts groq --spans 10 "<reply>"
+0 of 10 readings had a span that isn't verbatim: "Hi Léa, so sorry about this! The money from a fail…"
+2 of 10 readings had a span that isn't verbatim: "You can relax, the funds return on their own by Mo…"
+  "the funds return on its own by Monday"
+```
+So "Hi Léa" is 0 of 29 across the three runs on this wording, and the miscopy 3 of 20. A first try gave 0 of 0: a local DNS failure, not a provider's, which the script now says rather than hiding.
+
+**QA's confirmation of those fixes: APPROVED at 3f10951**, no blockers or majors. Half of one item didn't hold: step 6 scrolled to the doc only on screens about 735 px tall and up, and the edit could tug the panel once when scrolling by hand. The 51st check also passed with the bug put back, since a rectangle ignores clipping.
+
+**After it, with no further QA pass, so check these first if anything looks off:**
+- **Step 6:** a target above or below the fold now counts as one to scroll to, once, keyed on that rather than on what's on screen. Only a target waiting off to the side or hidden, like a closed panel, doesn't. My own walk, through step 5's review:
+```
+1024×800: step 5's review open: true
+PASS 1024×800: doc top 216, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  1024×700: step 5's review open: true
+PASS 1024×700: doc top 216, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  1024×600: step 5's review open: true
+PASS 1024×600: doc top 216, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  800×700: step 5's review open: true
+PASS 800×700: doc top 216, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  800×600: step 5's review open: true
+PASS 800×600: doc top 216, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  1440×700: step 5's review open: true
+PASS 1440×700: doc top 142, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+  1280×600: step 5's review open: true
+PASS 1280×600: doc top 142, textarea visible 230 of 230, after scrolling to the top by hand the panel stays at 0
+PASS 320: /Léa K\./: the picker ends 0 px past its column
+PASS 320: /Lukas R\./: the picker ends 0 px past its column
+PASS 320: /Sofia S\./: the picker ends 0 px past its column
+all passed
+```
+My first version of this walk never opened the review, since it looked for the wrong button, so its pass meant nothing. This one prints that it did.
+- **The 51st check** asks what a click would hit.
+- **320 px:** the picker stays in its column.
+- **Words:** "the prompt just before this one" names `2026-11-03.1`. The dropped-claim path states its full conditions: wording the detector doesn't know is one of them. D-056's "QA agreed" is credited right, and an unsourced line in D-059 is gone.
+
+**The gate, final run on this code:**
+```
+$ pnpm typecheck && pnpm lint: clean
+$ pnpm test
+ Test Files  33 passed (33)
+      Tests  445 passed (445)
+$ pnpm e2e
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1
+  1 passed (27.8s)
+$ pnpm tsx scripts/ui-audit.ts --serve
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+$ pnpm mcp:e2e (local, saved mode)
+ALL PASS
+$ the guided tour at 1024 and 800, every step
+all passed
+$ pnpm tsx scripts/slide-over-check.ts --serve
+PASS 1099: with the panel open, on top: 3 pills and the Demo menu
+PASS 1099: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1099: Esc closes the panel with focus outside it
+PASS 1099: closing leaves focus on a control, not the page
+PASS 1099: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1099: the Demo menu can be clicked with the panel open
+PASS 1099: the Demo menu opens
+PASS 1099: a pill can be clicked with the panel open, and switches the conversation
+PASS 1099: changing the conversation closes the panel (D-049)
+PASS 1099: arrow keys bring the last pill into view
+PASS 1099: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1099: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 1024: with the panel open, on top: 3 pills and the Demo menu
+PASS 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1024: Esc closes the panel with focus outside it
+PASS 1024: closing leaves focus on a control, not the page
+PASS 1024: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1024: the Demo menu can be clicked with the panel open
+PASS 1024: the Demo menu opens
+PASS 1024: a pill can be clicked with the panel open, and switches the conversation
+PASS 1024: changing the conversation closes the panel (D-049)
+PASS 1024: arrow keys bring the last pill into view
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1024: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 900: with the panel open, on top: 3 pills and the Demo menu
+PASS 900: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 900: Esc closes the panel with focus outside it
+PASS 900: closing leaves focus on a control, not the page
+PASS 900: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 900: the Demo menu can be clicked with the panel open
+PASS 900: the Demo menu opens
+PASS 900: a pill can be clicked with the panel open, and switches the conversation
+PASS 900: changing the conversation closes the panel (D-049)
+PASS 900: arrow keys bring the last pill into view
+PASS 900: no scrollbar on the pill strip (bar 0px, overflow true, hidden true)
+PASS 900: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 700: with the panel open, on top: 3 pills and the Demo menu
+PASS 700: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 700: Esc closes the panel with focus outside it
+PASS 700: closing leaves focus on a control, not the page
+PASS 700: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 700: the Demo menu can be clicked with the panel open
+PASS 700: the Demo menu opens
+PASS 700: a pill can be clicked with the panel open, and switches the conversation
+PASS 700: changing the conversation closes the panel (D-049)
+PASS 700: arrow keys bring the last pill into view
+PASS 700: no scrollbar on the pill strip (bar 0px, overflow true, hidden true)
+PASS 700: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 844×390: the panel keeps its height (338 px)
+PASS 844×390: Tab stays inside the panel, since it covers the pills
+PASS 844×390: focus on Send brings it into view, on top
+all passed
+```
+
+**The re-lock, proven with a real attempt.** `.loop/locked` is back, with no diff against main:
+```
+$ touch SPEC.md data/seed/tickets.json tests/helpers/fixtures.ts e2e/demo.spec.ts
+BLOCKED by protect-locked: "touch" on "tests/", "spec.md", "data/seed/", "e2e/" is locked (SPEC is the contract; see CLAUDE.md rule 1). If a locked test or doc is wrong, write .loop/BLOCKER.md with the test, line, expected vs actual and SPEC section, then stop.
+$ git diff main --stat -- .loop/locked IMPLEMENTATION_BRIEF.md tests/engine tests/ai .claude
+(no output)
+$ git diff main -U0 -- SPEC.md | grep "^@@"
+@@ -396 @@  @@ -409 @@  @@ -412,2 @@  @@ -415,2 @@  @@ -418 @@  @@ -446,3 @@     (all inside Appendix A, lines 387–449)
+```
+
+**Not done in this phase:** Gemini on prompt `2026-11-03.2`, which follows in its own commit once its daily quota allows. The hedge runs weren't repeated on this prompt, and README labels them with the prompt they ran on.
+
+```
+$ git worktree list
+D:/Project/slite 3f10951 [phase-12]
+```
+GATE: PASSED
 

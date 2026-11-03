@@ -490,6 +490,18 @@
     color: var(--on-ink-muted);
     flex-wrap: wrap;
   }
+  /* "Transfer type unknown" is long for a 320 px phone: the picker stays in its column and shortens. */
+  .chatTitle {
+    min-width: 0;
+  }
+  .chatWho .railWrap,
+  .chatWho .rail {
+    min-width: 0;
+    max-width: 100%;
+  }
+  .chatWho .rail {
+    text-overflow: ellipsis;
+  }
   .chatWho .rail {
     height: 28px;
     background: transparent;

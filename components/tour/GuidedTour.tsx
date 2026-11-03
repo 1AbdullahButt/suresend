@@ -161,6 +161,17 @@ function findTarget(selectors: string[]): HTMLElement | null {
   return null;
 }
 
+/** The first target that can be scrolled to: laid out, and not waiting off to the side or hidden, as a closed panel or sheet is. */
+function inReach(selectors: string[]): HTMLElement | null {
+  for (const sel of selectors) {
+    const el = document.querySelector<HTMLElement>(sel);
+    if (!el) continue;
+    const r = el.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0 && r.right > 0 && r.left < window.innerWidth && getComputedStyle(el).visibility !== "hidden") return el;
+  }
+  return null;
+}
+
 interface Box {
   top: number;
   left: number;
@@ -353,13 +364,14 @@ export function GuidedTour({
     const update = () => {
       if (pausedRef.current) return;
       const sel = isTour && step ? step.target(agRef.current) : selectors;
-      const el = findTarget(sel) ?? (isTour ? document.querySelector<HTMLElement>(sel[0] ?? "") : null);
       // Per element, not per list: a doc that renders after the panel still needs scrolling to.
-      const key = `${sel.join(",")}|${el?.dataset.tour ?? ""}`;
-      if (el && isTour && scrolledFor.current !== key) {
+      const reach = isTour ? inReach(sel) : null;
+      const key = `${sel.join(",")}|${reach?.dataset.tour ?? ""}`;
+      if (reach && scrolledFor.current !== key) {
         scrolledFor.current = key;
-        el.scrollIntoView({ block: "nearest" });
+        reach.scrollIntoView({ block: "nearest" });
       }
+      const el = findTarget(sel) ?? (isTour ? document.querySelector<HTMLElement>(sel[0] ?? "") : null);
       const clearSel = isTour && step?.keepClear ? step.keepClear(agRef.current) : null;
       const clearEl = clearSel ? document.querySelector<HTMLElement>(clearSel) : null;
       if (!clearEl) scrolledClear.current = "";

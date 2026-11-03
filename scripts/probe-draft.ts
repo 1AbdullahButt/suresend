@@ -21,6 +21,7 @@ type Row = { id: string; ticketId: string; rail: CheckInput["rail"]; draft: stri
 
 /** A span that isn't verbatim drops its claim, and with no claim left the check can't run. How often does this reply get one? */
 async function spans(provider: string, runs: number, reply: string) {
+  if (!reply) throw new Error('usage: probe-draft.ts groq --spans 10 "A reply"');
   let bad = 0;
   let read = 0;
   const seen = new Set<string>();

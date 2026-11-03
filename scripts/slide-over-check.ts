@@ -171,11 +171,7 @@ async function main() {
   const send = page.getByRole("button", { name: "Send", exact: true });
   await send.focus();
   await page.waitForTimeout(150);
-  const shown = await send.evaluate((el) => {
-    const r = el.getBoundingClientRect();
-    return r.top >= 0 && r.bottom <= window.innerHeight;
-  });
-  check(shown, "844×390: focus on Send brings it into view");
+  check(await send.evaluate(onTop), "844×390: focus on Send brings it into view, on top");
   await ctx.close();
   await browser.close();
   if (server) stopServer(server);
