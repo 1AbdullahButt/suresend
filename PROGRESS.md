@@ -2470,3 +2470,91 @@ D:/Project/slite 7d6d801 [phase-12b]
 ```
 GATE: PASSED
 
+**Merged and deployed.** `main` fast-forwarded to 27370be and pushed, CI passed on it, branch deleted, `vercel deploy --prod`. The push and the first deploy failed on a local DNS failure, and nothing went out until they were retried. Live checks, with a few live AI calls for wording no saved response covers:
+```
+PASS / status 200
+PASS conversations: Léa K. · Instant transfer | Lukas R. · Transfer type unknown | Sofia S. · Standard transfer
+PASS €250, and no old name, currency or rail on the first screen
+PASS the Docs tab has no old name or rail
+PASS the canonical Hold: Hold | Don't send this yet | Instant transfers now reverse in 1 business day. Your reply says 4.
+FAIL the seed's owners: Marie Dubois, Jonas Weber, Elena
+PASS /how-it-works status 200
+PASS how-it-works shows Groq's final numbers
+PASS how-it-works states the cap's cost
+PASS /og.png status 200
+PASS /demo.gif status 200
+PASS /no-such-page status 404
+PASS "The refund reaches your wallet within a couple of wo…" → HOLD/CONTRADICTS_GOVERNING (live, 940 ms)
+PASS "The reversal takes a few days.…" → CAUTION/UNSUPPORTED (live, 821 ms)
+PASS "Hi Léa, so sorry about this! The money from a failed…" → HOLD/CONTRADICTS_GOVERNING (live, 1313 ms)
+PASS "Nothing to do on your side: the reversal is automati…" → HOLD/CONTRADICTS_GOVERNING (saved, 0 ms)
+1 failed
+$ pnpm tsx scripts/slide-over-check.ts https://suresend-demo.vercel.app   (51 checks; 1024 shown)
+PASS 1024: with the panel open, on top: 3 pills and the Demo menu
+PASS 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1024: Esc closes the panel with focus outside it
+PASS 1024: closing leaves focus on a control, not the page
+PASS 1024: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1024: the Demo menu can be clicked with the panel open
+PASS 1024: the Demo menu opens
+PASS 1024: a pill can be clicked with the panel open, and switches the conversation
+PASS 1024: changing the conversation closes the panel (D-049)
+PASS 1024: arrow keys bring the last pill into view
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1024: in the tour, Send is uncovered once the suggested reply is in the composer
+all passed
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+ALL PASS
+```
+The 1 failure above was my check, not the site: its pattern looked for the word "rail" in the seed's JSON, and the field keeps that name (D-053). Checked again without it: no old name, no rail wording, and the word appears only as the field's key, in the tickets.
+
+## Final state (frozen, 2026-11-04)
+
+**The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." The one thing still to land is Gemini's numbers, which are reports and docs, in their own commit, and aren't a gate.
+
+**What's live:** https://suresend-demo.vercel.app, from 27370be. The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
+
+**What it does.** SureSend checks a support reply against the team's docs at Send. The AI reads the reply and the docs and quotes them; fixed rules make every decision. Two topics: when a failed transfer's money comes back, and whether the fee is refunded. Four verdicts: Good to send, Double-check, Hold, Ask first. Plus Couldn't check when the reply can't be read. All data is synthetic: Léa (instant transfer), Lukas (transfer type unknown) and Sofia (standard transfer), in euros, with docs owned by Marie Dubois, Jonas Weber and Elena.
+
+**Its final numbers, Groq, 3 runs, as they came:**
+
+| | Result |
+|---|---|
+| Golden, 25 cases | 75/75, quotes 117/117, fields 175/180, gate PASS |
+| Held-out clean, 25 cases | 67/75, fee 16/21, vague 9/9, quotes 158/158 |
+| Held-out exposed, 14 cases | 33/42, quotes 72/72 |
+| Paraphrased wrong timelines, 42 readings | Hold 18, Double-check 24, Good to send 0 |
+| The six of those that give a number in the docs' unit | 18 of 18 Hold |
+| Saved results | 132 of 132 keep their decision, reason and each claim's verdict |
+| Tests | 484 passed, including locked T1–T8 |
+| Browser | e2e passed, 51 of 51 slide-over checks local and live, 0 serious or critical axe issues, the tour walked at 1024 and 800 |
+| MCP | ALL PASS, local and live |
+
+No held-out miss reached Good to send. The one that's less strict than it should be is H23, read as vague on 2 of 3 runs: a Double-check, not a Hold. The same prompt scored 73/75 and 69/75 in an earlier session, so one session's score is one session's.
+
+**Gemini:** not a gate. Its rows are labelled as the previous prompt (`2026-11-02.6`), golden 69/75 and held-out clean 50/57 on the set of that day. Its rerun follows its 08:07 UTC reset, in its own commit. That job lives only in this session; if it doesn't fire, the commands are `pnpm eval --provider gemini --fresh`, then `pnpm eval --heldout --provider gemini --fresh`. The how-it-works page reads the README at build, so its Gemini rows stay as they are until someone redeploys.
+
+**Abdullah's decisions in force:**
+- D-060: any claim dropped for a bad quote caps the reply at Double-check.
+- D-058: a wrong "about a week" stays a Double-check.
+- D-056: the "Standard transfers" headline stays.
+- D-044: Groq is primary, though the eval's tie-break can pick Gemini.
+- D-051's clause: "on the same ticket at the same time, the same AI findings and the same docs always produce the same decision."
+
+**Left for Abdullah to keep or remove:** D-060's docs' side, a doc that loses a claim to quote validation can't support Good to send. I added it on my reading of "any claim". His copy spoke of the reply, and QA reads it as past that. It comes out cleanly if he meant replies only. The rename's unlock was also inferred from his instruction (D-061): it can't be done any other way, but he didn't state it.
+
+**Known and left, all in README Limitations or D-059 unless noted:**
+- The verdict on hedged wording varies from run to run, and the hedge runs ran on `2026-11-02.6`, not this prompt. H18's hedge got a Hold on all 6 runs on this prompt.
+- A right reply whose quote the AI miscopies gets a Double-check it didn't earn: 3 of 20 readings of one reply.
+- No real model has been given a dropped claim's placeholder in a rewrite, since no saved path drops a claim. The template is the fallback (D-060).
+- "Hi Léa" needed a prompt line, and a model upgrade could bring that back (D-053).
+- The slide-over check failed twice on one server instance and never again: see above, and start there if the tour's step 3 ever misses its button. Not in Limitations.
+- The tour's card covers the doc at 700–793 px wide. Esc after closing the reset dialog leaves focus on the page.
+- SPEC.md outside Appendix A and the brief keep the old names and "rail": D-053 and D-061 amend them. The mockups in `design/` are history. The README hasn't been cut, and Abdullah's brief for that hasn't come; it isn't a code change.
+
+**The lock:** `.loop/locked` holds, and a real edit attempt is refused. `docs/VIDEO_SCRIPT.md` has the customers' new names, and stays uncommitted and undeployed.
+```
+$ git worktree list
+D:/Project/slite 27370be [main]
+```
+
