@@ -1854,3 +1854,15 @@ PASS 390: status 404, disclaimer ×1, the link lands on https://suresend-demo.ve
 ```
 **Still open:** Gemini's rerun on `2026-11-02.6`, scheduled for 08:07 UTC on 3 Nov, in its own commit.
 
+**Gemini's rerun, in its own commit, as Abdullah asked.** On the final prompts and rules (`2026-11-02.6`, 8ab655d), 3 Nov, 3 runs each, with no limit or outage. Published as they came.
+```
+Golden, 08:07–08:15 UTC:   69/75, quotes 111/111, fields 180/180, gate PASS
+  vague-very-soon          0/3, CAUTION/TOPIC_GAP on every run (expected CAUTION/UNSUPPORTED)
+  vague-unknown-rail       0/3, CAUTION/TOPIC_GAP on every run (expected CAUTION/UNSUPPORTED)
+Held-out, 08:15–08:26 UTC: clean 50/57, fee 21/21, vague 2/9, quotes 119/119; exposed 18/18, quotes 39/39
+  H20-vague-mid-month      2/3, one CAUTION/TOPIC_GAP
+  H21-vague-before-long    0/3, CAUTION/TOPIC_GAP on every run
+  H22-vague-paperwork      0/3, CAUTION/TOPIC_GAP on every run
+```
+Every miss is Gemini finding no claim in a vague reply, and rule D0e catching it: the right verdict, Double-check, for a different reason. On the verdict alone it's 75/75, 57/57 and 18/18. Vague replies fell from 7/9 on the previous prompt to 2/9, though the prompt's timeline wording didn't change. I don't know why, and I didn't tune anything. `evals/results.md` again shows the eval's pick (Gemini, on field accuracy) with the override (Groq, D-044). Phase 11 has nothing left open.
+

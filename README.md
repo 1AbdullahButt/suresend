@@ -198,8 +198,8 @@ flowchart TD
 - **AI providers:** two live providers behind one adapter ([`lib/ai/client.ts`](lib/ai/client.ts)): Groq
   (`openai/gpt-oss-120b`, strict JSON-schema output) and Google Gemini (`gemini-3.5-flash-lite`, native JSON-schema
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
-  over. On the last prompt both providers finished (`2026-11-02.5`), both passed the gate with no rejected quotes, so the eval's tie-break went to field accuracy and picked Gemini, though Groq scored higher on
-  decisions (below). Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
+  over. On the current prompt both pass the gate with no rejected quotes, so the eval's tie-break goes to field accuracy and picks Gemini, though Groq scores higher on verdict and reason together, and Gemini on
+  the verdict alone (below). Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
   the field-accuracy gap changed no decision. [evals/results.md](evals/results.md) shows the pick and the override whenever both have run on the current prompt. An Anthropic adapter is kept, off by default. See [DECISIONS.md](DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its
@@ -259,7 +259,7 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 98.7% (74/75) | 100% (115/115) | 96.1% (173/180) | PASS |
-| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 86.7% (65/75) | 100% (107/107) | 100% (180/180) | PASS |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | 92.0% (69/75) | 100% (111/111) | 100% (180/180) | PASS |
 
 Groq's one miss: it read "less the small charge for the transfer" as vague on 1 of 3 runs, so that run got a Double-check, not a Hold. These score against the expected reason, and no miss
 reached Good to send.
@@ -267,8 +267,8 @@ reached Good to send.
 Groq's field accuracy is below 100% because it read DOC-101 and DOC-104 as "in force" where the hand-written fixtures say "unstated". Over this phase's three sessions it went
 170, 178, then 173 of 180. The prompt for reading docs didn't change in this phase, so that's the model varying. No decision changed.
 
-**Gemini's rows are from the previous prompt (`2026-11-02.5`), and before QA's rule fixes.** It hit its 500-a-day free limit on 2 Nov, so its rerun on this prompt follows in its own commit. On that
-prompt every Gemini miss was a vague reply, and none reached Good to send: a Hold on 4 runs, and on 6 it found no claim, so rule D0e's Double-check caught them.
+Gemini's 6 misses are two vague replies where it found no claim on every run, so rule D0e's Double-check caught them: the right verdict, for a different reason. On the verdict alone, Gemini is 75/75 and
+Groq 74/75. Its previous-prompt session scored 65/75.
 
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
@@ -279,14 +279,16 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 | Provider · model | All clean cases | Fee cases only (H12, H17–H19, H23–H25) | Vague replies only (H20–H22) | Quote validity |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 98.2% (56/57) | 95.2% (20/21) | 100% (9/9) | 100% (130/130) |
-| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt, 16 cases | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | 87.7% (50/57) | 100% (21/21) | 22.2% (2/9) | 100% (119/119) |
+| Gemini, previous prompt (`2026-11-02.5`), 16 cases | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
 | Groq, previous prompt (`2026-11-02.5`), 16 cases, two sessions | 95.8% (46/48), then 97.9% (47/48) | 83.3% (10/12), then 91.7% (11/12) | 100% (9/9) both | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Groq, two sessions | 92.3% (36/39), then 100% (39/39) | 75% (9/12), then 100% (12/12) | no such cases | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Gemini | 100% (39/39) | 100% (12/12) | no such cases | 100% (81/81) |
 
 - **The vague replies are the evidence for this phase's prompt change.** H20–H22 were committed before any prompt work on valueless
   claims, and the same test checks them for shared phrases. They're three cases, so it's a first check. They score against the reason, so a
-  reply the AI misses and rule D0e catches still counts as a miss here: Gemini's two are that (H22).
+  reply the AI misses and rule D0e catches still counts as a miss here. All 7 of Gemini's misses are that: it found no claim on 7 of 9 runs, up from 2 of 9 on the previous prompt, though the timeline wording
+  in the prompt didn't change, and I don't know why. Its verdict was right on all 9, and on all 57 clean cases. So for Gemini on this wording, the rule is doing the work, not the prompt.
 - **H23–H25 are the evidence for reading a fee taken off the money as not refunded.** They say it in other words, though H23 shares "taken off" with the new rule, below the three-word line ("with the service cost taken off", "once we deduct what the send cost you", "short of
   our handling charge"), and were committed before that prompt change (e00cd5d), under the same test for shared phrases. Groq: 9 of 9.
 - **Three expected results changed with the rule, not the case:** H10, H12 and H13 leave the customer's question open, so they're
@@ -317,7 +319,7 @@ golden set, or shares a phrase with drafts written after them. Where it could be
 | Provider · model | Decision accuracy | Quote validity |
 |---|---|---|
 | Groq · `openai/gpt-oss-120b` | 94.4% (17/18) | 100% (40/40) |
-| Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 94.4% (17/18) | 100% (39/39) |
+| Gemini (fallback) · `gemini-3.5-flash-lite` | 100% (18/18) | 100% (39/39) |
 
 Groq's one miss is H13, whose "It is returned along with your money" it read as a timeline with no value on 1 of 3 runs. That's still a Double-check, for a
 different reason.

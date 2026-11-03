@@ -1,8 +1,8 @@
 ## gemini · `gemini-3.5-flash-lite`
 
-- Runs per case: 3 · started: 2026-11-02T13:42:23.687Z · finished: 2026-11-02T13:50:35.815Z · throttled
-- Decision accuracy: **86.7%** (65/75)
-- Quote validity: **100.0%** (107/107 extracted quotes/spans verbatim; 0 rejected)
+- Runs per case: 3 · started: 2026-11-03T08:07:13.022Z · finished: 2026-11-03T08:15:46.413Z · throttled
+- Decision accuracy: **92.0%** (69/75)
+- Quote validity: **100.0%** (111/111 extracted quotes/spans verbatim; 0 rejected)
 - Extraction field accuracy (vs hand-written fixtures): **100.0%** (180/180)
 - Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
 
@@ -27,9 +27,9 @@
 | fee-unknown-rail |  | CAUTION / TOPIC_GAP | ✓ · ✓ · ✓ | 3/3 |
 | fee-scoped-F1 |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 | fee-amount |  | CAUTION / OUTSIDE_COVERAGE | ✓ · ✓ · ✓ | 3/3 |
-| vague-repro |  | CAUTION / UNSUPPORTED | ✓ · ✗ HOLD/CONTRADICTS_GOVERNING · ✓ | 2/3 |
+| vague-repro |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 | vague-week-out |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-very-soon |  | CAUTION / UNSUPPORTED | ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP | 0/3 |
-| vague-monday-less-charge |  | CAUTION / UNSUPPORTED | ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERNING | 0/3 |
+| vague-monday-less-charge |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 | vague-unknown-rail |  | CAUTION / UNSUPPORTED | ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP | 0/3 |
 | vague-next-week |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
