@@ -740,7 +740,7 @@
     display: inline-grid !important;
   }
 }
-@media (min-width: 700px) and (max-width: 1099px) {
+@media (min-width: 700px) and (max-width: 1099px) and (min-height: 561px) {
   .agent {
     position: relative;
     top: auto;

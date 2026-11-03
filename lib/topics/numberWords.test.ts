@@ -21,6 +21,13 @@ describe("the detector knows counts written in words", () => {
     ["a day or two at most", "a day or two"],
     ["within a business day", "a business day"],
     ["a couple of hours", "a couple of hours"],
+    ["back in a couple days", "a couple days"],
+    ["give it a couple of days", "a couple of days"],
+    ["it takes couple of days", "couple of days"],
+    ["in a day", "in a day"],
+    ["within a day", "within a day"],
+    ["it takes a month", "a month"],
+    ["two months from now", "two months"],
   ])("%s", (text, hit) => {
     expect(durationHits(text)).toContain(hit);
   });

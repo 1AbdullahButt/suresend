@@ -1,87 +1,67 @@
-# QA findings · Phase 11, second round · 2026-11-02T20:12:04Z
+# QA findings · Phase 12 · 2026-11-03T15:25:00Z
 
-Branch `phase-11`, HEAD e197ab1, `git diff main..phase-11`. No live AI, no eval, record or hedge-runs run. Replies with no saved response went through `runCheck` / `handleSend` with hand-written draft extractions, over the real saved source extractions. Scripts and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\qa12\`.
+Branch `phase-12`, HEAD ec541e2, compared with `main` (d1246e6). First pass: `evals/results*`, `evals/heldout*` numbers and the README's eval section are out of scope, because a live Groq eval is running and rewriting them. No live AI calls: everything ran with `AI_MODE=saved` or hand-written extractions. Production was only loaded, read-only, to compare short-viewport layout. Scripts and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\`. No source or test file was edited. The server I started is stopped (port 3100 has no listener).
 
 ## Commands run
+- `pnpm typecheck` → exit 0
+- `pnpm lint` → exit 0, `--max-warnings 0`
+- `pnpm test` → exit 0, `Test Files 33 passed (33)`, `Tests 436 passed (436)`
+- `pnpm vitest run` on heldoutIntegrity, europeanDemo, numberWords, phase12Copy, copyRules → 5 files, 85 tests passed
+- `pnpm build` → exit 0
+- `pnpm tsx scripts/slide-over-check.ts --serve` (shot redirected to scratch) → exit 0, `all passed`, 28 checks at 1099, 1024, 900, 700. Strip overflows at 900 and 700 with tags (`overflow true`, `hidden true`, bar 0)
+- `pnpm e2e` against a local `AI_MODE=saved` server on 3100 → exit 0, `1 passed`
+- `pnpm mcp:e2e` against the same server → exit 0, `ALL PASS`
+- `scripts/ui-audit.ts` against the same server, run from a scratch folder so it wouldn't rewrite the tracked `design/audit/` files, instead of `--serve` → exit 0, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.`
+- `pnpm tsx scripts/snapshot-results.ts <tmp> --compare evals/snapshots/phase12-before.json` → exit 1 by design: `132 results (0 not on saved responses)`, `126 identical, 4 different, 2 missing`. The 4 are `tour edit digitOnly verify` and `after fix + tour edit digitOnly verify`, each for two roles, suggestion template→ai only. The 2 missing are the renamed preset "Only the fee (any rail)". My own diff with that rename mapped: 132 of 132 identical on decision, reason and per-claim verdicts, no new rows
+- `pnpm hooks:selftest` → exit 0, `ALL PASS`
+- Real attempt on a locked file: `touch SPEC.md` → refused, `BLOCKED by protect-locked: "touch" on ... "spec.md" ... is locked`; `git status` shows SPEC.md untouched. Hook fed Edit requests: `data/seed/tickets.json`, `e2e/demo.spec.ts`, `tests/engine/x.ts`, `IMPLEMENTATION_BRIEF.md` → exit 2; `lib/engine/decide.ts` → exit 0
+- `git worktree list` → only `D:/Project/slite ec541e2 [phase-12]`
+- Playwright by hand (Chromium, real scrollbars) at 1440, 1099, 1024, 900, 860, 800, 700, 699, 390 and 1024×600, 1024×500, 800×500, 700×500, 844×390: panel, Tab order, Esc, Why, Trace with Details, Raw JSON, Docs, Fix review and Approve, Demo menu over the panel, Reset dialog, toast, the guided tour forwards and backwards, resizing with the panel open. All 3 tickets and all presets crawled at 1440 with visible text, aria-labels, titles and options searched. MCP `initialize`, `tools/list` and tool text read raw
 
-- `pnpm typecheck` → exit 0. `pnpm lint` → exit 0. `pnpm build` → exit 0.
-- `pnpm test` → exit 0. `Test Files 30 passed (30)`, `Tests 372 passed (372)`. README says 372.
-- `snapshot-results.ts --compare evals/snapshots/after.json` → exit 1, which it returns on any difference. `84 results … 0 not on saved responses`, `62 identical, 6 different, 0 missing`. The output is byte-identical to `phase11b.json`.
-- `snapshot-results.ts --compare evals/snapshots/phase11b.json` → exit 0, `84 identical`.
-- `snapshot-results.ts --compare evals/snapshots/phase11.json` → exit 1, 72 identical, 8 different: the repro and the Monday reply go to Hold (2 personas each), and the 4 digit-only rows go from `ai→CAUTION` to `template→CAUTION`.
-- `pnpm e2e` → exit 0, `1 passed`. `pnpm mcp:e2e http://127.0.0.1:3100/api/mcp` → exit 0, `ALL PASS`.
-- `pnpm tsx scripts/ui-audit.ts http://127.0.0.1:3100` → exit 0. 30 screens, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.` I read it and ran `git checkout -- design/audit`.
-- Builder's scripts: p11-ui-check 43/0, p11-offer 27/0, p10-ui 46/0, step5-ayesha 43/0, mcp-menu 31/0, step6-phone-fix 12/0, tour-step6 29/0, tour-menu 231/0. All as PROGRESS.md says.
-- My own: `newui.cjs` 70/0 (repro and Monday Hold through a real Send at 1440, 1024, 390; 404; tour line; API routes). `paths.cjs` 24/0, `ui.cjs` 21/0, `states.cjs` 30/0, `slide.cjs` 39/0, `offer.cjs` 64/0. `detector.ts`, `values.ts`, `mcp-http.mjs`.
-- `git archive e00cd5d` in my temp folder: the 3 test files → `Tests 6 failed | 113 passed (119)`, the same 6 as PROGRESS.md.
-- Locked paths: `git diff main..phase-11 --stat -- tests e2e SPEC.md IMPLEMENTATION_BRIEF.md data/seed` → empty. `.loop/locked` diff empty. Hook test as expected. `git worktree list` → `D:/Project/slite e197ab1 [phase-11]` only.
-- Screenshots read: the 404 page at 1440 and 390, the repro's Hold at 390, tour step 6 at 390.
+## Proven
+- **Re-lock.** `git diff main -- .loop/locked` empty. `IMPLEMENTATION_BRIEF.md`, `tests/engine`, `tests/ai`, `.claude/`, `package.json`, `playwright.config.ts` no diff. SPEC.md has 3 hunks, all between `## Appendix A` (line 387) and `## Appendix B` (line 450).
+- **Wording only.** Parsed the 5 changed fixtures on main and HEAD with `body` and quotes removed: 5 of 5 identical; numbers in every body unchanged. `tickets.json` identical except `customer`; `sources.json` identical except DOC-103's title; DOC-103's numbers and dates unchanged. `e2e/demo.spec.ts` changes one comment and one name in a selector, no journey or expectation. `tests/helpers/fixtures.ts` changes one search string. D-053's before-and-after diff matches `git diff main` line for line.
+- **`lib/workspace/europeanDemo.test.ts`** isn't vacuous: a missing doc would slice the wrong block and fail. The fixed lists match main. Its weak spot is the phrase list; see the first finding.
+- **Accented name.** Stored as NFC (`4c e9 61`) in the seed, SPEC, tour and README. `initials("Léa K.")` = LK, NFD input too. `isVerbatim` folds NFD to NFC. No name is sorted or split. MCP returns correct UTF-8 (`4cc3a961…`). JS `\b` treats `é` as a boundary, so "Léa few days" hits the detector; harmless in practice.
+- **The span fix (`lib/ai/prompts.ts:78`) is the right layer.** CLAUDE.md rule 3 says prompt, not rule; `isVerbatim` stays strict and the failure mode stays Couldn't check. PROGRESS's figures add up (0 of 9 + 10 + 10 + 10 = 0 of 39, against 7 of 10). I made no live calls, so I haven't reproduced them; H1 in the eval pass is the check to read.
+- **`governingScope` (D-056): the exception is sound; recommend keeping it.** "Failed transfers now reverse in 4 business days" on Sofia's ticket would be false beside DOC-103. No wrong card found in: specific rule, unknown ticket, weak basis, B1–B7 (all 7 golden variants read), the exception deleted, F1 on instant ("not refunded for instant transfers"), F1 on standard ("refunded for standard transfers"), F1 on unknown (Ask first), MCP's rail override. The fee rule names no type on any seed ticket.
+- **TOPIC_GAP copy (D-055).** Right in every state: docs value, standard, unknown type ("Your docs don't give one answer for this ticket"), unread doc, no docs (first sentence only), doc in doubt, fee, two gaps. "Missing an answer" shows in the app. MCP's headline, reason and trace use the same words, no regression.
+- **Shared spans (D-057).** Card lines, Why cards and MCP `claims[].says` show each claim's value text. React keys are safe: `draft#n` from `lib/ai/schemas.ts:173`, `gap#n`, `ask#n`, and `${rule}-${i}` in the trace. One gap in the trace, listed below.
+- **Number words.** On the 3 seed tickets a hit can't change a decision: with no timeline claim D0e already gives Double-check, so only the reason moves (TOPIC_GAP → EXTRACTION_GAP). Over MCP with no ticket, "a few days ago", "once a week" and "5,000 a week" move Good to send → Double-check, the safe direction. The Ask-first templates give no hits; `hasTimelineWords` is unchanged; the fix validator still rejects extra times. "3 transfers a day", "have a nice day", "a couple of questions" don't hit. `a few` stays value null in the prompt on both sides.
+- **Slide-over (D-054).** Pills and Demo menu on top and clickable at all four widths. Shift+Tab reaches the pills, the chat is skipped, Esc from inside returns to the toggle after `inert` lifts. Demo menu paints over the panel and Esc closes only the menu. Reset dialog and toast are on top with Dismiss clickable. The panel's own scroller holds Why and Docs (815 px in 328) at 1024×600; in Fix review, Tab reaches Approve and it works at 1024×600 and 800×700. Resizing across 1100 and 700 with the panel open flips `inert`, scrim and position correctly. The tour runs forwards at 1024, 800 and 1024×600, and forwards and backwards at 1024 and 800×700, with focus on the tour card each step and no sideways shift. Starting the tour with the panel open closes it.
+- **Bottom sheet.** At 699 and 390 Tab and Shift+Tab cycle inside the sheet, the scrim covers the pills, position stays fixed, Esc returns to the toggle.
+- **Assets.** `public/og.png` and 12 frames sampled from `docs/demo.gif` show Léa, Lukas, Sofia, €250, €125, "Instant transfer", "Transfer type unknown". `public/demo.gif` is byte-identical. `docs/VIDEO_SCRIPT.md` is ignored (`.gitignore:16`, `.vercelignore:12`), has never been committed, has the new names and none of the old.
+- **D-045** is corrected honestly, states what the mistake was and who made it, and PROGRESS.md:1502 carries the same correction.
+- **Held-out integrity.** 3ba00ad and a3687ab touch no prompt, rule or doc. a3687ab reworded H32, H34, H37 and replaced H35 ("One or two" → "Between one and two", id changed) with the expected result unchanged. H26–H31, H36, H37 are `exposed` with reasons. `lib/ai/heldoutIntegrity.test.ts` passes.
+- **Status and disclaimer.** Disclaimer in every screenshot (at 1024×600 the open Demo menu covers its right half, as it did before), icon plus label on decisions, label text on pills.
 
 ## Findings
 
-### Blockers and majors
+- [severity: major] components/agent/CheckView.tsx:18 · expected no user-visible "rail" (brief Part A; D-053: "'Rail' had more forms than the brief lists, so they went too… `copyRules.test.ts` now fails if any of it comes back") · actual the running app shows **"Rail changed. Press Send to check again."** · Reproduce: any ticket, press Send, change the transfer type picker. Screenshot `scratchpad\shots\stale-type-0.png`. It happens on the control the demo draws attention to, right beside a picker labelled "Transfer type". `lib/client/copyRules.test.ts:42` has no pattern for it, so the test passes: `RAIL_WORDS` and `LABELS` list phrases instead of catching the word. Fix the string, and make the test catch `\bRail\b` in visible strings. SPEC n/a, D-053.
 
-None.
+- [severity: minor] lib/client/metrics.ts:6, lib/client/workspace.ts:6 · expected no old names in any state · actual `suresend.metrics.v1` and `suresend.overrides.v1` survive the rename, so a browser that used the demo before keeps them. Reproduce: localStorage with a flag saved under the old name, reload, Demo menu → Review flagged replies shows `Hold · Ayesha K.: "Failed transfers are reversed within 4 business days."`. Old edited docs would keep their "Instant Rail" text the same way. Abdullah's browser and anyone who reviewed production will see this first, and it reads as a failed rename. Reset demo clears it. Bumping both keys to `.v2` is one line each.
 
-### Minors
+- [severity: minor] components/agent/AgentCard.tsx:47 · expected Esc closes the slide-over (the component's own comment; the brief's "Esc returns focus sensibly") · actual the handler is on the `aside`, and D-054 made focus outside the panel normal. Reproduce at 1024: open the panel, Shift+Tab to a pill, Esc: panel stays open at 250 ms, focus unchanged. Same from the Demo menu trigger, Guided tour and the select. The keyboard user must Tab back in first. New in this phase because the trap went away. A document-level listener while the slide-over is open would fix it.
 
-- [severity: minor] README.md:311 · "The detector catches the same wording too, so if the AI misses it, the reply is a Double-check, not Good to send", straight after H23–H25 · it catches only "minus", "less", "after deducting", "deducting" and "net of" before a fee word.
-  - H23–H25 hit nothing, and if the AI reads only their timeline they are `ALLOW/SUPPORTED`. README:377-378 states the general limit, and keeping those words out of the detector is right.
-  - The sentence overstates the net in the unsafe direction. Name the words, or point to that limit. Worth fixing before merge.
+- [severity: minor] components/shell/App.tsx:129 · expected closing returns focus to where the user was (D-054: "Closing moves focus back a frame later") · actual `agentReturnRef` is only set by `openAgent`, and the Send path opens the panel through `setPanelOpen`. Reproduce at 1024: focus Send, Enter, Hold opens, Esc: focus is `BODY`, so the next Tab starts at Demo menu. This is the main path. Also after Approve fix: the button unmounts, focus is `BODY`, and Esc then does nothing (panel stays open). Pre-existing on main by code reading (`git show main:components/shell/App.tsx:102`), so not a regression, but D-054's sentence only holds when the toggle opened it.
 
-- [severity: minor] lib/topics/feeRefund.ts:35 · false hits from the new alternation, with no fee claim extracted: "less time and charge nothing", "more or less, says the person in charge", "not deducting the fee", "no less than the fee you paid".
-  - Each is `CAUTION/EXTRACTION_GAP`, send 428, with a sentence that quotes the odd words. Never a Hold.
-  - With a fee claim extracted, the decision is untouched, as D-052 says.
-  - It's the safe direction, but nothing says so: the "leaves alone" test has no fee word in it, and README's Limitations doesn't list this. A `less(?! than)` and no crossing a comma would remove most of them. Optional.
+- [severity: minor] components/agent/agent.module.css:745 · expected the page doesn't move when the panel opens · actual `.agent` went from `position: fixed` to `position: relative`, so while closed it adds 420 px of scrollable overflow to `.app` (`scrollWidth 1444` vs `clientWidth 1024` at 1024). If the 60 ms focus timer (AgentCard.tsx:41) fires before the slide starts, the browser scrolls `.app` to reach the tab: `shell_app L420`, main at left −396, logo and customer card off-screen, no scrim yet (`scratchpad\shots\panel-open-1099x800.png`). It self-heals when the slide ends. Seen naturally twice in about 240 scripted opens, both the first open of a script run from a fresh browser, at 1099, by keyboard, with the eval also running on this machine. Forced every time, at 1099, 1024 and 800, with CDP `Animation.setPlaybackRate 0`. `overflow: clip` on `.app` in this range, or moving focus on `transitionend`, removes it. Regression from D-054, cosmetic and brief.
 
-- [severity: minor] README.md:290, DECISIONS.md:953, evals/heldout.md:9 · H23 and the new rule share "taken off" (H23 "with the service cost taken off"; prompt "with the fee taken off it"), below the three-word line, and the two commits are 98 seconds apart. The order is right and the test passes, but "in other words" is a bit generous for H23. A clause would cover it. The prompt is frozen, so don't change it for this.
+- [severity: minor] components/shell/shell.module.css:332 · expected D-054's "a little shorter… about 150 px at 1024" · actual true at 1024×800 (590 px) and fine at 1024×600 (390 px, 328 of content), but the loss is fixed, so short screens suffer: 844×390 gives a 180 px panel with 118 px of content for 439 px of Hold card (`scratchpad\shots\short-844x390.png`), against 338 px on main. "Use this reply" needs scrolling in a small window. Also applies to a laptop at high zoom. Separately, and pre-existing on production too: at 960×450 and below the composer sits under the footer and Send can't be clicked.
 
-- [severity: minor] README.md:264-265 · "no reply reached Good to send" is literally false: canon-9003 and allow-1day do, as expected. "No miss did."
+- [severity: minor] components/inbox/inbox.module.css:419, DECISIONS.md:1033 · expected D-054's "still scrolls by touch, trackpad and arrow keys" · actual with focus on a pill at 700 px and the strip overflowing, 3 × ArrowRight and 4 × ArrowLeft leave `scrollLeft` at 36. A horizontal wheel scrolls; a plain vertical mouse wheel doesn't. At 700 with all tags the last pill is 54–67% visible, and focusing it doesn't bring it fully in. Still clickable and reachable by Tab, and fine at 860 and up, including the brief's ~1024. Correct the sentence, or add `scrollIntoView` on focus.
 
-- [severity: minor] app/not-found.tsx:1, DECISIONS.md:960 · they cite SPEC §16 and §15. "Every screen" is in §18 (SPEC.md:382).
+- [severity: minor] lib/client/outcome.ts:501 · expected the trace shows each claim's value text on a shared span (D-057) · actual the `D0:pass` row for a yes/no claim still uses `span`. With "…after the weekend, minus the processing charge." the row under `Claim 2 of 2: "minus the processing charge"` reads `Your reply says "You'll see it reflected after the weekend, minus the processing charge."`. MCP's `rules_that_mattered` has the same line. `lib/check/phase12Copy.test.ts:143` filters to `Claim` rows, so it doesn't see this. The Details text also keeps the sentence, which is fine for a verbatim engine line. Use `claimWords` there and widen the test.
 
-### Your questions
+- [severity: minor] evals/heldout.json `about` · expected the same rule for every case · actual H36 and H37 are `exposed` because "their words are in this phase's new detector patterns", but H38 ("several working days") and H39 ("a fortnight") fit that sentence too and count as clean. They only pass `heldoutIntegrity.test.ts` because its line is three words. `lib/topics/numberWords.test.ts:17` also has H38's own wording, "the bank needs several working days". No effect on the numbers I can see: both expect Double-check and the prompt never names them, and D0e gave Double-check before the detector knew them. Mark them exposed, or narrow the sentence.
 
-1. **The prompt: fine.**
-   - `draftRule` and `vagueRule` are used only in the draft prompt (`prompts.ts:76-77`). The `values` and source notes are unchanged, as are the reply, fix and schema versions.
-   - "we'll look at the fee as well" shares only "the fee" with H12, and no three-word phrase with any held-out case.
-   - H23–H25 are byte-identical at e00cd5d and HEAD, and e00cd5d (18:09:58Z) comes before cd7abe1 (18:11:36Z).
-   - The test is real. In a temp copy, words from H23 in the prompt fail both the overlap and the freeze; a prompt change with no shared phrase fails the freeze; an H23 edit that reuses prompt words fails the overlap. It doesn't pin a held-out draft against a harmless edit, so git is the proof there, as for every case.
+- [severity: minor] lib/topics/reversalWindow.ts:6 · expected a clear statement of what the net misses · actual "a couple days", "couple of days", "a couple more days", "a few more days", "in a day or so", "in a day", "in an hour", "a month" don't hit. On a ticket D0e still gives Double-check if the AI misses them. Over MCP with no ticket, a reply the AI also misses reads Good to send. "A couple days" is ordinary English and the prompt doesn't name it. Add it, or note it beside the README's other detector limits in the eval-section pass.
 
-2. **The detector: fine, apart from the first two minors.** It doesn't fire on any SureSend template. Across 59 eval drafts and presets it fires only on `vague-repro` and `vague-monday-less-charge`. A false hit costs a Double-check.
+- [severity: minor] wording. (a) `lib/topics/reversalWindow.ts:51`: "Standard transfers **now** reverse in 4 business days" says something changed; DOC-103 says "Standard transfers are unchanged". Pre-existing, but D-056 now leans on this sentence. (b) `lib/client/outcome.ts:97`: "Your docs say refunded." Not reachable on a seed ticket, since none asks about the fee. (c) preset "A fee amount": card says "Your reply promises €2 fee that SureSend doesn't cover"; the Why pill says "2 EUR" where the reply says "€2". (d) `lib/engine/decide.ts:460`: Details on an unknown-type ticket reads "Every candidate's scope resolves for an unknown transfer type." (e) `components/agent/CheckView.tsx:164`: the card uses the picker's current value on a stale result, so a Hold run as standard reads "Instant transfers now reverse in 4 business days" after switching to instant, under the stale note. Pre-existing, and only with a live typed reply. No "the instant transfers" or "an instant transfers" anywhere in the crawl, trace or MCP.
 
-3. **`statesValues`: it's fine, and the evals stand.**
-   - It refuses some good rewrites: "one business day", "1 Business Day", "1 working day", "Refunded:" with a capital, "you get the fee back", "isn't refunded" where the docs say "not refunded", and a fee-only fix that leaves a hedged or vague timeline. Each falls back to the template, which states the right values and rechecks the same. The only loss is wording.
-   - Saved suggestions: all golden and preset ones, both personas, tag = Send, 0 disagree. `tourReplay.test.ts` and `vagueReply.test.ts` fail with the check removed, so it's guarded.
-   - Evals: scoring is `decision && reasonCode && suggestionOk` (`eval.ts:353-354`). Decisions are set before `holdSuggestion`, and tallies count the rewrite's extraction, which comes before the check.
-   - The 9 `suggestionIncludes` strings are all governing values, which the template states, so none can flip to a fail. In the reports they pass, apart from one Monday run that missed on the decision and got no suggestion. Hedge runs read no suggestion. The stamp changed, so use `--provider gemini` for the 08:07 rerun.
+- [severity: minor] components/inbox/ChatCard.tsx:76 · `inert` takes the only `main` landmark and the `h1` out of the accessibility tree while the slide-over is open. axe with all rules at 1099, 900 and 700: `landmark-one-main` (moderate) and `page-has-heading-one` (moderate) in Hold, Why, Trace and Docs. `scripts/ui-audit.ts:185` runs WCAG tags only, so it shows none. Best-practice rules, not WCAG failures, and a fair cost of `inert`; recorded so it's a known trade-off.
 
-4. **Numbers: all match the reports.**
-   - Groq golden 74/75, 115/115, 173/180, PASS. Held-out 56/57, fee 20/21, vague 9/9, 130/130. Exposed 17/18, 40/40, the miss H13 on 1 of 3. Hedge 34/40, 6 strict, 0 unsafe.
-   - H18 Holds across sessions: 3, 0 | 2, 1, 4 | 1, 5 = **16 of 35**.
-   - H14: 3/3, 2/3, 3/3, 3/3, 10/10, 3/3, 9/10.
-   - "62 of 68": the 6 are the no-claim reply on 2 personas and the digit-only edit on 4 rows, as stated. 170, 178, 173 are right.
-   - Gemini's rows are labelled as the previous prompt and match 9d13a70. The provider bullet is true of `.5`, and `results.md` says "Only groq has a complete report on this prompt so far" and "Not finished on this prompt: gemini".
+## Not yet covered
+Published eval numbers, the Hold rate and the README's eval section (second pass). PROGRESS.md's Phase 12 section is uncommitted at HEAD, and its gate line isn't written yet.
 
-5. **The tour: accurate.** A replayed step's reading is keyed to that exact doc text, so the answer does come from the doc and the rules still compute it. A saved reading isn't a hard-coded answer. The text is shown on screen at 1440 and 390, and step6-phone-fix passes.
-
-6. **The 404 page: fine.**
-   - At 1440 and 390 on `/nope`, `/foo/bar/baz`, `/how-it-works/x`, `/api-nope`: status 404, disclaimer once, one heading, no page errors. On `/nope`: the back link works by keyboard, axe is clean, no horizontal scroll, and the CSS applies.
-   - API routes answer as before: `/api/seed` 200; `/api/check`, `/api/send`, `/api/fix` GET 405; `/api/mcp` GET and DELETE 405 with Allow POST; POST `/api/check` with a bad body 400. Unknown `/api/*` is 404 HTML, now this page.
-   - Other pages carry this text only in Next's script payload, not on screen.
-
-7. **`.gitignore`: right.** All four paths are ignored. `.vercelignore` has the three Codex paths and `.claude/`, as D-052 says.
-
-8. **The same-decision sentence:** it has the clause everywhere (README:27, :119, :405, DECISIONS.md:939, and PROGRESS's evidence line).
-
-### Also checked
-
-- **The repro, through a real Send at 1440, 1024 and 390:** Hold, naming the fee, "Held by SureSend", 409. The suggestion states both values and is tagged checked, and it sends. The Monday reply is the same. A vague timeline keeps "Your docs say 1 business day; your reply gives no number."
-- **MCP over HTTP:** the repro is Hold, and its `suggested_reply` checks Good to send. Usman's preset still sends. So round 2's fix survived the re-recording.
-- **Expected results changed:** only `vague-repro` and `vague-monday-less-charge`, by Abdullah's decision. The `vagueReply.test.ts` edits are forced by the detector and add an assertion that the timeline's gap entry stays.
-
-### Before merge
-
-README:249's "passed (local and live)" holds only once this branch is deployed. Gemini's rows change with its own commit.
-
-## VERDICT: APPROVED
+## VERDICT: CHANGES_REQUIRED

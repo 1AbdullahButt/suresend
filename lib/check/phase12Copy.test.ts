@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 import { runCheck } from "@/lib/check/runCheck";
 import { decide } from "@/lib/engine/decide";
-import { claimLines, summarize, traceRows } from "@/lib/client/outcome";
+import { claimLines, summarize, traceRows, whyModel } from "@/lib/client/outcome";
 import { checkReplyText, checkReply } from "@/lib/mcp/tools";
 import { seedTickets } from "@/lib/workspace/seed";
 import { seedBody } from "@/lib/workspace/variants";
@@ -118,7 +118,7 @@ describe("a question the reply leaves open reads as a missing answer, not an err
     const gap = out.claims.find((c) => c.reasonCode === "TOPIC_GAP");
     expect(gap?.draftClaim.topic).toBe("fee_refund");
     const only = { ...out, checkHash: "x", suggestion: null, rejectedExtractions: [], ai: INFO, claims: [gap!] };
-    expect(summarize(only, "standard").sentence).toBe("Your reply doesn't answer their question about the fee. Your docs say refunded.");
+    expect(summarize(only, "standard").sentence).toBe("Your reply doesn't answer their question about the fee. Your docs say it's refunded.");
   });
 
   it("MCP says the same, in the same words", async () => {
@@ -144,6 +144,10 @@ describe("two claims with one span show each claim's value", () => {
     expect(rows[0]).toContain("“after the weekend”");
     expect(rows[1]).toContain("“minus the processing charge”");
     expect(rows.join(" ")).not.toContain(draft);
+    // A yes/no claim's own row quotes its words too.
+    const said = traceRows(r).filter((t) => t.rule === "D0").map((t) => t.summary).join(" ");
+    expect(said).toContain("minus the processing charge");
+    expect(said).not.toContain(draft);
   });
 
   it("different spans still show the reply's own words", async () => {
@@ -156,6 +160,18 @@ describe("two claims with one span show each claim's value", () => {
   it("the same span with no value text of its own keeps the span", async () => {
     const r = await check("TCK-9001", "instant", draft, [timeline(null, draft, ""), fee(false, draft, "")]);
     expect(claimLines(r).map((l) => l.says)).toEqual([draft, draft]);
+  });
+});
+
+describe("a claim outside the topics", () => {
+  const draft = "There's a €2 fee on every transfer.";
+  const amount: DraftClaim = { claimId: "o", topic: "other", value: { quantity: 2, of: "EUR" }, valueText: "€2 fee", span: draft, definitive: true };
+
+  it("quotes the reply's words rather than rewording them", async () => {
+    const r = await check("TCK-9003", "standard", draft, [amount]);
+    expect(r.reasonCode).toBe("OUTSIDE_COVERAGE");
+    expect(summarize(r, "standard").sentence).toBe("Your reply says “€2 fee”, which SureSend doesn't cover. Check it against the source.");
+    expect(whyModel(r).replySays).toBe("€2 fee");
   });
 });
 
@@ -188,14 +204,15 @@ describe("a Hold names a transfer type only when the rule is about one", () => {
   it("a general rule beside an exception still names the ticket's type: with another type on a different value, \"failed transfers\" would be false", async () => {
     const r = await check("TCK-9003", "standard", "Reversed within 1 business day.", [timeline(1, "Reversed within 1 business day", "1 business day")]);
     expect(r.headline).toMatch(/^Hold: standard transfers reverse in 4 business days \(/);
-    expect(summarize(r, "standard").sentence).toBe("Standard transfers now reverse in 4 business days. Your reply says 1.");
+    // "Now" is for a value that replaced another. Nothing changed for standard transfers.
+    expect(summarize(r, "standard").sentence).toBe("Standard transfers reverse in 4 business days. Your reply says 1.");
   });
 
   it("a general rule with no exception names no type", async () => {
     const gone: SourceOverride[] = [{ id: "DOC-103", deleted: true }];
     const r = await check("TCK-9003", "standard", "Reversed within 1 business day.", [timeline(1, "Reversed within 1 business day", "1 business day")], gone);
     expect(r.headline).toMatch(/^Hold: failed transfers reverse in 4 business days \(/);
-    expect(summarize(r, "standard").sentence).toBe("Failed transfers now reverse in 4 business days. Your reply says 1.");
+    expect(summarize(r, "standard").sentence).toBe("Failed transfers reverse in 4 business days. Your reply says 1.");
   });
 
   it("no seed ticket's card says \"for instant\" about a rule for all transfers", async () => {

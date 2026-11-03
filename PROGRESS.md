@@ -1884,3 +1884,189 @@ PASS /no-such-page status 404
 all passed
 ```
 
+## Phase 12: a European-friendly demo, and fixes from the re-check
+
+Branch `phase-12`. Abdullah's brief, in PLAN.md §15. Decisions D-053 to D-058, and D-045 corrected.
+
+**Held-out cases first.** H26–H39 (paraphrased wrong timelines) went in before anything else changed (3ba00ad). Four clean cases then shared a three-word phrase with the prompts' files, so I reworded them and re-ran those four (a3687ab), still before any change.
+
+**Baseline on the old prompt (`2026-11-02.6`), old docs, Groq, 3 fresh readings each:**
+```
+$ pnpm tsx scripts/probe-draft.ts groq --para 3
+H26-para-couple-working-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: The refund reaches your wallet within a couple of working days.
+  3× CAUTION/UNSUPPORTED [null definite]
+H27-para-couple-working-standard (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: You'll see the full sum again in a couple of working days.
+  3× CAUTION/UNSUPPORTED [null definite]
+H28-para-few-days-instant (expected CAUTION/UNSUPPORTED)
+  reply: The reversal takes a few days.
+  3× CAUTION/UNSUPPORTED [null definite]
+H29-para-few-working-standard (expected CAUTION/UNSUPPORTED)
+  reply: It will be a few working days before the funds are back.
+  3× CAUTION/UNSUPPORTED [null definite]
+H30-para-about-week-instant (expected CAUTION/UNIT_MISMATCH)
+  reply: Allow about a week for the money to return.
+  3× CAUTION/UNSUPPORTED [null hedged]
+H31-para-about-week-standard (expected CAUTION/UNIT_MISMATCH)
+  reply: Your balance is restored in about a week.
+  3× CAUTION/UNSUPPORTED [null hedged]
+H32-para-two-to-three-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Give it two to three working days and the sum is yours again.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":2,"amountMax":3,"unit":"business_days"} definite]
+H33-para-three-working-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Count on three working days before the funds reappear.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":3,"unit":"business_days"} definite]
+H34-para-seven-business-standard (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Seven business days is what it takes for the sum to reappear.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":7,"unit":"business_days"} definite]
+H35-para-one-or-two-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: One or two working days and the sum reappears.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":1,"amountMax":2,"unit":"business_days"} definite]
+H36-para-day-or-two-instant (expected CAUTION/UNIT_MISMATCH)
+  reply: A day or two at most and it's all yours again.
+  3× CAUTION/UNIT_MISMATCH [{"amount":1,"amountMax":2,"unit":"calendar_days"} definite]
+H37-para-handful-days-standard (expected CAUTION/UNSUPPORTED)
+  reply: A handful of days and the cash is home.
+  3× CAUTION/UNSUPPORTED [null definite]
+H38-para-several-working-instant (expected CAUTION/UNSUPPORTED)
+  reply: The bank needs several working days to hand it over.
+  3× CAUTION/TOPIC_GAP [no claims]
+H39-para-fortnight-standard (expected CAUTION/UNIT_MISMATCH)
+  reply: You're looking at a fortnight before the cash comes home.
+  2× CAUTION/UNSUPPORTED [null definite]
+  1× CAUTION/UNIT_MISMATCH [{"amount":14,"unit":"calendar_days"} definite]
+
+Total 42 readings: Hold 12, Double-check 30, Ask first 0, Good to send 0, couldn't check 0
+```
+"A couple of working days" read as no value on all 6 readings, so it never got a Hold. The four reworded cases, on the same prompt:
+```
+$ pnpm tsx scripts/probe-draft.ts groq --para 3 H32,H34,H35,H37
+H32-para-two-to-three-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Give it two to three working days, then the sum is yours again.
+  2× HOLD/CONTRADICTS_GOVERNING [{"amount":2,"amountMax":3,"unit":"business_days"} definite]
+  1× HOLD/CONTRADICTS_GOVERNING [{"amount":2,"amountMax":3,"unit":"business_days"} definite + null definite]
+H34-para-seven-business-standard (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Seven business days is how long the sum needs to reappear.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":7,"unit":"business_days"} definite]
+H35-para-one-and-two-instant (expected HOLD/CONTRADICTS_GOVERNING)
+  reply: Between one and two working days, then the sum reappears.
+  3× HOLD/CONTRADICTS_GOVERNING [{"amount":1,"amountMax":2,"unit":"business_days"} definite]
+H37-para-handful-days-standard (expected CAUTION/UNSUPPORTED)
+  reply: A handful of days, then the cash is home.
+  3× CAUTION/UNSUPPORTED [null definite]
+
+Total 12 readings: Hold 9, Double-check 3, Ask first 0, Good to send 0, couldn't check 0
+```
+
+**New checks first, recorded failing (a3687ab).** 47 of 65 failed before any fix. The other 18 are guards that must keep passing.
+```
+$ pnpm vitest run lib/check/phase12Copy.test.ts lib/topics/numberWords.test.ts lib/workspace/europeanDemo.test.ts lib/client/copyRules.test.ts
+× has the new names on the same personas and rails 9ms
+     × says "transfer", not "rail", in every doc and title 1ms
+     × matches SPEC Appendix A, byte for byte 8ms
+     × on every ticket 1ms
+     × in the preset about a fee amount 1ms
+     × README.md has no old name, currency or rail wording 2ms
+     × docs/MCP_DEMO.md has no old name, currency or rail wording 1ms
+     × e2e/demo.spec.ts has no old name, currency or rail wording 1ms
+     × evals/golden.json has no old name, currency or rail wording 1ms
+     × evals/heldout.json has no old name, currency or rail wording 1ms
+     × scripts/mcp-e2e.ts has no old name, currency or rail wording 1ms
+     × scripts/record-demo.ts has no old name, currency or rail wording 1ms
+     × scripts/ui-audit.ts has no old name, currency or rail wording 1ms
+     × within a couple of working days 9ms
+     × in a couple of days 2ms
+     × give it a couple of business days 1ms
+     × it takes a few days 0ms
+     × a few working days from now 0ms
+     × the bank needs several working days 0ms
+     × a handful of days 0ms
+     × allow about a week 0ms
+     × after a fortnight 1ms
+     × a day or two at most 0ms
+     × within a business day 0ms
+     × a couple of hours 0ms
+     × with the claim missed and no customer message, a reply like this can't pass as having no policy claim 4ms
+     × draft: a couple of is 2, in the unit it names 10ms
+     × source: a couple of is 2, in the unit it names 8ms
+     × draft: a few stays vague, and a week is 7 calendar days 1ms
+     × source: a few stays vague, and a week is 7 calendar days 2ms
+     × nothing a visitor reads says "rail" 22ms
+     × nothing a visitor reads has the old names or currency 11ms
+     × says what's missing, then what the docs say 31ms
+     × on a standard transfer, the value is that transfer's 3ms
+     × with the transfer type unknown and the docs differing by type, no value is named 2ms
+     × with a doc unread, it says so rather than naming the next doc's value (D-046) 3ms
+     × with no doc on the topic, it only says what's missing 3ms
+     × the topic asked can be the fee 4ms
+     × MCP says the same, in the same words 7ms
+     × the sentence isn't repeated: each line gives its own words 4ms
+     × so does the trace's row for each claim 3ms
+     × the fee rule covers all transfers: no type, on either ticket 1ms
+     × the same when the reply matches 2ms
+     × the exception is about instant transfers, so it says so 1ms
+     × a general rule beside an exception still names the ticket's type: with another type on a different value, "failed transfers" would be false 1ms
+     × a general rule with no exception names no type 1ms
+     × no seed ticket's card says "for instant" about a rule for all transfers 1ms
+ Test Files  4 failed (4)
+      Tests  47 failed | 18 passed (65)
+```
+The slide-over check against production, which was main at d1246e6:
+```
+$ pnpm tsx scripts/slide-over-check.ts https://suresend-demo.vercel.app
+FAIL 1099: with the panel open, on top: 3 pills and the Demo menu; covered: pill 1, pill 2, pill 3, Demo menu
+FAIL 1099: Shift+Tab from the panel reaches the pills, with the panel still open
+FAIL 1099: the Demo menu can be clicked with the panel open
+FAIL 1099: a pill can be clicked with the panel open, and switches the conversation
+FAIL 1099: changing the conversation closes the panel (D-049)
+PASS 1099: no scrollbar on the pill strip (bar 0px, overflow false, hidden false)
+FAIL 1024: with the panel open, on top: 3 pills and the Demo menu; covered: pill 1, pill 2, pill 3, Demo menu
+FAIL 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+FAIL 1024: the Demo menu can be clicked with the panel open
+FAIL 1024: a pill can be clicked with the panel open, and switches the conversation
+FAIL 1024: changing the conversation closes the panel (D-049)
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden false)
+FAIL 900: with the panel open, on top: 3 pills and the Demo menu; covered: pill 1, pill 2, pill 3, Demo menu
+FAIL 900: Shift+Tab from the panel reaches the pills, with the panel still open
+FAIL 900: the Demo menu can be clicked with the panel open
+FAIL 900: a pill can be clicked with the panel open, and switches the conversation
+FAIL 900: changing the conversation closes the panel (D-049)
+FAIL 900: no scrollbar on the pill strip (bar 15px, overflow true, hidden false)
+FAIL 700: with the panel open, on top: 3 pills and the Demo menu; covered: pill 1, pill 2, pill 3, Demo menu
+FAIL 700: Shift+Tab from the panel reaches the pills, with the panel still open
+FAIL 700: the Demo menu can be clicked with the panel open
+FAIL 700: a pill can be clicked with the panel open, and switches the conversation
+FAIL 700: changing the conversation closes the panel (D-049)
+FAIL 700: no scrollbar on the pill strip (bar 15px, overflow true, hidden false)
+22 failed
+```
+The scrollbar check passed at 1099 and 1024 in that run only because the strip fitted with those tags. It now requires the bar hidden in every state, so a wider tag can't bring it back.
+
+**The unlock (D-053).** `.loop/locked` moved aside, one script run, moved back. The script stopped partway on B3's fixture, which has none of these words; the lock went straight back on, and I opened it once more to finish the same edit. The diff is in D-053.
+
+**A real problem the eval found: the accent.** The first eval session, on prompt `2026-11-03.1`, gave H1 ("Hi Léa, so sorry about this! The money…") Couldn't check on 2 of 3 runs, which H1 had never done. The spans came back lowercased: "the money from a failed transfer…", which isn't verbatim, so every claim is rejected and the check fails closed.
+```
+$ 10 fresh readings each, on prompt 2026-11-03.1
+Hi Ayesha, so sorry ab...: 0 of 10 readings had a span that isn't verbatim
+Hi Léa, so sorry about...: 7 of 10 readings had a span that isn't verbatim
+Hi Sofia, so sorry abo...: 1 of 10 readings had a span that isn't verbatim
+So sorry about this! T...: 0 of 10 readings had a span that isn't verbatim
+```
+So the rename caused it, and the demo's lead ticket would have hit it whenever a reply greeted Léa by name. CLAUDE.md rule 3 says to fix the prompt, not the rule, and the fix is one sentence on the draft side: "the same capitals, accents and punctuation. A span that starts a sentence keeps its capital letter." After it:
+```
+$ the same, on the draft prompt with that sentence
+Hi Léa, so sorry about this! The m...: 0 of 9 not verbatim
+Hi Sofia, so sorry about this! The...: 0 of 10 not verbatim
+Hi Léa, thanks for waiting. Failed...: 0 of 10 not verbatim
+Thanks for your patience, Léa. You...: 0 of 10 not verbatim
+```
+Prompt `2026-11-03.2`. That superseded the first session, so it's recorded here and everything was re-recorded and re-run. The first session, for the record:
+```
+Prompt 2026-11-03.1, Groq, 3 runs: golden 75/75, quotes 117/117, fields 173/180, gate PASS
+- Runs per case: 3 · started: 2026-11-03T13:18:15.785Z · finished: 2026-11-03T14:14:08.859Z · throttled · provider errors retried, with no answer to score: 15
+- Decision accuracy: **89.3%** (67/75)
+- Paraphrased wrong timelines: **Hold 12/18**, Double-check 6, Ask first 0, Good to send 0; verdict and reason as expected 15/18
+- Quote validity: **98.7%** (153/155 extracted quotes/spans verbatim; 2 rejected)
+```
+

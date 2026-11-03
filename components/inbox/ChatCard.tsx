@@ -89,6 +89,7 @@ export function ChatCard({
             className={cx(ui.btn, ui.outline, ui.sm, s.agentToggle)}
             aria-expanded={agentOpen}
             onClick={onToggleAgent}
+            data-agent-toggle=""
           >
             {stored ? (
               <span className={s.toggleTag}>

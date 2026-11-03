@@ -12,14 +12,14 @@ const TABS: Array<{ id: Tab; label: string }> = [
 
 /**
  * The SureSend card (design v2): two tabs, Check and Docs. A normal card at ≥1100 px, a slide-over below that and a
- * bottom sheet under 700 px. In overlay modes focus moves in when it opens and Esc closes it. Only the bottom sheet traps Tab:
- * the slide-over sits below the header and the conversation pills, which stay in reach (D-054).
+ * bottom sheet under 700 px. In overlay modes focus moves in when it opens and Esc closes it. Only a panel that covers the
+ * conversation pills traps Tab (`modal`): the slide-over sits below them, and they stay in reach (D-054).
  */
 export function AgentCard({
   tab,
   onTab,
   overlay,
-  sheet,
+  modal,
   open,
   onClose,
   children,
@@ -27,7 +27,7 @@ export function AgentCard({
   tab: Tab;
   onTab: (t: Tab) => void;
   overlay: boolean;
-  sheet: boolean;
+  modal: boolean;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
@@ -38,7 +38,7 @@ export function AgentCard({
 
   useEffect(() => {
     if (!overlay || !open) return;
-    const t = window.setTimeout(() => ref.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus(), 60);
+    const t = window.setTimeout(() => ref.current?.querySelector<HTMLElement>('[role="tab"][aria-selected="true"]')?.focus({ preventScroll: true }), 60);
     return () => window.clearTimeout(t);
   }, [overlay, open]);
 
@@ -49,7 +49,7 @@ export function AgentCard({
       onClose();
       return;
     }
-    if (!sheet || e.key !== "Tab" || !ref.current) return;
+    if (!modal || e.key !== "Tab" || !ref.current) return;
     const items = Array.from(
       ref.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'),
     ).filter((el) => el.offsetParent !== null);

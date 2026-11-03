@@ -3,7 +3,8 @@ import type { Source, SourceOverride } from "@/lib/engine/types";
 import { readJson, removeKey, writeJson } from "./storage";
 import type { OverrideRecord } from "./types";
 
-const KEY = "suresend.overrides.v1";
+// v2: the seed docs' text changed in Phase 12, and an edit saved under v1 holds the old text.
+const KEY = "suresend.overrides.v2";
 
 export type OverrideMap = Record<string, OverrideRecord>;
 

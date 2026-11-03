@@ -73,6 +73,18 @@ async function main() {
     }
     check(reached && (await tab(page).isVisible()), `${width}: Shift+Tab from the panel reaches the pills, with the panel still open`);
 
+    // Focus is on a pill now, outside the panel: Esc still closes it, and focus lands on something, not the page.
+    await page.keyboard.press("Escape");
+    await page.waitForTimeout(350);
+    check(!(await tab(page).isVisible()), `${width}: Esc closes the panel with focus outside it`);
+    check(await page.evaluate(() => document.activeElement !== document.body), `${width}: closing leaves focus on a control, not the page`);
+    await openPanel(page);
+    const jump = await page.locator("footer").evaluate((f) => {
+      const app = f.parentElement as HTMLElement;
+      return { left: app.scrollLeft, overflow: getComputedStyle(app).overflowX };
+    });
+    check(jump.left === 0 && jump.overflow === "clip", `${width}: the page can't jump sideways when the panel opens (scrollLeft ${jump.left}, overflow ${jump.overflow})`);
+
     const menuClick = await demoMenu(page).click({ timeout: 2000, trial: true }).then(() => true, () => false);
     check(menuClick, `${width}: the Demo menu can be clicked with the panel open`);
     if (menuClick) {
@@ -91,6 +103,17 @@ async function main() {
     // The strip at its widest: every ticket with a result tag.
     await page.keyboard.press("Escape");
     await page.waitForTimeout(300);
+    // A narrow strip scrolls: an arrow key brings the next pill fully into view.
+    await pills(page).first().focus();
+    await page.keyboard.press("ArrowRight");
+    await page.keyboard.press("ArrowRight");
+    await page.waitForTimeout(150);
+    const lastInView = await page.getByRole("navigation", { name: "Conversations" }).evaluate((nav: HTMLElement) => {
+      const last = nav.querySelectorAll("button")[2]!.getBoundingClientRect();
+      const box = nav.getBoundingClientRect();
+      return last.right <= box.right + 1 && last.left >= box.left - 1;
+    });
+    check(lastInView, `${width}: arrow keys bring the last pill into view`);
     const reply = page.getByRole("textbox", { name: "Your reply" });
     for (let i = 0; i < count; i++) {
       await pills(page).nth(i).click({ timeout: 2000 }).catch(() => undefined);
@@ -109,6 +132,21 @@ async function main() {
     if (width === 1024) await page.screenshot({ path: process.env.SLIDE_OVER_SHOT ?? "design/audit/slide-over-1024.png" });
     await ctx.close();
   }
+  // A short screen has no room for a panel under the strip: it's the old overlay, modal, at full height.
+  const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } });
+  const page = await ctx.newPage();
+  await page.goto(base, { waitUntil: "networkidle" });
+  await pills(page).first().waitFor();
+  await openPanel(page);
+  const height = await page.getByRole("complementary", { name: "SureSend" }).evaluate((el) => el.getBoundingClientRect().height);
+  check(height >= 320, `844×390: the panel keeps its height (${Math.round(height)} px)`);
+  let left = false;
+  for (let i = 0; i < 30 && !left; i++) {
+    await page.keyboard.press("Tab");
+    left = await page.evaluate(() => !document.activeElement?.closest('[aria-label="SureSend"]'));
+  }
+  check(!left, "844×390: Tab stays inside the panel, since it covers the pills");
+  await ctx.close();
   await browser.close();
   if (server) stopServer(server);
   console.log(failures ? `${failures} failed` : "all passed");

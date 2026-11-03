@@ -1,6 +1,7 @@
 // Phase 11 (D-045, D-046): copy the independent review ruled out. Scans what a visitor reads, so a new screen can't bring it back.
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import path from "node:path";
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
@@ -38,10 +39,23 @@ describe("copy rules", () => {
 
   // D-053: a visitor reads "instant transfer" and "transfer type". The code field stays `rail`, and the prompts still explain it to the AI.
   it('nothing a visitor reads says "rail"', () => {
-    const RAIL_WORDS = /\b(?:instant|standard|unknown|payment|one|this|the|by|which|another|other|any|all|every)[- ]rails?\b|\brails? (?:is|unknown|isn't)\b|\brail-specific\b|\}[- ]rails?\b(?!=)/i;
-    const LABELS = />\s*Rail\s*<|"Rail"|\bRail unknown\b|\bInstant rail\b/;
-    const hit = (f: string) => RAIL_WORDS.exec(visible(f))?.[0] ?? LABELS.exec(visible(f))?.[0];
-    const found = FILES.filter((f) => !/lib\/ai\/(?:prompts|schemas)\.ts$/.test(rel(f)) && hit(f)).map((f) => `${rel(f)}: ${hit(f)}`);
+    // Every string and JSX text, not a list of phrases: QA found "Rail changed. Press Send…", which a list didn't have.
+    const texts = (f: string) => {
+      const out: string[] = [];
+      const walk = (n: ts.Node) => {
+        if (ts.isStringLiteralLike(n) || ts.isTemplateHead(n) || ts.isTemplateMiddle(n) || ts.isTemplateTail(n) || ts.isJsxText(n)) out.push(n.text);
+        ts.forEachChild(n, walk);
+      };
+      walk(ts.createSourceFile(f, readFileSync(f, "utf8"), ts.ScriptTarget.Latest, true, f.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS));
+      return out;
+    };
+    // The field's own name, as a key or a value, and MCP's parameter, which keeps it.
+    const allowed = (t: string) => /^rails?$/.test(t.trim()) || /pass rail\b|transfer type \(rail\)/.test(t);
+    const found = FILES.filter((f) => !/lib\/ai\/(?:prompts|schemas)\.ts$/.test(rel(f))).flatMap((f) =>
+      texts(f)
+        .filter((t) => /\brails?\b|-rails?\b/i.test(t) && !allowed(t))
+        .map((t) => `${rel(f)}: ${t.trim().slice(0, 70)}`),
+    );
     expect(found).toEqual([]);
   });
 

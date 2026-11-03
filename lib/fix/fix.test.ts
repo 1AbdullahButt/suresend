@@ -109,7 +109,7 @@ describe("validation", () => {
       ["Instant transfers didn't move to 1 business day.", /contains "didn't"/],
       ["Standard transfers are reversed within 1 business day.", /doesn't name instant transfers|beyond instant transfers/],
       ["All transfers on instant transfers are reversed within 1 business day.", /beyond instant transfers/],
-      ["Instant transfers take 1 business day; standard ones can take two months.", /another timeline \("months"\)|beyond instant transfers/],
+      ["Instant transfers take 1 business day; standard ones can take two months.", /another timeline or amount \("two months"\)|beyond instant transfers/],
       ["Instant transfers take 1 business day, or eleven days at month-end.", /another timeline/],
       ["Instant transfers take 1 business day, usually immediately.", /another timeline \("immediately"\)/],
       // D-041: the fee detector now catches it first; either way it's refused for the fee wording.

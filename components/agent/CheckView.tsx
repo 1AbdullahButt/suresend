@@ -1,6 +1,6 @@
 "use client";
 import { Check, CircleCheck, RefreshCw } from "lucide-react";
-import type { Rail, Suggestion } from "@/lib/engine/types";
+import type { Suggestion } from "@/lib/engine/types";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
 import { claimLines, sentCopy, summarize } from "@/lib/client/outcome";
@@ -15,7 +15,7 @@ const DOT = { good: s.dGood, check: s.dCheck, hold: s.dHold, ask: s.dAsk, off: s
 
 const STALE_TEXT: Record<Exclude<StaleReason, null>, string> = {
   draft: "You changed the reply. Press Send to check it.",
-  rail: "Rail changed. Press Send to check again.",
+  rail: "The transfer type changed. Press Send to check again.",
   persona: "Viewing as someone else now. Press Send to check again.",
   workspace: "A doc changed. Press Send to check again.",
 };
@@ -76,7 +76,6 @@ export function CheckingSteps({ checking }: { checking: CheckingState }) {
 export function CheckView({
   stored,
   staleReason,
-  rail,
   checking,
   sendState,
   ack,
@@ -93,7 +92,6 @@ export function CheckView({
 }: {
   stored: StoredResult | null;
   staleReason: StaleReason;
-  rail: Rail;
   checking: CheckingState | null;
   sendState: SendState;
   ack: boolean;
@@ -161,7 +159,8 @@ export function CheckView({
   if (view === "why") return <WhyView result={result} onBack={() => onView("main")} onTrace={() => onView("trace")} />;
   if (view === "trace") return <TraceView result={result} onBack={() => onView("why")} onOpenDoc={onOpenDoc} />;
 
-  const sum = summarize(result, rail);
+  // The rail it was checked on: the picker may have moved since, and the note above says so.
+  const sum = summarize(result, stored.key.rail);
   // A reply with several claims lists each with its own verdict, so a Hold names the claim it's for (D-041).
   const lines = claimLines(result);
   const stale = staleReason !== null;

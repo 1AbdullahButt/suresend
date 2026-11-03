@@ -88,7 +88,8 @@ export function App() {
   const ag = useSureSend();
   const { actions } = ag;
   const overlay = useMediaQuery("(max-width: 1099px)");
-  const sheet = useMediaQuery("(max-width: 699px)");
+  // The panel covers the pills on a phone or a short screen, so there it's modal (D-054).
+  const modal = useMediaQuery("(max-width: 699px), (max-height: 560px)");
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [tour, setTour] = useState<TourState | null>(null);
@@ -106,9 +107,25 @@ export function App() {
 
   const closeAgent = useCallback(() => {
     actions.setPanelOpen(false);
-    // After the render that lifts `inert` from the chat: an inert element can't take focus.
-    requestAnimationFrame(() => agentReturnRef.current?.focus());
+    // After the render that lifts `inert` from the chat: an inert element can't take focus. Send opens the panel by itself, so
+    // there may be nothing to go back to: then the toggle that reopens it.
+    requestAnimationFrame(() => {
+      const back = agentReturnRef.current;
+      agentReturnRef.current = null;
+      (back?.isConnected && back.offsetParent !== null ? back : document.querySelector<HTMLElement>("[data-agent-toggle]"))?.focus();
+    });
   }, [actions]);
+
+  // Esc closes it wherever focus is, since the pills and the header stay in reach beside it. Inside it, AgentCard has already
+  // handled the key. The menu, the tour and the reset dialog use Esc for themselves.
+  useEffect(() => {
+    if (!overlay || !ag.panelOpen || menuOpen || confirmReset || tour) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !e.defaultPrevented) closeAgent();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [overlay, ag.panelOpen, menuOpen, confirmReset, tour, closeAgent]);
 
   // Under 1100 px the agent card is a slide-over / bottom sheet: open it whenever Send starts a check or one finishes.
   // Changing the conversation closes it, since what it shows belongs to the other ticket; a tour step opens it itself.
@@ -256,12 +273,11 @@ export function App() {
               <main className={s.body} aria-label="Conversation" aria-busy="true" />
             )}
             {overlay && ag.panelOpen ? <div className={s.scrim} onClick={closeAgent} aria-hidden="true" /> : null}
-            <AgentCard tab={ag.tab} onTab={actions.setTab} overlay={overlay} sheet={sheet} open={ag.panelOpen} onClose={closeAgent}>
+            <AgentCard tab={ag.tab} onTab={actions.setTab} overlay={overlay} modal={modal} open={ag.panelOpen} onClose={closeAgent}>
               {ag.tab === "check" ? (
                 <CheckView
                   stored={ag.stored}
                   staleReason={ag.staleReason}
-                  rail={ag.rail}
                   checking={ag.checking}
                   sendState={ag.sendState}
                   ack={ag.ack}

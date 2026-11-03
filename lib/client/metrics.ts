@@ -3,7 +3,8 @@ import type { CheckResult, Rail } from "@/lib/engine/types";
 import { fnv1a } from "./hash";
 import { readJson, removeKey, writeJson } from "./storage";
 
-const KEY = "suresend.metrics.v1";
+// v2: the demo's customers and doc titles changed in Phase 12, and what v1 saved still names the old ones.
+const KEY = "suresend.metrics.v2";
 
 export type Review = "correct" | "false_alarm";
 

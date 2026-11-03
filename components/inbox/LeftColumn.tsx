@@ -42,6 +42,7 @@ export function LeftColumn({
     if (next < 0) return;
     e.preventDefault();
     refs.current[next]?.focus();
+    refs.current[next]?.scrollIntoView({ block: "nearest", inline: "nearest" });
   };
   const meta = ticket ? ticketMeta(ticket.id) : null;
   const amount = meta?.transfer.split("·")[1]?.trim() ?? "";

@@ -3,7 +3,7 @@ import { formatValue, isDuration, unitsMatch, valueWords, type AnyValue } from "
 import type { ScopeLike, TopicDef } from "./types";
 
 // Counts in words too, with or without a number behind them: the AI says what they're worth, and this net only sees that they're there.
-const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same|a couple of|a few|several|a handful of)`;
+const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same|(?:a )?couple(?: of)?|a few|several|a handful of)`;
 
 function scopeSubject(rail: ScopeLike): string {
   return rail === "instant" ? "Instant transfers" : rail === "standard" ? "Standard transfers" : "Failed transfers";
@@ -37,18 +37,18 @@ export const reversalWindow = {
   patterns: [
     {
       kind: "duration",
-      re: new RegExp(String.raw`\b${NUMBER}[\s-]*(?:business |working |calendar )?(?:day|days|hour|hours|week|weeks)\b|\ba (?:business |working |calendar )?(?:week|fortnight)\b|\ba (?:business|working) day\b|\ba day or two\b`, "gi"),
+      re: new RegExp(String.raw`\b${NUMBER}[\s-]*(?:business |working |calendar )?(?:day|days|hour|hours|week|weeks|month|months)\b|\ba (?:business |working |calendar )?(?:week|fortnight|month)\b|\ba (?:business|working) day\b|\ba day or two\b|\b(?:in|within) a day\b`, "gi"),
       noun: "the timing",
     },
     { kind: "relative_time", re: /\b(?:same day|today|tomorrow|within|by end of)\b/gi, noun: "the timing" },
   ],
   holdHeadline: ({ railTransfers, governing, cite, draft }) => `Hold: ${railTransfers ?? "failed transfers"} reverse in ${governing} (${cite}). The draft says ${draft}.`,
   replyTemplate: (v) => `For transfers on this payment type, the current policy gives a reversal window of ${formatValue(v)}.`,
-  sentence({ verdict, rail, governing, draft, draftText }) {
+  sentence({ verdict, rail, governing, draft, draftText, replaced }) {
     const subject = scopeSubject(rail);
     const gov = valueWords(governing);
     return verdict === "hold"
-      ? { sentence: `${subject} now reverse in ${gov}. Your reply says ${draftShort(draft, governing, draftText)}.`, strong: gov }
+      ? { sentence: `${subject}${replaced ? " now" : ""} reverse in ${gov}. Your reply says ${draftShort(draft, governing, draftText)}.`, strong: gov }
       : { sentence: `${subject} reverse in ${gov}. Your reply matches.`, strong: gov };
   },
 } satisfies TopicDef;

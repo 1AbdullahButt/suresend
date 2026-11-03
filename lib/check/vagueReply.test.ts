@@ -224,7 +224,7 @@ describe("the AI reads the vague words as a claim with no value", () => {
     const fee = whyModel(r, r.claims[1]!);
     expect(r.claims[1]?.governing?.valueText).toBe("refunded");
     expect(fee.governing?.id).toBe("DOC-101");
-    expect(summarize({ ...r, claims: [r.claims[1]!] }, c.rail).sentence).toBe("Your docs say refunded; your reply doesn't say it plainly.");
+    expect(summarize({ ...r, claims: [r.claims[1]!] }, c.rail).sentence).toBe("Your docs say it's refunded; your reply doesn't say it plainly.");
   });
 
   it("the rail is unknown and the docs differ by rail: no one value is named, and the reply still can't pass", async () => {

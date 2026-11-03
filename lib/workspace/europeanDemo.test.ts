@@ -69,6 +69,14 @@ describe("the money is in euros", () => {
   });
 });
 
+describe("a returning browser", () => {
+  // Saved numbers and doc edits carry the old names and the old doc text, so they start again rather than show them (QA).
+  it("doesn't reread what it saved under the old names", () => {
+    expect(read("lib/client/metrics.ts")).toContain('"suresend.metrics.v2"');
+    expect(read("lib/client/workspace.ts")).toContain('"suresend.overrides.v2"');
+  });
+});
+
 describe("what people read outside the app", () => {
   const OLD = /Ayesha|Usman|\bHina\b|\bPKR\b|Rs \d|instant[- ]rail|standard[- ]rail|Instant Rail|\ball rails\b|payment rail/i;
 

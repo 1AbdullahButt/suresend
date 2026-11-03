@@ -94,7 +94,8 @@ const unreadLead = (result: CheckResult): string | null =>
 /** The docs' value for a reply that gives none, flagged when the doc behind it is in doubt. */
 function docsSayWords(claim: ClaimResult, value: NonNullable<Value>): string {
   const doubt = governingEvidence(claim)?.weakeners.length ? ", but that doc is in doubt" : "";
-  return `Your docs say ${wordsFor(claim.draftClaim.topic, value)}${doubt}`;
+  const topic = claim.draftClaim.topic;
+  return `Your docs say ${(isCovered(topic) ? topicDef(topic).stated?.(value) : undefined) ?? wordsFor(topic, value)}${doubt}`;
 }
 
 /** The sent card (D-045): what happened, never that the reply was right. Past a Double-check, the docs may well have disagreed. */
@@ -115,7 +116,7 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
   // The sentence is the topic's own wording (D-041).
   const said = (verdict: "hold" | "allow") =>
     topic && gov && claim
-      ? topic.sentence({ verdict, rail, governing: gov.value, draft: claim.draftClaim.value, draftText: claim.draftClaim.valueText })
+      ? topic.sentence({ verdict, rail, governing: gov.value, draft: claim.draftClaim.value, draftText: claim.draftClaim.valueText, replaced: gov.via !== "CONSENSUS" })
       : null;
   const base = { name: meta.name, tone: meta.tone };
 
@@ -226,7 +227,7 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     case "HEDGED_CONTRADICTION":
       return `Your hedged “${claim?.draftClaim.valueText ?? ""}” differs from the policy (${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "another value"}).`;
     case "OUTSIDE_COVERAGE":
-      return `Your reply promises ${claim?.draftClaim.valueText ?? "something"} that SureSend doesn't cover. Check it against the source.`;
+      return `Your reply says “${claim?.draftClaim.valueText ?? "something"}”, which SureSend doesn't cover. Check it against the source.`;
     default:
       return firstUpper(result.headline.replace(/^Caution:\s*/i, ""));
   }
@@ -315,7 +316,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
   const gov = claim?.governing ?? null;
   const govEv = governingEvidence(claim);
   const replySays = claim
-    ? claim.draftClaim.value
+    ? claim.draftClaim.value && isCovered(claim.draftClaim.topic)
       ? wordsFor(claim.draftClaim.topic, claim.draftClaim.value)
       : claim.draftClaim.valueText || "No value"
     : "No policy promise";
@@ -501,7 +502,7 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
     case "D0:pass":
       // A yes/no value reads "Your reply says “the transfer fee isn't refundable”"; an amount reads "Your reply promises 4 business days".
       return c.draftClaim.value && unitLabel(c.draftClaim.value) === null
-        ? `Your reply says “${c.draftClaim.span}”${c.draftClaim.definitive ? "" : ", hedged"}.`
+        ? `Your reply says “${claimWords(ctx.result, c)}”${c.draftClaim.definitive ? "" : ", hedged"}.`
         : `Your reply promises ${c.draftClaim.valueText}${c.draftClaim.definitive ? "" : ", hedged"}.`;
     case "D1:pass": {
       const rail = /resolves for (instant|standard) transfers/.exec(row.detail)?.[1];
