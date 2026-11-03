@@ -2331,3 +2331,83 @@ ALL PASS
 ```
 **Still open:** Gemini's rerun on `2026-11-03.2`, scheduled for 08:07 UTC on 4 Nov, in its own commit. D-059's decision for Abdullah.
 
+### Phase 12, second round
+
+Abdullah: a dropped claim caps the reply (D-060), doc owners get European names (D-061), "about a week" and the "Standard transfers" headline stay as they are. Branch `phase-12b`.
+
+**QA's repro first, recorded failing (3886d7e).** "Your money is back within 1 business day, with the service cost taken off", with the fee's quote off by one letter: `expected 'ALLOW' to be 'CAUTION'`. The owner checks failed too.
+```
+$ pnpm vitest run lib/check/droppedClaim.test.ts lib/workspace/europeanDemo.test.ts
+× have European names, with the same activity and everything else 10ms
+     × are named the same way in the docs 5ms
+     × evals/heldout.json has no old name 1ms
+     × lib/workspace/variantBodies.ts has no old name 1ms
+     × tests/helpers/fixtures.ts has no old name 1ms
+     × data/seed/sources.json has no old name 1ms
+     × data/seed/docs/DOC-101.md has no old name 1ms
+     × data/seed/docs/SRC-202.md has no old name 1ms
+     × SPEC Appendix A has them too 1ms
+     × with the quote off by one letter, it can't be Good to send 16ms
+     × the card says part of it couldn't be verified, and what the docs say 5ms
+     × the card lists the part it couldn't check, without the AI's miscopied words 9ms
+     × Send needs a person's OK 9ms
+     × MCP says the same 8ms
+     × the trace and Why say what happened 3ms
+     × a Hold stays a Hold, and the dropped timeline isn't called unanswered 4ms
+     × its suggested reply states the dropped topic's value too, so it still answers the customer 4ms
+     × a dropped claim outside the topics caps a right reply too 3ms
+     × another Double-check keeps its own reason, listed first 2ms
+     × with a doc unread, no value is named for the dropped part (D-046) 2ms
+     × the engine caps on the count alone, if a caller gives no detail 1ms
+ Test Files  2 failed (2)
+      Tests  21 failed | 25 passed (46)
+```
+**The same hole on the docs' side, found by testing it, and the tests first again.** With DOC-103 holding two claims and the exception's quote miscopied, the old SOP's 4 business days came back Good to send:
+```
+DOC-103's timeline quote right: HOLD/CONTRADICTS_GOVERNING, "Don't send this yet", rejected []
+DOC-103's timeline quote miscopied: ALLOW/SUPPORTED, "Matches your docs", rejected ["QUOTE_NOT_FOUND"]
+$ pnpm vitest run lib/check/droppedClaim.test.ts   (the reply's side fixed by then)
+     × with the exception's quote miscopied, the old SOP can't make it Good to send 14ms
+     × the card says part of the doc, not all of it 3ms
+     × a Hold from what's left stays a Hold 11ms
+     × no value is named while part of a doc is missing (D-046) 3ms
+ Test Files  1 failed (1)
+      Tests  4 failed | 20 passed (24)
+```
+**Saved results, against the last round.** Saved responses re-recorded on the renamed docs, 50 files, unexpected 0.
+```
+$ pnpm tsx scripts/snapshot-results.ts evals/snapshots/phase12b-after.json --compare evals/snapshots/phase12-after.json
+132 results → evals/snapshots/phase12b-after.json (0 not on saved responses)
+Compared with evals/snapshots/phase12-after.json: 132 identical, 0 different, 0 missing.
+```
+
+**Groq, prompt `2026-11-03.2` (unchanged: no name is in the prompts), 3 runs, as they came.**
+```
+$ pnpm eval --provider groq --fresh
+- Runs per case: 3 · started: 2026-11-03T18:34:09.838Z · finished: 2026-11-03T18:56:26.161Z · throttled
+- Decision accuracy: **100.0%** (75/75)
+- Quote validity: **100.0%** (117/117 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **97.2%** (175/180)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+$ pnpm eval --heldout --provider groq --fresh
+- Runs per case: 3 · started: 2026-11-03T18:56:40.277Z · finished: 2026-11-03T19:41:32.775Z · throttled
+**Clean held-out cases (25)**
+- Decision accuracy: **89.3%** (67/75)
+- Fee cases only: **76.2%** (16/21)
+- Vague replies only: **100.0%** (9/9)
+- Paraphrased wrong timelines: **Hold 12/18**, Double-check 6, Ask first 0, Good to send 0; verdict and reason as expected 15/18
+- Quote validity: **100.0%** (158/158 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures; seed docs only, the reworded texts have none): **95.4%** (103/108)
+| H18-fee-hedged-no | Hedged "not refunded", worded without the hedge list: Double-check, not Hold | CAUTION / HEDGED_CONTRADICTION | ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERN
+| H23-fee-cost-taken-off | The timeline is right; the fee is taken off the money, in other words, so it isn't refunded | HOLD / CONTRADICTS_GOVERNING | ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSU
+| H38-para-several-working-instant | "Several" is a count with no number too: vague | CAUTION / UNSUPPORTED | ✗ CAUTION/EXTRACTION_GAP · ✗ CAUTION/EXTRACTION_GAP · ✗ CAUTION/EXTRACTION_GAP |
+**Exposed cases (14): regression only, not held-out**
+- Decision accuracy: **78.6%** (33/42)
+- Paraphrased wrong timelines: **Hold 6/24**, Double-check 18, Ask first 0, Good to send 0; verdict and reason as expected 18/24
+- Quote validity: **100.0%** (72/72 extracted quotes/spans verbatim; 0 rejected)
+| H13-fee-unknown-rail | Fee refunded on the ticket with an unknown transfer type: the fee rule covers all transfers, so the type doesn't matter | CAUTION / TOPIC_GAP | ✗ CAUTION/UNSUPPORTED
+| H31-para-about-week-standard | The same on a standard transfer | CAUTION / UNIT_MISMATCH | ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED | 0/3 |
+| H36-para-day-or-two-instant | "A day or two" is 1–2 calendar days. The units differ, so Double-check | CAUTION / UNIT_MISMATCH | ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/U
+```
+Held-out is report-only, so "passes" has no line to cross. I read it as: no wrong reply reached Good to send, and none did. On the paraphrased wrong timelines the count is Hold 18, Double-check 24, Good to send 0, the same as the earlier session. The one miss that's less strict than it should be is H23, read as vague on 2 of 3 runs: a Double-check, not a Hold.
+
