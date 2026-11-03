@@ -189,7 +189,7 @@ export function CheckView({
           <ul className={s.claimList} aria-label="Claims in this reply">
             {lines.map((l) => (
               <li key={l.key}>
-                <span className={s.claimSays}>{l.quoted ? `“${l.says}”` : l.says}</span>
+                <span className={s.claimSays}>{l.quoted ? `“${l.says}”` : `${l.label}: ${l.says}`}</span>
                 <span className={s.claimTag}>
                   <span className={cx(s.claimDot, DOT[l.tone])} aria-hidden="true" />
                   {l.name}

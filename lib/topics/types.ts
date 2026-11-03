@@ -47,7 +47,7 @@ export interface TopicDef {
   holdHeadline(p: { railTransfers: string | null; governing: string; cite: string; draft: string }): string;
   /** The safe-reply template sentence stating the governing value (SPEC §6.7). */
   replyTemplate(v: AnyValue): string;
-  /** The value after "Your docs say", when the bare words would read badly: "it's refunded". */
+  /** What follows "Your docs say", when the bare words would read badly: "the transfer fee is refunded". */
   stated?: (v: AnyValue) => string;
   /** One plain sentence for the decision card (design v2), and the value to emphasise in it. `replaced`: this value took over from another doc's. */
   sentence(p: { verdict: "hold" | "allow"; rail: ScopeLike; governing: AnyValue; draft: AnyValue | null; draftText: string; replaced: boolean }): {

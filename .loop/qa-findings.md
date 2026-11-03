@@ -1,70 +1,101 @@
-# QA findings · Phase 12, confirmation of the fixes after the second pass · 2026-11-03T17:22:45Z
+# QA findings · Phase 12, second round · 2026-11-03T20:24:04Z
 
-Branch `phase-12`, HEAD 3f10951. Reviewed `git diff 845c464..phase-12` only, not the whole phase. No live AI: `AI_MODE=saved` or hand-written readings. Production was loaded read-only for layout, with `/api/check`, `/api/send`, `/api/fix` and `/api/mcp` aborted. No env values printed. No source or test file edited. `docs/VIDEO_SCRIPT.md` and locked files not touched. My server is stopped (no listener on 3100). Scripts, logs and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\p3\`.
-
-Uncommitted edits to README.md, DECISIONS.md and PROGRESS.md appeared while I was reviewing: the span probe's new numbers (0 of 29, 3 of 20) and the pasted output behind them. They're docs only and I checked them too. The numbers add up against the paste. The committed copy still says 0 of 19 and one in 10.
+Branch `phase-12b`, HEAD 9b15dee. Reviewed `git diff main..phase-12b`, not the whole phase. No live AI: `AI_MODE=saved` or hand-written readings. No env values printed. No source or test file edited. `docs/VIDEO_SCRIPT.md` not opened. Locked files not changed: the only attempt was the `touch` you asked for, and the hook refused it. My server is stopped (no listener on 3100 or 3000). `git status --short` is empty. Scripts, logs and screenshots: `C:\Users\avata\AppData\Local\Temp\claude\D--Project-slite\607cb1d3-d036-40a6-a4f5-f5b7e826e10a\scratchpad\p12b\`.
 
 ## Commands run
+- `git worktree list` → `D:/Project/slite 9b15dee [phase-12b]`, the only entry
 - `pnpm typecheck` → exit 0
 - `pnpm lint` → exit 0, `--max-warnings 0`
-- `pnpm build` → exit 0, `Compiled successfully`
-- `pnpm test` → exit 0, `Test Files 33 passed (33)`, `Tests 445 passed (445)`
-- `SLIDE_OVER_SHOT=<scratch> pnpm tsx scripts/slide-over-check.ts --serve` → exit 0, 51 PASS, 0 FAIL, `all passed`
-- `pnpm e2e` against a local `AI_MODE=saved` server on 3100 → exit 0, `1 passed`
-- `tsx scripts/ui-audit.ts` from a scratch folder, so `design/audit` wasn't rewritten → exit 0, 30 states, all `axe: none`, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.`
-- `git worktree list` → only `D:/Project/slite 3f10951 [phase-12]`
-
-## What this confirmation covered
-**1. `shell.module.css`: confirmed.**
-- `.app` computes to `clip` at 1099×800, 1024×800, 1024×561, 900×800, 700×800, 700×561, and to `hidden` at 1440×900, 1100×800, 1024×560, 1024×500, 844×390, 700×560, 699×800, 390×844. Where it's `hidden`, `scrollWidth` equals `clientWidth`, so there's nothing to jump to sideways.
-- Jump: 120 opens each, watched every frame, at 1024×800, 700×800, 1024×500, 844×390: max `scrollLeft` anywhere 0, max header shift 0.
-- Tab to Send at 844×390: local equals production. Rect 295–351, 56 px visible, clickable, `.app` scrolled by 104.
-- Tour step 1 at 844×390: local equals production. Ring `717,330 64×64`, Send clickable.
-- Resize from 844×390 to 844×700 and back: scroll resets to 0 under clip and returns to 104, nothing stuck.
-- Where clip applies at its shortest (700 to 1099 × 561, all three tickets), Send is at 399–455, clickable, no overflow.
-
-**2. `GuidedTour.tsx`: half confirmed.**
-- Send is free in step 6 once the panel is closed: covered 0%, clickable, ring on it at 1024×700, 1024×600, 800×700, 800×600, also 1024×800, 1024×768, 768×1024.
-- "After step 5's review, step 6 scrolls to the doc" holds only on tall screens. See the first finding.
-- Walk at 1024×800, 800×800, 390×844, diffed line by line against the last pass's logs: only step 6 changed (and 1 px at 390 in step 2). 0 page errors. The only failed clicks are the same 3 as before, Send under an open panel, which the script expects. At 1024×800 and 800×800, step 6 is better on the review path: ring on the doc, textarea fully visible.
-- On the phone, the ring now shows after the review, and the card covers 91% of the textarea, where it covered 8%. That's the direct path's own layout (97%), "Hide steps" is there, and typing collapses the card. Not a new kind of problem.
-
-**3. `ChatCard.tsx`: confirmed.** No dot at any width. 390: "Léa K." over the picker, reads fine, still 25 px taller than one line. 430 and 699: one line. 700 and up: this head is hidden and the pill bar shows the name, so nothing changed. See the 320 px finding.
-
-**4. `copyRules.test.ts`: confirmed.** I sliced the real `texts` and `allowed` out of the test file at run time and ran them on scratch sources outside the repo. Today's tree: 74 files, found 0. Fail as required: `<span>rail</span>`, `{"rail"}`, `aria-label="rail"`, "Pick the transfer type (rail) first" in a component and in `lib/`, "pass rail" outside `lib/mcp/`, "Bypass rail checks" even inside it, `title="Rail"`, a bare `"Rail"`. Pass as intended: both phrases inside `lib/mcp/`, a bare `"rail"` in code. 19 cases, 0 mismatches. Still passing, left open below: `const label = "rail"` used later in JSX, `{ label: "rail" }` in a data table, and `rail_type` or `RAIL_UNKNOWN`.
-
-**5. `eval.ts` and `probe-draft.ts`: confirmed.** In `eval.ts`, `ok` is computed before `note` and doesn't read it. `note` reaches only stderr and the new `notes` text, which follows the table after a blank line. Scores come from `.ok`. The `--spans` probe uses the same `isVerbatim(span, reply)` as `validateDraftClaims` (`runCheck.ts:82`), and a fresh memory-only cache per reading, so it can't replay a saved answer. With `AI_MODE=saved` it printed `no reading: Live AI is not configured…` and `0 of 0`, not a false zero of N.
-
-**6. Docs: every stale item from my list is right now, with four small inaccuracies below.** Checked against git: "Groq 74/75" is `.6` (e197ab1, the miss is `CAUTION/UNSUPPORTED`). "65/75" is `.5` (f93910e). `.1` is 75/75 and 117/117 (PROGRESS.md:2066). The only prompt difference from `.1` to `.2` is the span line and the version. "Since `2026-11-02.6`" is right for the fee wording (cd7abe1, `lib/topics/feeRefund.ts`). `suggestionIncludes: "1 business day"` is in `golden.json`. "22 of the 24 that ran" and "Gemini has run the 19 and 6" hold. The quota sentence is gone.
-
-**D-059 and Limitations, rerun with `p2/drop.mts`:** the fee span off by one letter gives `ALLOW/SUPPORTED`, "Matches your docs", `rejected: [SPAN_NOT_FOUND]`. The right span gives Hold. The timeline span miscopied on a Hold gives "Not answered: Nothing on the reversal timeline". Both as stated. "The check stops only if every claim is dropped" matches `decide.ts:77` and SPEC D0a: both dropped gives `AI_UNAVAILABLE/EXTRACTION_FAILED`. One condition is missing; see below.
+- `pnpm build` → exit 0, 11 static pages generated
+- `pnpm test` → exit 0, `Test Files 34 passed (34)`, `Tests 482 passed (482)`
+- `pnpm e2e` → exit 0, `1 passed (41.4s)`, wrong draft → held → Use this reply → sent → Demo menu shows 1 stopped
+- `SLIDE_OVER_SHOT=<scratch> pnpm exec tsx scripts/slide-over-check.ts --serve` → exit 0, 51 PASS, 0 FAIL, `all passed`
+- `pnpm mcp:e2e` against `AI_MODE=saved pnpm start -p 3100` → exit 0, 19 PASS, 0 FAIL, `ALL PASS`, DOC-105 refused
+- `pnpm exec tsx scripts/snapshot-results.ts <scratch>/snapshot-qa.json --compare evals/snapshots/phase12-after.json` → exit 0, `132 results (0 not on saved responses)`, `132 identical, 0 different, 0 missing`. My file is byte-identical to the committed `evals/snapshots/phase12b-after.json`
+- `tsx scripts/ui-audit.ts http://127.0.0.1:3100`, from a scratch folder so `design/audit` wasn't rewritten → exit 0, `Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.`
+- `pnpm hooks:selftest` → exit 0, `ALL PASS`
+- `touch SPEC.md`, then `touch data/seed/sources.json tests/helpers/fixtures.ts` → both refused: `BLOCKED by protect-locked: "touch" on "spec.md" is locked`, and the same for `tests/`, `data/seed/`. Not gone around
+- `git diff main --stat -- .loop/locked IMPLEMENTATION_BRIEF.md tests/engine tests/ai e2e .claude` → empty
+- `git diff main -- lib/ai/prompts.ts lib/ai/schemas.ts` → 0 lines. `lib/ai` and `lib/topics` have no diff at all
+- `git log --all -- docs/VIDEO_SCRIPT.md` → empty. `git check-ignore` → `.gitignore:16`
+- My harnesses, real `runCheck`, `handleSend`, `handleFix`, `checkReply`, `proposeDocFix` and the copy functions on hand-written readings: `cap.mts`, `hold.mts`, `docs.mts`, `fix.mts`, `last.mts`, 71 cases. All exit 0, output in `*.out` beside them
+- My Playwright scripts, `ui.mts`, `ui2.mts` and `names.mts`: the real saved-mode server with `/api/send` mocked by hand-built results, 4 results × 1440, 1024, 390. All exit 0. Browser requests to an AI provider: 0. Axe on each mocked card: no serious or critical
+- `numbers.mts`: counts the published numbers from the raw report rows
 
 ## Findings
-- [severity: minor] components/tour/GuidedTour.tsx:356–361, PROGRESS.md:2157 · expected step 6 to scroll to the doc after step 5's review · actual **it only does while the doc's rectangle is still on screen, so about 735 px tall and up.** `findTarget` skips a doc above the viewport and returns the panel, so the new per-element key scrolls the panel, not the doc. 1024×740: doc at 216, textarea all visible. **1024×730, 1024×700, 1024×600, 900×700, 800×700, 800×600, 1440×700, 1366×650, 1280×600, 1100×700, 390×700: doc off screen, 0 to 25 of the textarea's 230 px visible, ring on the whole panel.** 1024×600 is the exact case in my second pass, unchanged (`p3/shots/s6-review-1024x600.png`), and 1366×650 is a common laptop. Going straight to step 6 without the review is right at all of them. No regression, and scrolling the panel still gets there, so it stays minor, but PROGRESS's "scrolls to a doc that renders late" overstates it. Log: `p3/s6.log`.
-- [severity: minor] components/tour/GuidedTour.tsx:358 · expected scrolling by hand to be left alone · actual new with this edit: on short screens, scrolling the panel back up past the doc's title pulls it once, by 224 px (`asked 240, is 16`), at 1024×600, 800×600, 390×660, 1440×650. Production: 0 pulls. Steps 1 to 5: 0 pulls. Scrolling down: 0 pulls. It lands on the doc, so it's harmless. A fix for the finding above could cover it. Log: `p3/flip2.log`.
-- [severity: minor] scripts/slide-over-check.ts:173–178 · expected the 51st check to fail if the short screen's bug returns · actual **it passes with the bug back.** With `overflow: clip` forced on `.app` at 844×390, the same sequence gives rect 333–389, so `r.top >= 0 && r.bottom <= innerHeight` is true, while 0 px are visible and `elementFromPoint` hits `HTML`. A rectangle ignores clipping. Test what a click would hit, as `onTop` in the same file does. The behaviour itself is right today, by my own measurement. Log: `p3/guard.mjs`.
-- [severity: minor] README.md:404, DECISIONS.md:1067 · expected the dropped-claim path's conditions in full · actual "It takes a miscopy on the one wrong claim" leaves out that the wording must also be unknown to the detector. "minus the processing charge" and "less the transfer fee" with a miscopied span give `CAUTION/EXTRACTION_GAP`, "Couldn't confirm the fee refund", not Good to send. The error overstates the risk, so nothing unsafe follows. Log: `p3/drop2.mts`.
-- [severity: minor] DECISIONS.md:1050 · expected the right attribution · actual "QA's second pass agreed with keeping it." It was the first pass (`git show 845c464:.loop/qa-findings.md`, line 27). The second pass's file doesn't mention D-056. Say "QA agreed".
-- [severity: minor] DECISIONS.md:1067 · expected something traceable · actual "said that if he disagrees, its verdict flips" isn't in any findings file. It follows from the rule that a major blocks approval, but I can't source the sentence on disk.
-- [severity: minor] README.md:266 · expected "previous" to read one way · actual "the prompt just before this one… golden was 75/75" sits two lines below the row "Groq, previous prompt, 74/75". Both are true, of different prompts (`2026-11-03.1`, `2026-11-02.6`), and they read as a contradiction. Name `2026-11-03.1`.
-- [severity: minor] PROGRESS.md:2151–2153, README.md:248 · expected the evidence pasted (CLAUDE.md rule 6) · actual README says 51 passed, and the last run pasted in PROGRESS.md is the 50. My run shows 51.
-- [severity: minor] components/inbox/inbox.module.css:485 · expected the picker to stay in its column · actual at 320 px "Instant transfer" runs 33 px past `.chatWho`, and the SureSend pill covers its chevron (`p3/shots/head-local-320.png`). Production fits. It's a cost of the rename, not of removing the dot. 360 and up are fine.
-- [severity: minor] scripts/probe-draft.ts:28, 71 · expected `throttle: true` to space readings · actual a new runtime per reading means a new `throttled` with `last = 0`, so readings aren't spaced. A rate limit shows as `no reading`, not a false count, so the result stays sound. Also, `--spans` with no reply probes an empty string.
 
-## Left open from the second pass
-- **For Abdullah (D-059):** `lib/check/runCheck.ts:80–86`, `lib/engine/decide.ts:77`: a claim dropped for a bad quote can leave Good to send. `lib/engine/decide.ts:150, 317`, `lib/client/outcome.ts:301`: a dropped timeline on a Hold shows "Not answered". Both disclosed in Limitations. D0a's row and MCP still don't mention the rejection.
-- `components/tour/GuidedTour.tsx:219–223`: the card covers the doc from 700 to 793 px wide (D-059). Not in D-059: at 800×800 it covers 84% of the decision after saving, and step 3's card hides the end of the composer.
-- Step 4 with the panel closed by hand: the card covers Send at 1024×800 and 800×800. The step asks for nothing more by then.
-- `components/shell/App.tsx:338`: Esc after closing the reset dialog leaves focus on BODY and the menu open (D-059).
-- `lib/client/copyRules.test.ts`: `const label = "rail"` outside JSX, `{ label: "rail" }` in a data table, `rail_type` and `RAIL_UNKNOWN` still pass.
-- `evals/heldout.md:17`, `scripts/eval.ts:530`: the list of earlier sessions leaves out e197ab1 and 191fbc5 for `.6`.
-- `DECISIONS.md:968`, `README.md:266`: the wording is now honest, and golden's fall from 75/75 to 73/75 between `.1` and `.2` still isn't ruled out. 20 readings on `.2` give the miscopy on 3, and there's no matching run on `.1`. The first 39 readings' raw spans aren't saved.
-- Tab alone at 700 leaves the last pill 76% visible, still clickable.
-- A wrong "about a week" is a Double-check (D-058), for Abdullah.
-- `inert` dropping the landmark and heading, and "resolves for an unknown transfer type" behind Details: left on purpose, and I agree.
-- **Second-pass items now closed:** README 271–272, 285–295 and 315, 248, and 252–253, 258 and 278. README 266's account. `overflow: clip`. Step 6's card over Send. The dot.
+**No blocker. No major. I couldn't get a wrong reply to Good to send through the cap.** All minors below fail in the safe direction: none changes a verdict or lets a reply through.
 
-## Not covered
-No live AI, so the probe's readings (0 of 29, 3 of 20, 0 of 30) are checked for arithmetic against the paste, not reproduced. Production comparisons cover layout and focus only. At 844×390, cards taller than the screen run off the bottom. Going to step 2 without pressing Send, Next is at 398 on a 390 px screen, the same on local and production. With Send pressed, my forward walk reached step 6, whose card is 496 px tall, and the walk back stopped there because Back is out of reach. Card placement isn't in this diff, and the Limitations say the demo isn't built for that height. I didn't test tapping the picker at 320 px.
+- [severity: minor] `components/agent/CheckView.tsx:192`, `DECISIONS.md:1082` · **"Not verified" isn't on the card.** Expected, per D-060: "the card's line reads 'Not verified: Part of this reply'". Actual: the card renders only `l.says`, so it reads "Part of this reply · Double-check". The label shows in Why only. On a Double-check the headline explains it. On a Hold nothing does. Repro: `shots/hold-card-390.png`, "You can relax, the funds return on their own by Monday, less the small charge for the transfer", with the timeline span miscopied. Fix the card or D-060's sentence. · D-060
+
+- [severity: minor] `lib/client/outcome.ts:233`, `lib/topics/feeRefund.ts:16` · **"Your docs say it's refunded" has nothing for "it" to refer to.** `stated` was written for a sentence that has already named the fee (D-055's "their question about the fee"). Here nothing has, and the reply is about the money coming back, so "it" reads as the money. This is the one hint on the card about what to check by hand. Repro: QA's repro, `shots/cap-card-1440.png`. The engine's headline has the same gap: "The policy says refunded". D-060 and `droppedClaim.test.ts:93` pin this exact wording, so a fix changes both. · D-060
+
+- [severity: minor] `lib/engine/decide.ts:166`, `decide.ts:367` · **A dropped `other` claim names an unrelated docs value.** `other` isn't a topic (`lib/topics/index.ts`), but `docsSay("other")` treats it as one. Repro: `last.mts` R1, DOC-104 unflagged in Doc settings and "Your daily limit is 5,001 EUR" as the miscopied span: "Your docs say 24 hours, but that doc is in doubt", and Why's "Your docs agree on this". With DOC-101 holding an `other` claim, MCP also returns `governing: {doc_id: "DOC-101", value: "24 hours"}`. Not reachable on the seed as it stands: the only `other` claim with a value in the saved readings is DOC-104's, which is excluded while flagged. It takes a doc edit or an unflag, plus a live miscopy. The verdict stays Double-check. One-line fix: name a value only for a covered topic. · D-046, D-060
+
+- [severity: minor] `lib/client/outcome.ts:234`, `outcome.ts:313`, `decide.ts:365` · **Several dropped topics read badly.** The sentence says "one part", beside three identical lines "Part of this reply · Double-check", and names only the first topic's value. Repro: `cap.mts` 1b, `shots/three-card-1024.png`. Why has three identical card titles, and MCP's `says` repeats, though its `topic` tells them apart. The trace quotes the pseudo-span ("Claim 2 of 2: “Part of this reply”"), as if those were the reply's words. It takes three miscopies in one reply. · D-060
+
+- [severity: minor] `lib/engine/decide.ts:166`, `DECISIONS.md:1084` · **"A Hold's suggested reply states that topic's value too" isn't true when the detector also hits that topic.** The entry is left out for D0b's, which has no governing value. Repro: `hold.mts` C2, "Failed transfers are reversed within 4 business days, less the small charge for the transfer", timeline span miscopied: suggested "The transfer fee is refunded.", amber "Double-check: it doesn't answer what the customer asked". That's the miss the README describes, on a digit timeline rather than "by Monday". The tag is honest, so this is a weak suggestion, not a wrong one. README line 267 says "that miss shouldn't recur" about `vague-monday-less-charge`, which holds (no detector hit). D-060's sentence is the broader one. The same path shows the older quirk of a gap line reading “within” (`decide.ts:322`, not in this diff). · D-060
+
+- [severity: minor] `lib/client/outcome.ts:393` · **Why can omit "Part of DOC-103 couldn't be read".** A cap's line is skipped when that doc is already listed as evidence. An unread doc never was, so a partial doc is the first case this can happen. Repro: `docs.mts` P11, the fee claim lost and a right timeline reply: the card says it, Why doesn't, and "So" says only "The rules can't confirm it". Everywhere else the wording is right: card, trace (fired and pass rows), Raw JSON, MCP (headline, reason, rules), recheck note ("part of Instant Transfers: Reversal Exception couldn't be read"). The trace names docs by short title or ID depending on what's in the evidence ("Part of Reversal SOP and Part of DOC-103", P9), as it already did for unread docs. · D-060
+
+- [severity: minor] `lib/check/runCheck.ts:242`, `runCheck.ts:306`, `lib/ai/prompts.ts:112` · **The AI rewrite with a pseudo-span is sound where tested, but has never run on a real model.** The fall-through is right: rewrite omits the value (B2), rereads with a miscopy (B3), adds a wrong value (B4), throws (B5, B8), empty (B6): all give the template, recheck ALLOW. Three edges remain. (1) No guard against the words echoing: B7 "Part of this reply: your money is back…" comes back as origin `ai`, ALLOW. (2) The AI can't be told which words were wrong, so it can keep them: B9 keeps "by Monday" beside the right value and passes if the reread misses it too, which needs two misses. (3) An invented claim adds a sentence: R2, a reply with no fee in it and a hallucinated span gets "The transfer fee is refunded." in its suggested reply. That's true per the docs and rechecked, but the agent never raised it. Marking a dropped claim WRONG does no harm when it was right: the value given is the docs' own. No session in PROGRESS exercised this path live ("this session had no dropped claim"), and I'm not allowed to. · §6.7, D-060
+
+- [severity: minor] `README.md:267` · **The 73/75 → 75/75 sentence leaves out what else changed.** "With no prompt change" is true, but the seed docs' owner names changed between those sessions, and held-out H6–H8 with them. The README's own Limitations says a name can move the AI's reading ("Léa"). I don't think it explains the gain, but one clause would close it. The same goes for the 69 → 67 row. Line 332's "read as a timeline with no value" for H13 is an inference: `CAUTION/UNSUPPORTED` would also fit a fee read with no value, and the held-out report doesn't keep the words (golden's does). · §15
+
+- [severity: minor] `design/mockup-*.html`, `design/v2/Docs.dc.html:38`, `lib/check/phase12Copy.test.ts:114` · **Old names remain outside what the app shows.** These are mockups and a test fixture: not served, but the repo is public. D-061 discloses SPEC's §4, §7 and Appendix B, not these. Nothing to do unless Abdullah wants the repo clean too. · D-061
+
+### 1. The cap, D-060
+Everything here is from the harnesses.
+
+| Tried | Result |
+|---|---|
+| QA's repro | CAUTION / CLAIM_UNVERIFIED. With the right span, HOLD |
+| Two dropped on one topic; on several; beside a valid one on the same topic | CAUTION, one entry per topic |
+| Wrong "9 weeks" dropped beside a right timeline | CAUTION, not Good to send |
+| Dropped `other` with a null value, beside a right reply | CAUTION. Conservative: the rules ignore that claim when it's kept. It's what "any claim" says |
+| Every claim dropped | AI_UNAVAILABLE, 503 |
+| Only `other` null claims plus a dropped one | CAUTION, not D0d's Allow, with a topic gap beside it |
+| Unknown type, kept 4 days plus dropped fee | ESCALATE stands; holding reply states the fee, recheck ALLOW |
+| Unknown type, kept fee plus dropped timeline | CAUTION, no value named |
+| MCP with no `ticket_id` | CAUTION, `in_reply: false`, no AI words |
+| Ask-first reply alone, or plus a kept fee, with the inside claim verbatim | Set aside as before: ALLOW |
+| The same with the inside claim miscopied | CAUTION, or Couldn't check when nothing is left. A miscopy isn't "inside", so this follows the rule |
+| Ask-first plus a wrong fee that's miscopied | Couldn't check or Double-check, never Allow |
+| Ops persona | Same results; DOC-105's own lost claim caps ops only |
+
+- **No path to Allow.** `unverified` can only be empty with a dropped claim when that topic is flagged, and then D0b gives CAUTION. `rejectedCount` always equals `dropped.length` in `runCheck`. The engine's `dropped: []` with a count above 0 isn't reachable from it.
+- **Send:** 428 without the OK, 200 with it. Hold with a dropped timeline 409, every claim dropped 503. In the UI, Send anyway stays disabled until ticked, works by keyboard, and the sent card says "Sent with your OK."
+- **Metrics:** checked 1, stopped 0, flagged 1 with its headline; a Hold counts as stopped 1. Every claim dropped counts nothing. "Review flagged replies (1)" lists it.
+- **Stale,** by the human path at all three widths: note shown, OK and Send anyway hidden, back when the text is restored. (While the panel is open at 1024 or 390 the composer is `inert`, by design.)
+- **Rule 4.** No AI words from a dropped claim in the card, Why, trace, MCP (`checkReplyText` too) or the suggested reply. Raw JSON test: outside `rejectedExtractions`, none. The AI's `topic` is used, as D-060 says. I agree with keeping the snippet in `rejectedExtractions`: SPEC.md line 134 requires it, it shows only in Raw JSON, labelled as rejected, and MCP's `present` doesn't return it.
+- **Fix the doc.** `findFixSource` isn't confused: the entry is CAUTION, so it's never the lead. Hold on the timeline with a dropped fee gets the proposal; Hold on the fee with a dropped timeline gets none; a capped Double-check gets none. `propose_doc_fix` the same, `applied: false`.
+- **UI at 1440, 1024, 390.** No layout break, no horizontal scroll. Status is icon or dot plus label. Disclaimer on every screen I checked, including Why and Trace. Focus goes to the back button on Why (measured at each width) and Trace (from the code, `TraceView.tsx`). The "Show all 19 steps" toggle works. The D0a row reads "Failed. …" with its Details.
+
+### 2. The docs' side
+**My judgement: it goes past Abdullah's copy, it's flagged honestly, and it does no harm on the demo's paths. It's his call, and it doesn't block.**
+- **Honest:** D-060 says "my reading of any claim", and says how to take it out. That description matches the code: the `dropped` count and the `partial` flag.
+- **Normal paths:** every saved reading is verbatim (16 doc quotes, 38 reply spans, 0 not verbatim), so it can't trigger in saved mode, and 132 of 132 are identical. Holds stand (`docs.mts` P3, P4, P10), and the cap only ever touches an ALLOW (`decide.ts:264`), so Ask first can't move. I ran no Ask-first case with a partial doc.
+- **Triggers:** flagged-outdated doc, no (P13, P14). Hidden doc, no: the support agent's reads were DOC-101, DOC-103, SRC-202, DOC-104 (9b). The persona filter still runs first (`runCheck.ts:130`). A kept claim that lost only its `supersedes` quote doesn't count as dropped (P15) and falls to D6.
+- **`docsSay`:** only `dropped > 0` hides a value, so no normal path changes. A flagged doc's loss hides nothing.
+- **The live cost, which D-060 understates:** the cap isn't per topic, so a lost fee claim caps a right timeline reply (P11), and a lost Slack claim caps too (P12). A live reading is cached in memory whether its quotes pass or not (`lib/ai/aiDeps.ts:168`), with no expiry (500 entries, `lib/ai/cache.ts`), so on that instance the same doc text keeps the Double-check on every reply until it's re-edited, evicted or the instance restarts. Only edited docs go live, since the seed docs always hit saved readings. Worth a line if he keeps it.
+
+### 3. The rename, D-061
+- **Lock:** the stat above is empty, the SPEC diff is 5 lines, all in Appendix A, and the hook refused real attempts.
+- **D-061's diff:** 22 changed lines across SPEC, seed and helper, 0 missing from D-061's block. The tests diff is 4 lines changed, each identical once the name is masked.
+- **What a visitor reads:** no old name in `/api/seed`, the Docs tab (list, owner line, each doc), Why, the trace, Raw JSON, MCP `get_doc`, `/how-it-works`, or anywhere in `.next/static` and `.next/server`. New names show: Marie Dubois, Jonas Weber, Elena, Matteo.
+- **Images:** the GIF contact sheet shows no owner names, and `public/demo.gif` is identical to `docs/demo.gif`. `public/og.png` has no owner name and isn't in this diff.
+- **For Abdullah to know:** moving `.loop/locked` aside was inferred from his instruction, not stated by him. His instruction can't be done any other way, and it's recorded and re-locked. Your hand-off should say so.
+
+### 4. The published numbers
+Counted from the raw report rows.
+- **Golden:** 25 cases, 75/75, fields 175/180, 0 rejected, gate true.
+- **Held-out clean:** 25 cases, 67/75. Fee 16/21 (H12, H17–19, H23–25). Vague 9/9. Quote counts as reported: 158/158.
+- **Exposed:** 14 cases, 33/42, quotes 72/72.
+- **Paraphrases:** Hold 18, Double-check 24, Good to send 0. The six that can Hold: 18 of 18. Nine readings by another reason: H31, H36, H38, 3 each. Eight clean misses and nine exposed misses, as the README lists them. Only H23's two are less strict than expected. No miss reached Good to send, and the only ALLOW readings are H3 and H6, which expect it.
+- **Earlier-session rows** match `main`'s reports: 73/75, 115/117, 171/180; 69/75, 18/21, 34/42.
+- **Gemini:** labelled "previous prompt" in every table, and its reports aren't in this diff. `pnpm test` 482 matches the README.
+- **Freeze:** `evals/heldout.json`'s `frozen` block is unchanged (only 3 lines changed, all doc bodies) and matches the current fingerprint `0f7d0d0a…`. `heldoutIntegrity.test.ts` passes. Prompts and schemas have no diff.
+- **Saved readings:** 50 files re-recorded; 43 outputs are identical to `main`'s and 7 differ in the AI's wording (spans, value text, a status word, one extra null claim). All are still verbatim, and the 132 results are identical.
+- **Limitations:** the dropped-claim bullet is now right. Nothing stale beyond the README finding above.
 
 ## VERDICT: APPROVED

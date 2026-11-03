@@ -13,7 +13,7 @@ export const feeRefund = {
   id: "fee_refund" as const,
   valueKind: "boolean",
   valueWords: words,
-  stated: (v) => `it's ${words(v)}`,
+  stated: (v) => `the transfer fee is ${words(v)}`,
   label: "fee-refund",
   subject: "whether the transfer fee is refunded",
   coverage: "whether the transfer fee is refunded when a transfer fails",

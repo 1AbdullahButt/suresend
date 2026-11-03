@@ -118,7 +118,7 @@ describe("a question the reply leaves open reads as a missing answer, not an err
     const gap = out.claims.find((c) => c.reasonCode === "TOPIC_GAP");
     expect(gap?.draftClaim.topic).toBe("fee_refund");
     const only = { ...out, checkHash: "x", suggestion: null, rejectedExtractions: [], ai: INFO, claims: [gap!] };
-    expect(summarize(only, "standard").sentence).toBe("Your reply doesn't answer their question about the fee. Your docs say it's refunded.");
+    expect(summarize(only, "standard").sentence).toBe("Your reply doesn't answer their question about the fee. Your docs say the transfer fee is refunded.");
   });
 
   it("MCP says the same, in the same words", async () => {

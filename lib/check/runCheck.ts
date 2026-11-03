@@ -2,7 +2,7 @@
 // Order matters: merge overrides → filter by persona → extract (AI, injected) → validate quotes → decide (pure) →
 // safe reply (rechecked). Hidden sources are removed before extraction, so they never reach the AI or the response.
 import { createHash } from "node:crypto";
-import { decide, type DecideTicket, type Extractions } from "@/lib/engine/decide";
+import { decide, UNVERIFIED_PART, type DecideTicket, type Extractions } from "@/lib/engine/decide";
 import { isVerbatim } from "@/lib/engine/normalize";
 import { detectPolicyPatterns, hasTimelineWords } from "@/lib/engine/patterns";
 import type {
@@ -304,7 +304,9 @@ async function holdSuggestion(
         const said = extractions.draft.ok ? extractions.draft.claims : [];
         // The prompt says to state each value exactly as given; a rewrite that doesn't loses to the template, which does (D-052).
         const statesValues = facts.filter((f) => f.wrong).every((f) => text.includes(f.claim.governing.valueText));
-        if (rejected.length === 0 && isAcceptable(re) && !dropsAnAnswer(re, said) && statesValues) return checked(text, "ai", re, sources);
+        // The rewrite is told about a dropped claim by a placeholder (D-060). Words that echo it aren't a reply.
+        const echoes = text.toLowerCase().includes(UNVERIFIED_PART.toLowerCase());
+        if (rejected.length === 0 && isAcceptable(re) && !dropsAnAnswer(re, said) && statesValues && !echoes) return checked(text, "ai", re, sources);
       }
     } catch {
       // fall through to the template

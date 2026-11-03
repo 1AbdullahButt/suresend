@@ -90,7 +90,7 @@ describe("QA's repro: a wrong fee claim, dropped for a miscopied quote", () => {
     const s = summarize(r, "instant");
     expect(s.name).toBe("Double-check");
     expect(s.headline).toBe("Couldn't verify part of this reply");
-    expect(s.sentence).toBe("The AI's reading of one part didn't match your words, so the rules didn't check it. Your docs say it's refunded. Check it by hand.");
+    expect(s.sentence).toBe("The AI's reading of part of this reply didn't match your words, so the rules didn't check that part. Your docs say the transfer fee is refunded. Check it by hand.");
   });
 
   it("the card lists the part it couldn't check, without the AI's miscopied words", async () => {
@@ -179,7 +179,39 @@ describe("the cap only caps", () => {
       { claimId: "o", topic: "other", value: { quantity: 5000, of: "EUR" }, valueText: "€5,000", span: "Your daily limit is €5,001", definitive: true },
     ]);
     expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "CLAIM_UNVERIFIED"]);
-    expect(summarize(r, "instant").sentence).toBe("The AI's reading of one part didn't match your words, so the rules didn't check it. Check it by hand.");
+    expect(summarize(r, "instant").sentence).toBe("The AI's reading of part of this reply didn't match your words, so the rules didn't check that part. Check it by hand.");
+  });
+
+  it("a dropped claim outside the topics names no value from the docs, however they read", async () => {
+    const draft = "Failed transfers are reversed within 1 business day. Pending ones take a day.";
+    const r = await check(
+      "TCK-9001",
+      "instant",
+      draft,
+      [timeline(1, "Failed transfers are reversed within 1 business day", "1 business day"), { claimId: "o", topic: "other", value: { amount: 1, unit: "calendar_days" }, valueText: "a day", span: "Pending ones take 1 day", definitive: true }],
+      {
+        extractSource: async (s) => ({
+          claims: s.id === "DOC-101" ? [...sourceClaims(s.id), sc(s.id, "Transfer fee is refunded with the principal.", { topic: "other", value: { amount: 24, unit: "hours" }, valueText: "24 hours" })] : sourceClaims(s.id),
+          info: INFO,
+        }),
+      },
+    );
+    expect(r.reasonCode).toBe("CLAIM_UNVERIFIED");
+    expect(r.claims.find((c) => c.reasonCode === "CLAIM_UNVERIFIED")?.governing).toBeNull();
+    expect(summarize(r, "instant").sentence).not.toContain("Your docs say");
+  });
+
+  it("a rewrite that echoes the placeholder loses to the template", async () => {
+    const r = await check("TCK-9001", "instant", monday, [miscopied, less], {
+      // The rewrite reads clean and states both values, so only the placeholder can refuse it.
+      extractDraft: async (d) =>
+        d === monday
+          ? { claims: [miscopied, less], info: INFO }
+          : { claims: [timeline(1, "says 1 business day", "1 business day"), fee(true, "the transfer fee is refunded", "refunded")], info: INFO },
+      suggestReply: async () => ({ text: "Part of this reply says 1 business day, and the transfer fee is refunded.", info: INFO }),
+    });
+    expect(r.suggestion?.origin).toBe("template");
+    expect(r.suggestion?.text).not.toContain("Part of this reply");
   });
 
   it("another Double-check keeps its own reason, listed first", async () => {
@@ -262,6 +294,8 @@ describe("a doc's claim dropped for a bad quote caps the reply too", () => {
     const r = await run([exception(), { ...feeClaim, quote: "For instant transfers, the transfer fee isn't refunded." }]);
     expect([r.decision, r.reasonCode]).toEqual(["HOLD", "CONTRADICTS_GOVERNING"]);
     expect(r.caps.map((c) => c.partial)).toEqual([true]);
+    // The doc is listed as evidence, for what it did say. Why still says what it lost.
+    expect(whyModel(r).didntCount.map((x) => x.text)).toContain("Part of DOC-103 couldn't be read.");
   });
 
   it("no value is named while part of a doc is missing (D-046)", async () => {

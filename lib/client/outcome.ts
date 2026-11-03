@@ -231,7 +231,7 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     case "CLAIM_UNVERIFIED": {
       // The AI's words for this part failed validation, so they aren't quoted back (D-060).
       const docs = gov && claim ? docsSayWords(claim, gov.value) : null;
-      return `The AI's reading of one part didn't match your words, so the rules didn't check it.${docs ? ` ${docs}.` : ""} Check it by hand.`;
+      return `The AI's reading of part of this reply didn't match your words, so the rules didn't check that part.${docs ? ` ${docs}.` : ""} Check it by hand.`;
     }
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
@@ -390,7 +390,8 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
     }
   }
 
-  for (const cap of result.caps) if (!seen.has(cap.sourceId)) didntCount.push({ id: cap.sourceId, text: `${capName(cap)} couldn't be read.` });
+  // A doc that lost a claim is listed for what it did say, and here for what it lost.
+  for (const cap of result.caps) if (!seen.has(cap.sourceId) || cap.partial) didntCount.push({ id: cap.sourceId, text: `${capName(cap)} couldn't be read.` });
 
   // A gap, an outside-coverage claim or an unread doc means the docs weren't fully compared, so saying they're silent would be false.
   const reason = claim?.reasonCode ?? result.reasonCode;

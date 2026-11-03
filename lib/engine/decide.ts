@@ -357,14 +357,18 @@ function topicGap(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (to
   };
 }
 
+/** What stands in for a dropped claim's words, which failed validation. */
+export const UNVERIFIED_PART = "Part of this reply";
+
 /**
  * One CAUTION entry per topic with a claim dropped for a bad quote (D0a, D-060). The AI's words for it failed validation, so none are
  * kept: only its topic, which names the docs' value for the reader and for a suggested reply, and decides nothing.
  */
 function unverifiedPart(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (topic: string) => Governing | null): ClaimResult {
-  const span = "Part of this reply";
+  const span = UNVERIFIED_PART;
   const dc: DraftClaim = { claimId: `dropped#${i + 1}`, topic: topic as DraftClaim["topic"], value: null, valueText: span, span, definitive: true };
-  const governing = docsSay(topic);
+  // Claims outside the topics aren't one question: what a doc says out there isn't the docs' answer to this one.
+  const governing = isCovered(topic) ? docsSay(topic) : null;
   return {
     draftClaim: dc,
     decision: "CAUTION",
