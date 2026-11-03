@@ -7,8 +7,10 @@ import { runCheck } from "@/lib/check/runCheck";
 import { claimLines, summarize, traceRows, whyModel } from "@/lib/client/outcome";
 import { decide } from "@/lib/engine/decide";
 import { checkReply } from "@/lib/mcp/tools";
-import { seedBody } from "@/lib/workspace/variants";
-import type { AiRunInfo, CheckDeps, DraftClaim, Rail, SourceClaim } from "@/lib/engine/types";
+import { seedBody, verifiedSave } from "@/lib/workspace/variants";
+import type { AiRunInfo, CheckDeps, DraftClaim, Rail, SourceClaim, SourceOverride } from "@/lib/engine/types";
+
+type SourceOverrideList = SourceOverride[];
 
 const NOW = "2026-10-30T12:00:00Z";
 const INFO: AiRunInfo = { mode: "saved", model: "test", latencyMs: 0, promptVersion: "test" };
@@ -104,7 +106,7 @@ describe("QA's repro: a wrong fee claim, dropped for a miscopied quote", () => {
   it("Send needs a person's OK", async () => {
     const input = { ticketId: "TCK-9001", rail: "instant" as const, draft, role: "support_agent" as const, overrides: [] };
     const blocked = await handleSend({ ...input, acknowledged: false }, deps([right, miscopied]));
-    expect(blocked.status).toBe(409);
+    expect(blocked.status).toBe(428);
     const ok = await handleSend({ ...input, acknowledged: true }, deps([right, miscopied]));
     expect(ok.status).toBe(200);
   });
@@ -222,3 +224,74 @@ describe("the cap only caps", () => {
     expect(out.claims.some((c) => c.reasonCode === "CLAIM_UNVERIFIED")).toBe(true);
   });
 });
+
+describe("a doc's claim dropped for a bad quote caps the reply too", () => {
+  const FEE = "For instant transfers, the transfer fee is not refunded.";
+  const draft = "Failed transfers are reversed within 4 business days.";
+  const edited = [verifiedSave("DOC-103", `${seedBody("DOC-103").trimEnd()}\n\n${FEE}\n`, "2026-10-29T09:00:00Z")];
+  const four: DraftClaim = timeline(4, draft, "4 business days");
+  const feeClaim = sc("DOC-103", FEE, { topic: "fee_refund", value: { flag: false }, valueText: "not refunded", scope: { rail: "instant" } });
+  const run = (doc103: SourceClaim[], claims: DraftClaim[] = [four], over: SourceOverrideList = edited) =>
+    runCheck(
+      { ticketId: "TCK-9001", rail: "instant", draft, role: "support_agent", overrides: over, decisionTime: NOW },
+      deps(claims, { extractSource: async (x) => ({ claims: x.id === "DOC-103" ? doc103 : sourceClaims(x.id), info: INFO }) }),
+    );
+  const exception = () => sourceClaims("DOC-103")[0]!;
+
+  it("with both quotes right, the exception wins: the control", async () => {
+    const r = await run([exception(), feeClaim]);
+    expect([r.decision, r.reasonCode]).toEqual(["HOLD", "CONTRADICTS_GOVERNING"]);
+  });
+
+  it("with the exception's quote miscopied, the old SOP can't make it Good to send", async () => {
+    const r = await run([{ ...exception(), quote: exception().quote.replace("reversed", "refunded") }, feeClaim]);
+    expect(r.decision).toBe("CAUTION");
+    expect(r.reasonCode).toBe("SOURCE_UNREAD");
+    expect(r.rejectedExtractions.map((x) => x.reason)).toEqual(["QUOTE_NOT_FOUND"]);
+    expect(r.caps.map((c) => [c.sourceId, c.partial])).toEqual([["DOC-103", true]]);
+  });
+
+  it("the card says part of the doc, not all of it", async () => {
+    const r = await run([{ ...exception(), quote: exception().quote.replace("reversed", "refunded") }, feeClaim]);
+    const s = summarize(r, "instant");
+    expect(s.headline).toBe("Part of a doc couldn't be read");
+    expect(s.sentence).toBe("Part of DOC-103 couldn't be read, so this can't be confirmed as right. It might hold a contradiction.");
+  });
+
+  it("a Hold from what's left stays a Hold", async () => {
+    const r = await run([exception(), { ...feeClaim, quote: "For instant transfers, the transfer fee isn't refunded." }]);
+    expect([r.decision, r.reasonCode]).toEqual(["HOLD", "CONTRADICTS_GOVERNING"]);
+    expect(r.caps.map((c) => c.partial)).toEqual([true]);
+  });
+
+  it("no value is named while part of a doc is missing (D-046)", async () => {
+    const said = "Your transfer fee will be refunded with the money.";
+    const r = await runCheck(
+      { ticketId: "TCK-9001", rail: "instant", draft: said, role: "support_agent", overrides: edited, decisionTime: NOW },
+      deps([fee(true, said, "refunded with the money")], { extractSource: async (x) => ({ claims: x.id === "DOC-103" ? [{ ...exception(), quote: exception().quote.replace("reversed", "refunded") }, feeClaim] : sourceClaims(x.id), info: INFO }) }),
+    );
+    expect(r.claims.find((c) => c.reasonCode === "TOPIC_GAP")?.governing).toBeNull();
+    expect(r.claims.find((c) => c.reasonCode === "TOPIC_GAP")?.trace[0]?.detail).not.toContain("The docs say");
+  });
+
+  it("every claim dropped is still an unread doc, as before", async () => {
+    const r = await run([{ ...exception(), quote: "not in the doc" }]);
+    expect(r.caps.map((c) => [c.sourceId, c.partial ?? false])).toEqual([["DOC-103", false]]);
+    expect(r.rejectedExtractions.map((x) => x.reason)).toContain("ALL_CLAIMS_REJECTED");
+  });
+
+  it("a doc flagged outdated counts for nothing, so its lost part caps nothing", async () => {
+    const said = "Failed transfers are reversed within 1 business day.";
+    const r = await runCheck(
+      { ticketId: "TCK-9001", rail: "instant", draft: said, role: "support_agent", overrides: [], decisionTime: NOW },
+      deps([timeline(1, said, "1 business day")], {
+        extractSource: async (x) => ({
+          claims: x.id === "DOC-104" ? [sc("DOC-104", "Failed transfers are refunded in 5-7 days", { value: { amount: 5, amountMax: 7, unit: "calendar_days" }, valueText: "5-7 days" }), sc("DOC-104", "not in the doc", { value: { amount: 1, unit: "hours" }, valueText: "1 hour" })] : sourceClaims(x.id),
+          info: INFO,
+        }),
+      }),
+    );
+    expect(r.caps).toEqual([]);
+  });
+});
+

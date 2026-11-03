@@ -1,12 +1,12 @@
 {
-  "key": "cddfd2e001a58e5fde4d4202a181ce65f7ad5cec92021aa02dcc1cf07a0b93d4",
+  "key": "3984e994b9f7619831972f75927674d538c820a809f7371e7139e13e500bba45",
   "identity": {
     "task": "source_extraction",
     "promptVersion": "2026-11-03.2",
     "schemaVersion": "2026-11-03.1",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "inputText": "Hamza (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Bilal posts the policy 🙏\n",
+    "inputText": "Matteo (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Jonas posts the policy 🙏\n",
     "sourceKind": "slack"
   },
   "output": {
@@ -27,5 +27,5 @@
       }
     ]
   },
-  "recordedAt": "2026-11-03T14:20:52.509Z"
+  "recordedAt": "2026-11-03T18:23:52.173Z"
 }

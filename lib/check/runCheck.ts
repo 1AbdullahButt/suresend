@@ -148,7 +148,7 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
       return false;
     });
     const claims = validateDraftClaims(input.draft, raw, rejected);
-    extractions.draft = { ok: true, text: input.draft, claims, rejectedCount: raw.length - claims.length };
+    extractions.draft = { ok: true, text: input.draft, claims, rejectedCount: raw.length - claims.length, dropped: raw.filter((c) => !claims.includes(c)) };
   } else {
     const info = infoOf(draftOutcome!.error);
     if (info) infos.push(info);
@@ -166,7 +166,7 @@ export async function runCheck(input: CheckInput, deps: CheckDeps): Promise<Chec
         extractions.sources[source.id] = { ok: false, error: "every extracted claim failed quote validation" };
         rejected.push({ sourceId: source.id, reason: "ALL_CLAIMS_REJECTED", snippet: `${raw.length} claim(s) from ${source.id} rejected; treated as unread` });
       } else {
-        extractions.sources[source.id] = { ok: true, claims };
+        extractions.sources[source.id] = { ok: true, claims, dropped: raw.length - claims.length };
       }
     } else {
       const info = infoOf(outcome.error);
@@ -238,8 +238,8 @@ interface GovernedClaim {
   wrong: boolean;
 }
 
-/** Contradicts the governing value (Hold, a hedged contradiction, other units) or gives none (D-046). These are the claims a reply fixes. */
-const WRONG = new Set<ReasonCode>(["CONTRADICTS_GOVERNING", "HEDGED_CONTRADICTION", "UNIT_MISMATCH", "UNSUPPORTED"]);
+/** Contradicts the governing value (Hold, a hedged contradiction, other units), gives none (D-046), or couldn't be read (D-060). These are the claims a reply fixes. */
+const WRONG = new Set<ReasonCode>(["CONTRADICTS_GOVERNING", "HEDGED_CONTRADICTION", "UNIT_MISMATCH", "UNSUPPORTED", "CLAIM_UNVERIFIED"]);
 
 function governedClaims(claims: ClaimResult[]): GovernedClaim[] {
   return claims

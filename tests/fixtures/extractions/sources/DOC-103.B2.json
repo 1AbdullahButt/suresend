@@ -1,7 +1,7 @@
 {
   "sourceId": "DOC-103",
   "variant": "B2",
-  "body": "# Instant Transfers – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
+  "body": "# Instant Transfers – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Jonas confirms.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
   "claims": [
     {
       "claimId": "DOC-103#1",

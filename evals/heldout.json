@@ -78,7 +78,7 @@
         {
           "id": "DOC-101",
           "save": "verify",
-          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
+          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Marie (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
         }
       ],
       "expect": {
@@ -96,7 +96,7 @@
         {
           "id": "DOC-101",
           "save": "verify",
-          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
+          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Marie (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
         }
       ],
       "expect": {
@@ -115,7 +115,7 @@
         {
           "id": "SRC-202",
           "save": "draft",
-          "body": "Bilal (Compliance): FYI we've proposed moving instant reversals to 2 business days because of the new bank cut-off. Still a proposal, nothing changes for customers yet."
+          "body": "Jonas (Compliance): FYI we've proposed moving instant reversals to 2 business days because of the new bank cut-off. Still a proposal, nothing changes for customers yet."
         }
       ],
       "expect": {

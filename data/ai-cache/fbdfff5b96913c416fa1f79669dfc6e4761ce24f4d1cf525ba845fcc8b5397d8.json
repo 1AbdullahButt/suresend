@@ -1,5 +1,5 @@
 {
-  "key": "ce6c22b01b8819323f123481bf474dfb9e3a8a021639e11c15263a5a1fca8b90",
+  "key": "fbdfff5b96913c416fa1f79669dfc6e4761ce24f4d1cf525ba845fcc8b5397d8",
   "identity": {
     "task": "safe_reply",
     "promptVersion": "2026-11-02.2",
@@ -16,7 +16,7 @@
     },
     "claims": [
       {
-        "span": "the reversal is automatic and you'll see it reflected after the weekend",
+        "span": "you'll see it reflected after the weekend",
         "topic": "reversal_window",
         "correct": "1 business day",
         "quote": "For instant transfers only, failed transfers are reversed within 1 business day.",
@@ -34,7 +34,7 @@
     ]
   },
   "output": {
-    "reply": "Nothing to do on your side: the reversal will be completed within 1 business day, and the processing charge is refunded."
+    "reply": "Nothing to do on your side: the reversal is automatic, you'll see it reflected within 1 business day, and the processing charge is refunded."
   },
-  "recordedAt": "2026-11-03T14:26:18.641Z"
+  "recordedAt": "2026-11-03T18:29:16.550Z"
 }

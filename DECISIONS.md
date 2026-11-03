@@ -1064,7 +1064,64 @@ On the old prompt "a couple of working days" read as a claim with no value on 6 
 - **What stays a Double-check, on purpose.** A wrong "about a week" or "a fortnight" is a Double-check, not a Hold: rule D8 makes a unit mismatch a Double-check, and a hedge is one too. Turning those into Holds would mean a rule change, which this brief didn't ask for. Abdullah may want to look at this: "about a week" on a 1-business-day transfer is clearly wrong, and it still needs only a person's OK to go out.
 
 ### D-059 · What's left for Abdullah, from QA's second pass (2026-11-03)
-**A claim dropped for a bad quote can leave Good to send.** Not changed, because it's a rule. SPEC §6.2 drops a claim whose quote isn't verbatim, and D0a only stops when every claim is dropped. So if one of two claims is miscopied, the other decides alone. QA built it with hand-written readings: "Your money is back within 1 business day, with the service cost taken off", with the fee span off by one letter, is ALLOW / SUPPORTED, "Matches your docs". With the right span it's a Hold. That sits badly with CLAUDE.md rule 2. It's older than this phase, follows the SPEC as written, and takes a miscopy on the one wrong claim, in wording the detector doesn't know: "minus the processing charge" with a miscopied span is a Double-check. **The fix would be a cap:** a draft with any rejected claim can't be better than CAUTION, and the card says why. It's small, but it amends SPEC D0a and needs a fresh eval, so it's his to decide. README Limitations states it. QA rated it minor.
+**A claim dropped for a bad quote can leave Good to send.** Not changed, because it's a rule. SPEC §6.2 drops a claim whose quote isn't verbatim, and D0a only stops when every claim is dropped. So if one of two claims is miscopied, the other decides alone. QA built it with hand-written readings: "Your money is back within 1 business day, with the service cost taken off", with the fee span off by one letter, is ALLOW / SUPPORTED, "Matches your docs". With the right span it's a Hold. That sits badly with CLAUDE.md rule 2. It's older than this phase, follows the SPEC as written, and takes a miscopy on the one wrong claim, in wording the detector doesn't know: "minus the processing charge" with a miscopied span is a Double-check. **The fix would be a cap:** a draft with any rejected claim can't be better than CAUTION, and the card says why. It's small, but it amends SPEC D0a and needs a fresh eval, so it's his to decide. README Limitations states it. QA rated it minor. **Decided: Abdullah said yes. See D-060.**
 
 **Left as they are, all older than this phase or by design:** the tour's card covers the doc at 700 to 793 px wide, where there's no room beside the panel (782 to 793 is new, by 12 px of layout, and the phone's "Hide steps" only starts under 700). Esc after closing the reset dialog leaves focus on the page, with the menu still open. A wrong "about a week" is a Double-check (D-058).
+
+### D-060 · A claim dropped for a bad quote caps the reply at Double-check (Abdullah's decision, 2026-11-03). Amends SPEC §6.6 D0a and §6.2
+Abdullah: "if any claim is dropped (quote failed validation), the reply is capped at Double-check, with copy like 'I couldn't verify part of this reply.' Add QA's miscopied-quote repro as a failing test first. Amend D0a in DECISIONS.md."
+
+**D0a, as amended.**
+
+| Rule | Condition | Result | Reason |
+|---|---|---|---|
+| D0a (as before) | Draft extraction failed (API error, invalid output after retry, or **every** claim rejected by quote validation) | `AI_UNAVAILABLE`. Send is blocked until rechecked. | `EXTRACTION_FAILED` |
+| D0a (new) | **Some** claims rejected by quote validation, others not | The rules run on what's left, plus one CAUTION entry per topic with a dropped claim, so the reply can't be better than CAUTION. Hold, Ask first and another reason's Double-check stand. | `CLAIM_UNVERIFIED` |
+
+- **Why.** QA's repro: "Your money is back within 1 business day, with the service cost taken off", with the fee's quote off by one letter, was ALLOW / SUPPORTED, "Matches your docs". With the right quote it's a Hold. A dropped claim said nothing, and "nothing found" must never read as safe (CLAUDE.md rule 2).
+- **The AI's words for a dropped claim are never shown.** They failed validation (CLAUDE.md rule 4). The entry keeps only the topic: the card's line reads "Not verified: Part of this reply", and MCP's `claims[].says` the same, with `in_reply: false`.
+- **The copy.** Abdullah suggested "I couldn't verify part of this reply". The card speaks of SureSend, not "I" (D-047), so the headline is "Couldn't verify part of this reply", and the sentence is "The AI's reading of one part didn't match your words, so the rules didn't check it. Your docs say it's refunded. Check it by hand." The docs' value appears only when D-046 allows it. The engine's headline: "Caution: SureSend couldn't verify part of this reply."
+- **It also fixes the misleading card QA found.** A dropped timeline used to read "Not answered: Nothing on the reversal timeline", though the reply gave one. A dropped claim's topic isn't unanswered now, and a Hold's suggested reply states that topic's value too, so it still answers the customer.
+- **A detector hit on the same topic gets one line,** D0b's: "minus the processing charge" with a miscopied quote stays EXTRACTION_GAP.
+- **SureSend's own holding sentence isn't a dropped claim.** It's set aside before validation (D-045), so it doesn't trigger this.
+- **A doc's claim too, which is my reading of "any claim".** Testing this turned up the same hole on the docs' side: with DOC-103 edited to hold two claims and the exception's quote miscopied, the old SOP's 4 business days came back Good to send. All of a doc's claims rejected was already an unread doc (D-012.3); one rejected and one kept wasn't anything. It's now the same cap: `SOURCE_UNREAD`, with `partial: true` on the cap, "Part of DOC-103 couldn't be read", no value named while part of a doc is missing, and a Hold from what's left stands. On the seed docs this is rare, because DOC-103 reads as one claim. Abdullah's copy was about the reply, so if he meant replies only, this part comes out cleanly: it's the `dropped` count on a source and the `partial` flag.
+- **The cost.** A right reply whose quote the AI miscopies gets a Double-check it didn't earn. I measured a miscopy on 3 of 20 readings of one reply, which is one reply, not a rate.
+- **Written first:** 12 of the 17 tests for the reply's side and 4 of the 7 for the docs' side failed before the fix; the others are guards (PROGRESS.md).
+
+### D-061 · The doc owners and staff get European names (Abdullah's decision, 2026-11-03)
+Abdullah: "Rename doc owners (Bilal, Sara, etc.) to European names, for consistency with Part A." Sara Malik → Marie Dubois, Bilal Ahmed → Jonas Weber, Zara → Elena, Hamza → Matteo. Their roles, activity and everything else are as they were. No accents, since "Léa" showed what one can do to the AI's quoting (D-053). "Compliance" stays, as it's a team.
+- **The unlock.** These names live only in the locked seed, so renaming them needs one. I took the instruction as the same one-time unlock as Part A, on the same terms: `data/seed/`, SPEC.md Appendix A, the fixtures and the helper in `tests/`, names only, recorded here with the diff, and re-locked after. `.loop/locked` was moved aside, one script ran, and it was put back. No `tests/engine`, `tests/ai` or `e2e/` file changed, and nor did `IMPLEMENTATION_BRIEF.md`. The proof is in PROGRESS.md.
+- **The amendment.** Outside Appendix A, SPEC.md keeps the old names: §4's table, §7's chips ("Owner Bilal"), and Appendix B's B2 ("until Bilal confirms"). Read them as Marie and Jonas. The code's B2 text says Jonas.
+- **The prompts didn't change.** No name is in them, so the prompt stays `2026-11-03.2` and the freeze stands. Two seed docs and B2's body changed, so their saved responses were re-recorded.
+- **Held-out:** H6 and H7 ("Owner: Marie"), H8 ("Jonas (Compliance)"), the same mechanical edit.
+- **Before and after, every locked line except the fixtures' copies of the same text:**
+```diff
+SPEC.md Appendix A only:
+-**DOC-101 · Outgoing Transfers: Reversal SOP** · kind `sop` · verified 2026-10-01 · updated 2026-09-30 · owner Sara Malik (active) · visibility everyone
++**DOC-101 · Outgoing Transfers: Reversal SOP** · kind `sop` · verified 2026-10-01 · updated 2026-09-30 · owner Marie Dubois (active) · visibility everyone
+-**DOC-103 · Instant Transfers: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Bilal Ahmed (active) · visibility everyone
++**DOC-103 · Instant Transfers: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Jonas Weber (active) · visibility everyone
+-**DOC-104 · Support Macros: Transfers** · kind `macro` · unverified · updated 2026-08-12 · flaggedOutdated true (reader note: "timeline looks old") · owner Zara (inactive) · visibility everyone
++**DOC-104 · Support Macros: Transfers** · kind `macro` · unverified · updated 2026-08-12 · flaggedOutdated true (reader note: "timeline looks old") · owner Elena (inactive) · visibility everyone
+
+SPEC.md Appendix A, data/seed/docs/DOC-101.md, tests/fixtures/extractions/sources/DOC-101.seed.json (body):
+-Owner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.
++Owner: Marie (Payments Ops). Last reviewed with Settlement team in Sept.
+
+SPEC.md Appendix A, data/seed/docs/SRC-202.md, tests/fixtures/extractions/sources/SRC-202.seed.json (body):
+-Hamza (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Bilal posts the policy 🙏
++Matteo (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Jonas posts the policy 🙏
+
+data/seed/sources.json:
+-    "owner": { "name": "Sara Malik", "active": true },
+-    "owner": { "name": "Bilal Ahmed", "active": true },
+-    "owner": { "name": "Zara", "active": false },
++    "owner": { "name": "Marie Dubois", "active": true },
++    "owner": { "name": "Jonas Weber", "active": true },
++    "owner": { "name": "Elena", "active": false },
+
+tests/helpers/fixtures.ts (variant B2's new line), tests/fixtures/extractions/sources/DOC-103.B2.json (body):
+-        "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.",
++        "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Jonas confirms.",
+```
 

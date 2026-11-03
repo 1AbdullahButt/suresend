@@ -1,6 +1,6 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
-import type { CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
+import type { Cap, CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
 import { governingScope } from "@/lib/engine/applicability";
 import { patternNoun, patternTopic } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
@@ -79,6 +79,7 @@ const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
   UNIT_MISMATCH: "Check the units",
   HEDGED_CONTRADICTION: "Your hedge differs from the policy",
   TOPIC_GAP: "Missing an answer",
+  CLAIM_UNVERIFIED: "Couldn't verify part of this reply",
 };
 
 const candidatesIn = (claim: ClaimResult) => claim.evidence.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value);
@@ -87,9 +88,12 @@ const candidatesIn = (claim: ClaimResult) => claim.evidence.filter((e) => e.stan
 const isVague = (claim: ClaimResult | null | undefined, result: CheckResult): boolean =>
   !!claim && claim.reasonCode === "UNSUPPORTED" && claim.draftClaim.value === null && isCovered(claim.draftClaim.topic) && (candidatesIn(claim).length > 0 || result.caps.length > 0);
 
+/** A doc that couldn't be read, or the part of one that couldn't (D-060). */
+const capName = (c: Cap, name: string = c.sourceId) => (c.partial ? `Part of ${name}` : name);
+
 /** Why no value is named: an unread doc might hold it (D-046). */
 const unreadLead = (result: CheckResult): string | null =>
-  result.caps.length > 0 ? `${result.caps.map((c) => c.sourceId).join(", ")} couldn't be read, so SureSend can't say what your docs give` : null;
+  result.caps.length > 0 ? `${result.caps.map((c) => capName(c)).join(", ")} couldn't be read, so SureSend can't say what your docs give` : null;
 
 /** The docs' value for a reply that gives none, flagged when the doc behind it is in doubt. */
 function docsSayWords(claim: ClaimResult, value: NonNullable<Value>): string {
@@ -156,7 +160,9 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
     case "CAUTION": {
       // EXTRACTION_GAP names what the detector found: "Couldn't confirm the timing".
       const headline =
-        result.reasonCode === "EXTRACTION_GAP"
+        result.reasonCode === "SOURCE_UNREAD" && result.caps.every((c) => c.partial)
+          ? "Part of a doc couldn't be read"
+          : result.reasonCode === "EXTRACTION_GAP"
           ? `Couldn't confirm ${patternNoun(gapMatches(result))}`
           : isVague(claim, result)
             ? "Your reply is vague on this"
@@ -205,7 +211,7 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
       return hits ? `SureSend found ${hits} but couldn't confirm ${noun}. Check it manually.` : `SureSend couldn't confirm ${noun}. Check it manually.`;
     }
     case "SOURCE_UNREAD": {
-      const ids = result.caps.map((c) => c.sourceId).join(", ");
+      const ids = result.caps.map((c) => capName(c)).join(", ");
       return `${ids || "A doc"} couldn't be read, so this can't be confirmed as right. It might hold a contradiction.`;
     }
     case "PROPOSAL_ONLY":
@@ -221,6 +227,11 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
       const lead = `Your reply doesn't answer their question about ${topic?.question ?? "this"}.`;
       const docs = gov && claim ? docsSayWords(claim, gov.value) : (unreadLead(result) ?? (claim && candidatesIn(claim).length > 0 ? "Your docs don't give one answer for this ticket" : null));
       return docs ? `${lead} ${docs}.` : lead;
+    }
+    case "CLAIM_UNVERIFIED": {
+      // The AI's words for this part failed validation, so they aren't quoted back (D-060).
+      const docs = gov && claim ? docsSayWords(claim, gov.value) : null;
+      return `The AI's reading of one part didn't match your words, so the rules didn't check it.${docs ? ` ${docs}.` : ""} Check it by hand.`;
     }
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
@@ -276,7 +287,7 @@ function railShort(rail: "instant" | "standard" | "any"): string {
 /** One claim of a reply that makes several (D-041): what it says and its own verdict. */
 export interface ClaimLine {
   key: string;
-  /** "Claim 1 of 2", or "Not answered" for a question the reply leaves open. */
+  /** "Claim 1 of 2"; "Not answered" for a question the reply leaves open; "Not verified" for a part the rules couldn't check. */
   label: string;
   /** The words of the reply that make the claim, or what's missing when `quoted` is false. */
   says: string;
@@ -294,13 +305,14 @@ export function claimWords(result: CheckResult, claim: ClaimResult): string {
 /** The reply's claims in the order it makes them, each with its own verdict; empty for a reply with one claim or none. */
 export function claimLines(result: CheckResult): ClaimLine[] {
   if (result.claims.length < 2) return [];
-  const made = result.claims.filter((c) => c.reasonCode !== "TOPIC_GAP").length;
+  const inReply = (c: ClaimResult) => c.reasonCode !== "TOPIC_GAP" && c.reasonCode !== "CLAIM_UNVERIFIED";
+  const made = result.claims.filter(inReply).length;
   let n = 0;
   return result.claims.map((c, i) => ({
     key: c.draftClaim.claimId || String(i),
-    label: c.reasonCode === "TOPIC_GAP" ? "Not answered" : made > 1 ? `Claim ${++n} of ${made}` : "Your reply",
+    label: c.reasonCode === "TOPIC_GAP" ? "Not answered" : c.reasonCode === "CLAIM_UNVERIFIED" ? "Not verified" : made > 1 ? `Claim ${++n} of ${made}` : "Your reply",
     says: claimWords(result, c),
-    quoted: c.reasonCode !== "TOPIC_GAP",
+    quoted: inReply(c),
     name: OUTCOME[c.decision].name,
     tone: OUTCOME[c.decision].tone,
   }));
@@ -326,7 +338,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
   const didntCount: Array<{ id: string; text: string }> = [];
   const seen = new Set<string>();
   // No value is named for this reply because a doc couldn't be read, so what the other docs say can't be called the answer.
-  const unconfirmed = result.caps.length > 0 && !gov && (isVague(claim, result) || claim?.reasonCode === "TOPIC_GAP");
+  const unconfirmed = result.caps.length > 0 && !gov && (isVague(claim, result) || claim?.reasonCode === "TOPIC_GAP" || claim?.reasonCode === "CLAIM_UNVERIFIED");
 
   if (gov && govEv) {
     seen.add(govEv.source.id);
@@ -378,13 +390,15 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
     }
   }
 
-  for (const cap of result.caps) if (!seen.has(cap.sourceId)) didntCount.push({ id: cap.sourceId, text: `${cap.sourceId} couldn't be read.` });
+  for (const cap of result.caps) if (!seen.has(cap.sourceId)) didntCount.push({ id: cap.sourceId, text: `${capName(cap)} couldn't be read.` });
 
   // A gap, an outside-coverage claim or an unread doc means the docs weren't fully compared, so saying they're silent would be false.
   const reason = claim?.reasonCode ?? result.reasonCode;
-  const unread = result.caps.map((c) => c.sourceId).join(", ");
+  const unread = result.caps.map((c) => capName(c)).join(", ");
   const noDocs =
-    reason === "EXTRACTION_GAP"
+    reason === "CLAIM_UNVERIFIED"
+      ? "SureSend didn't compare this part with your docs, because the AI's reading of it didn't match your words. Check it by hand."
+      : reason === "EXTRACTION_GAP"
       ? "SureSend didn't compare this with your docs, because the AI didn't pick it up as a claim. Check it by hand."
       : reason === "OUTSIDE_COVERAGE"
         ? "SureSend doesn't check this topic against your docs. Check it by hand."
@@ -425,7 +439,9 @@ function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evide
       break;
     case "CAUTION":
       second =
-        code === "WEAK_BASIS"
+        code === "CLAIM_UNVERIFIED"
+          ? "SureSend couldn't verify part of this reply, so double-check before sending."
+          : code === "WEAK_BASIS"
           ? "But it changed after it was verified, so double-check before sending."
           : code === "CHANGE_SIGNALLED"
             ? "A change is signalled, so double-check before sending."
@@ -567,10 +583,12 @@ type TraceEntryLike = { rule: string; outcome: TraceRow["outcome"]; detail: stri
 
 function topSummary(row: TraceEntryLike, ctx: TraceCtx): string {
   const { result } = ctx;
-  const unread = result.caps.map((cap) => ctx.name(cap.sourceId)).join(" and ");
+  const unread = result.caps.map((cap) => capName(cap, ctx.name(cap.sourceId))).join(" and ");
   switch (`${row.rule}:${row.outcome}`) {
     case "D0a:fired":
       return "The reply couldn't be read, so nothing was sent.";
+    case "D0a:fail":
+      return "The AI's reading of part of this reply didn't match its words, so that part wasn't checked. The reply can't be better than Double-check.";
     case "D0a:pass":
       return `The reply was read: ${result.claims.length} claim${result.claims.length === 1 ? "" : "s"} found.`;
     case "D0b:fired": {

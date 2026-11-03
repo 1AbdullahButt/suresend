@@ -277,3 +277,5 @@ Part B: 1. the pills and Demo menu reachable beside the slide-over at 700–1100
 Then re-record, confirm decisions and reason codes for every saved result except those Part B means to change, and rerun Groq golden and held-out; Gemini when its quota allows, in its own commit. The README isn't cut in this phase.
 - **Gate:** typecheck, lint, all tests, e2e, axe, the slide-over check at 1024; new checks recorded failing, then passing; the saved results compared; evals published as they are; QA APPROVED; the re-lock proven; then merged, deployed, pushed; `git worktree list` clean.
 
+**Phase 12, second round (added 2026-11-03, Abdullah's decision).** Branch `phase-12b`. A claim dropped for a bad quote caps the reply at Double-check, with QA's repro as a failing test first, and D0a amended in DECISIONS.md. Doc owners get European names. "About a week" stays a Double-check (D-058), and the "Standard transfers" headline stays (D-056). Then Groq golden and held-out; Gemini after the 08:07 UTC reset, in its own commit; QA, then merge and deploy.
+

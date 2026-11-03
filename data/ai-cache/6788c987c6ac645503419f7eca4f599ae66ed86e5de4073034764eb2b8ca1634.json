@@ -1,12 +1,12 @@
 {
-  "key": "8ce7391e271aa598caf5ecdc9ba6ae334b3ecfb666dfd723607474f00414efdc",
+  "key": "6788c987c6ac645503419f7eca4f599ae66ed86e5de4073034764eb2b8ca1634",
   "identity": {
     "task": "source_extraction",
     "promptVersion": "2026-11-03.2",
     "schemaVersion": "2026-11-03.1",
     "provider": "groq",
     "model": "openai/gpt-oss-120b",
-    "inputText": "# Instant Transfers – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
+    "inputText": "# Instant Transfers – Reversal Exception\nProposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Jonas confirms.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
     "sourceKind": "policy"
   },
   "output": {
@@ -30,5 +30,5 @@
       }
     ]
   },
-  "recordedAt": "2026-11-03T14:22:29.297Z"
+  "recordedAt": "2026-11-03T18:25:28.574Z"
 }

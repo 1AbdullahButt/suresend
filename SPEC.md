@@ -386,11 +386,11 @@ These are unit or route tests on the engine using **hand-written extraction fixt
 
 ## Appendix A: seed sources (use this text exactly; the mess is intentional)
 
-**DOC-101 · Outgoing Transfers: Reversal SOP** · kind `sop` · verified 2026-10-01 · updated 2026-09-30 · owner Sara Malik (active) · visibility everyone
+**DOC-101 · Outgoing Transfers: Reversal SOP** · kind `sop` · verified 2026-10-01 · updated 2026-09-30 · owner Marie Dubois (active) · visibility everyone
 
 ```markdown
 # Outgoing Transfers – Reversal SOP
-Owner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.
+Owner: Marie (Payments Ops). Last reviewed with Settlement team in Sept.
 
 ## 1. Scope
 Covers outgoing transfers from wallet to other banks (all transfer types).
@@ -406,7 +406,7 @@ When an outgoing transfer fails, the amount is reversed to the customer's wallet
 Transfer fee is refunded with the principal. No separate request needed.
 ```
 
-**DOC-103 · Instant Transfers: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Bilal Ahmed (active) · visibility everyone
+**DOC-103 · Instant Transfers: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Jonas Weber (active) · visibility everyone
 
 ```markdown
 # Instant Transfers – Reversal Exception
@@ -421,10 +421,10 @@ How to tell the transfer type: check "Transfer type" on the transaction in the a
 **SRC-202 · Slack #ops-announcements · 2026-10-24** · kind `slack` · visibility everyone
 
 ```text
-Hamza (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Bilal posts the policy 🙏
+Matteo (Ops): heads up team, we're planning to move instant reversals to 1 day once compliance signs off. Not live yet, keep using the SOP till Jonas posts the policy 🙏
 ```
 
-**DOC-104 · Support Macros: Transfers** · kind `macro` · unverified · updated 2026-08-12 · flaggedOutdated true (reader note: "timeline looks old") · owner Zara (inactive) · visibility everyone
+**DOC-104 · Support Macros: Transfers** · kind `macro` · unverified · updated 2026-08-12 · flaggedOutdated true (reader note: "timeline looks old") · owner Elena (inactive) · visibility everyone
 
 ```markdown
 # Macros – Transfers

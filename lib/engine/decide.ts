@@ -31,8 +31,10 @@ import type {
 
 /** Extraction outcomes after quote validation. `ok: false` means the call failed (error or invalid output after retry). */
 export interface Extractions {
-  draft: { ok: true; text: string; claims: DraftClaim[]; rejectedCount: number } | { ok: false; text: string; error: string };
-  sources: Record<string, { ok: true; claims: SourceClaim[] } | { ok: false; error: string }>;
+  /** `dropped`: the claims quote validation rejected. Only their topics are used: their words failed validation, so they're never shown. */
+  draft: { ok: true; text: string; claims: DraftClaim[]; rejectedCount: number; dropped?: DraftClaim[] } | { ok: false; text: string; error: string };
+  /** `dropped`: how many of a doc's claims quote validation rejected, when some survived (all rejected is `ok: false`). */
+  sources: Record<string, { ok: true; claims: SourceClaim[]; dropped?: number } | { ok: false; error: string }>;
 }
 
 export interface DecideTicket {
@@ -65,6 +67,9 @@ export interface EvaluatedClaim {
 
 const DOWNGRADE_PREFIX = "Downgraded to CAUTION";
 
+/** "DOC-103", or "Part of DOC-103" when the doc kept some of its claims. */
+const capName = (c: Cap) => (c.partial ? `Part of ${c.sourceId}` : c.sourceId);
+
 export function decide(extractions: Extractions, sources: Source[], ticket: DecideTicket, now: Date): DecideOutput {
   const decisionTime = now.getTime();
   const draftText = extractions.draft.text;
@@ -92,7 +97,16 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
       trace,
     };
   }
-  trace.push({ rule: "D0a", outcome: "pass", detail: `Draft read: ${draft.claims.length} claim(s) extracted and quote-validated.` });
+  // D0a, amended (D-060): a claim dropped for a bad quote says nothing, so the claims left can't vouch for the reply. It's capped at CAUTION.
+  trace.push(
+    draft.rejectedCount > 0
+      ? {
+          rule: "D0a",
+          outcome: "fail",
+          detail: `Draft read: ${draft.claims.length} claim(s) quote-validated, ${draft.rejectedCount} dropped because the quote isn't in the draft. That part wasn't checked, so the result can't be better than CAUTION.`,
+        }
+      : { rule: "D0a", outcome: "pass", detail: `Draft read: ${draft.claims.length} claim(s) extracted and quote-validated.` },
+  );
 
   // Validated source claims from sources that were read successfully.
   const pool: EvaluatedClaim[] = [];
@@ -113,11 +127,9 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     }
   }
 
-  // The docs' value for a reply that gives none (D-046). An unread doc might hold it (SPEC §6.6.2), so none is named then.
-  const anyUnread = sources.some((s) => {
-    const ex = extractions.sources[s.id];
-    return ex && !ex.ok && !s.flaggedOutdated;
-  });
+  // The docs' value for a reply that gives none (D-046). An unread doc, or the part of one that was lost, might hold it (SPEC §6.6.2), so none is named then.
+  const lostPart = (ex: Extractions["sources"][string] | undefined) => !!ex && (!ex.ok || (ex.dropped ?? 0) > 0);
+  const anyUnread = sources.some((s) => lostPart(extractions.sources[s.id]) && !s.flaggedOutdated);
   const docsSay = (topic: string) => (anyUnread ? null : docsValue(topic, pool, ticket));
 
   // Claims on a covered topic go through rules D1–D11; the taxonomy registry says which topics are covered (D-041).
@@ -147,8 +159,11 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
   const flagged = new Set(uncovered.map((m) => patternTopic(m.kind)));
   const asked = ticket.message ? topicsAsked(ticket.message) : [];
   const holding = holdingTopics(draftText, draft.claims);
-  const unanswered = asked.filter((t) => !claimed.has(t) && !flagged.has(t) && !holding.includes(t));
+  // A dropped claim's topic isn't unanswered: the reply said something there that couldn't be checked. A caller with only the count gets one entry.
+  const droppedOn = draft.dropped?.map((c) => c.topic as string) ?? (draft.rejectedCount > 0 ? ["other"] : []);
+  const unanswered = asked.filter((t) => !claimed.has(t) && !flagged.has(t) && !holding.includes(t) && !droppedOn.includes(t));
   const topicGaps = unanswered.map((t, i) => topicGap(t, i, pool, docsSay));
+  const unverified = [...new Set(droppedOn)].filter((t) => !flagged.has(t)).map((t, i) => unverifiedPart(t, i, pool, docsSay));
   const d0e: TraceEntry =
     topicGaps.length > 0
       ? { rule: "D0e", outcome: "fired", detail: topicGaps.map((g) => g.trace[0]!.detail).join(" ") }
@@ -167,8 +182,8 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
 
   let gapNoun = "";
   if (covered.length === 0) {
-    // D0b / D0c / D0e / D0d
-    claims = [...outsideResults, ...topicGaps];
+    // D0b / D0c / D0a's cap / D0e / D0d
+    claims = [...outsideResults, ...unverified, ...topicGaps];
     if (uncovered.length > 0) {
       decision = "CAUTION";
       reasonCode = "EXTRACTION_GAP";
@@ -184,6 +199,11 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
       reasonCode = "OUTSIDE_COVERAGE";
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted out-of-topic claim." });
       trace.push({ rule: "D0c", outcome: "fired", detail: `${outside.length} claim(s) outside the topics SureSend checks. Check them manually.` });
+      trace.push(d0e);
+    } else if (unverified.length > 0) {
+      decision = "CAUTION";
+      reasonCode = "CLAIM_UNVERIFIED";
+      trace.push({ rule: "D0b", outcome: "pass", detail: "The policy-pattern detector found no timing, amount or deadline in the draft." });
       trace.push(d0e);
     } else if (topicGaps.length > 0) {
       decision = "CAUTION";
@@ -211,7 +231,7 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     } else {
       trace.push({ rule: "D0b", outcome: "pass", detail: "Every detector match is covered by an extracted claim on its topic." });
     }
-    claims.push(...topicGaps);
+    claims.push(...unverified, ...topicGaps);
     trace.push(d0e);
     const worst = mostSevere(claims)!;
     decision = worst.decision;
@@ -223,20 +243,24 @@ export function decide(extractions: Extractions, sources: Source[], ticket: Deci
     });
   }
 
-  // SOURCE_UNREAD cap: an unread, visible, non-excluded source can never support ALLOW.
+  // SOURCE_UNREAD cap: an unread, visible, non-excluded source can never support ALLOW, and nor can one that lost a claim to quote
+  // validation (D-060): the old SOP could otherwise win because the exception's quote was miscopied.
   const caps: Cap[] = [];
   for (const source of sources) {
     const ex = extractions.sources[source.id];
-    if (ex && !ex.ok && !source.flaggedOutdated) {
-      caps.push({
-        code: "SOURCE_UNREAD",
-        sourceId: source.id,
-        detail: `${source.id} (${source.title}) couldn't be read, so it can't support ALLOW. It might hold a contradiction.`,
-      });
-    }
+    if (!lostPart(ex) || source.flaggedOutdated) continue;
+    const partial = !!ex?.ok;
+    caps.push({
+      code: "SOURCE_UNREAD",
+      sourceId: source.id,
+      detail: partial
+        ? `Part of ${source.id} (${source.title}) couldn't be read, so it can't support ALLOW. The part it lost might hold a contradiction.`
+        : `${source.id} (${source.title}) couldn't be read, so it can't support ALLOW. It might hold a contradiction.`,
+      ...(partial ? { partial: true } : {}),
+    });
   }
   if (caps.length > 0) {
-    const ids = caps.map((c) => c.sourceId).join(", ");
+    const ids = caps.map(capName).join(", ");
     if (decision === "ALLOW") {
       decision = "CAUTION";
       reasonCode = "SOURCE_UNREAD";
@@ -327,6 +351,30 @@ function topicGap(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (to
         rule: "D0e",
         outcome: "fired",
         detail: `The reply doesn't answer the customer's question about ${def.question}.${governing ? ` The docs say ${governing.valueText} (${governing.sourceId}).` : ""} Check it manually.`,
+      },
+    ],
+    governing,
+  };
+}
+
+/**
+ * One CAUTION entry per topic with a claim dropped for a bad quote (D0a, D-060). The AI's words for it failed validation, so none are
+ * kept: only its topic, which names the docs' value for the reader and for a suggested reply, and decides nothing.
+ */
+function unverifiedPart(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (topic: string) => Governing | null): ClaimResult {
+  const span = "Part of this reply";
+  const dc: DraftClaim = { claimId: `dropped#${i + 1}`, topic: topic as DraftClaim["topic"], value: null, valueText: span, span, definitive: true };
+  const governing = docsSay(topic);
+  return {
+    draftClaim: dc,
+    decision: "CAUTION",
+    reasonCode: "CLAIM_UNVERIFIED",
+    evidence: pool.filter((e) => e.claim.topic === topic).map((e) => toEvidence(e, dc)),
+    trace: [
+      {
+        rule: "D0a",
+        outcome: "fired",
+        detail: `The AI's quote for part of the draft isn't in the draft, so the rules didn't check that part.${governing ? ` The docs say ${governing.valueText} (${governing.sourceId}).` : ""} Check it manually.`,
       },
     ],
     governing,
@@ -614,6 +662,8 @@ function headlineFor(
       return g ? `Caution: the policy says ${g.valueText} (${cite}), and the draft gives no checkable value.` : "Caution: no source supports this claim. Check it manually.";
     case "TOPIC_GAP":
       return `Caution: the draft doesn't answer the customer's question about ${topic?.question ?? "a checked topic"}.${g ? ` The policy says ${g.valueText} (${cite}).` : ""}`;
+    case "CLAIM_UNVERIFIED":
+      return `Caution: SureSend couldn't verify part of this reply.${g ? ` The policy says ${g.valueText} (${cite}).` : ""} Check it manually.`;
     case "EXTRACTION_GAP":
       return `Caution: SureSend couldn't confirm ${gapNoun || "a policy claim"} in this draft. Check it manually.`;
     case "OUTSIDE_COVERAGE":
@@ -621,7 +671,7 @@ function headlineFor(
     case "NO_POLICY_CLAIM":
       return "Allow: no policy claims in this reply.";
     case "SOURCE_UNREAD":
-      return `Caution: ${caps.map((c) => c.sourceId).join(", ")} couldn't be read, so SureSend can't confirm this. Check it manually.`;
+      return `Caution: ${caps.map(capName).join(", ")} couldn't be read, so SureSend can't confirm this. Check it manually.`;
     case "EXTRACTION_FAILED":
       return "AI unavailable: SureSend couldn't read this draft. Retry, or rewrite it without the policy claim.";
     default:

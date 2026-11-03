@@ -104,6 +104,7 @@ export type ReasonCode =
   | "OUTSIDE_COVERAGE"
   | "NO_POLICY_CLAIM"
   | "TOPIC_GAP"
+  | "CLAIM_UNVERIFIED"
   | "SCOPE_UNKNOWN"
   | "PROPOSAL_ONLY"
   | "UNSUPPORTED"
@@ -176,6 +177,8 @@ export interface Cap {
   code: "SOURCE_UNREAD";
   sourceId: string;
   detail: string;
+  /** Some of the doc was read: it lost a claim to quote validation and kept others (D-060). */
+  partial?: boolean;
 }
 
 /** Extension (D-002.4): policy-pattern detector hits (SPEC §6.6.2), for highlighting. */

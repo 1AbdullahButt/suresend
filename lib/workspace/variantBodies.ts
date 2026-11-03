@@ -3,7 +3,7 @@
 
 export const B2_FROM = "Effective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.";
 export const B2_TO =
-  "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.";
+  "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Jonas confirms.";
 export const B3_BODY =
   "# Reversal Timeline Update\nEffective 27 Oct 2026. Approved by Head of Ops. Failed transfers are reversed within 1 business day.\n";
 

@@ -62,7 +62,7 @@ export function variantBody(name: VariantName): string {
       return replaceExact(
         doc103,
         "Effective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.",
-        "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.",
+        "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Jonas confirms.",
       );
     case "B3":
       return "# Reversal Timeline Update\nEffective 27 Oct 2026. Approved by Head of Ops. Failed transfers are reversed within 1 business day.\n";

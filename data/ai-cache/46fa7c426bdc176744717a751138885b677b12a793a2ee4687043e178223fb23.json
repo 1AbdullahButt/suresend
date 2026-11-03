@@ -11,15 +11,22 @@
   "output": {
     "claims": [
       {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "I'm confirming the exact reversal timeline for your transfer",
+        "span": "I'm confirming the exact reversal timeline for your transfer",
+        "definitive": false
+      },
+      {
         "topic": "fee_refund",
         "value": {
           "flag": true
         },
-        "valueText": "refunded",
+        "valueText": "The transfer fee is refunded",
         "span": "The transfer fee is refunded.",
         "definitive": true
       }
     ]
   },
-  "recordedAt": "2026-11-03T14:30:35.172Z"
+  "recordedAt": "2026-11-03T18:31:40.368Z"
 }

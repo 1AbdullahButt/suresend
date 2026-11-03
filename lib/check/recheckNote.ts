@@ -53,7 +53,8 @@ export function recheckNote(re: DecideOutput, sources: Source[]): string | undef
     case "SOURCE_UNREAD": {
       const id = re.caps[0]?.sourceId;
       const title = sources.find((s) => s.id === id)?.title;
-      return title ? `${title} couldn't be read` : "a doc couldn't be read";
+      if (!title) return "a doc couldn't be read";
+      return `${re.caps[0]?.partial ? "part of " : ""}${title} couldn't be read`;
     }
     case "TOPIC_GAP":
       return "it doesn't answer what the customer asked";
