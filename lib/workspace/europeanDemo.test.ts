@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 import { ticketMeta } from "@/components/inbox/ticketMeta";
 import { PRESETS } from "./presets";
+import { B2_TO } from "./variantBodies";
 import { seedSources, seedTickets } from "./seed";
 
 const read = (...p: string[]) => readFileSync(path.join(process.cwd(), ...p), "utf8").replace(/\r\n/g, "\n");
@@ -54,6 +55,39 @@ describe("the seed", () => {
     }
     expect(appendix).toContain("**DOC-103 · Instant Transfers: Reversal Exception**");
     for (const t of seedTickets()) expect(appendix).toContain(`- ${t.id} · ${t.customer} · rail \`${t.rail}\` · "${t.message}"`);
+  });
+});
+
+describe("the doc owners and staff (D-061)", () => {
+  it("have European names, with the same activity and everything else", () => {
+    expect(seedSources().map((s) => [s.id, s.owner?.name ?? null, s.owner?.active ?? null])).toEqual([
+      ["DOC-101", "Marie Dubois", true],
+      ["DOC-103", "Jonas Weber", true],
+      ["SRC-202", null, null],
+      ["DOC-104", "Elena", false],
+      ["DOC-105", "Compliance", true],
+    ]);
+  });
+
+  it("are named the same way in the docs", () => {
+    const body = (id: string) => seedSources().find((s) => s.id === id)!.body;
+    expect(body("DOC-101")).toContain("Owner: Marie (Payments Ops).");
+    expect(body("SRC-202")).toContain("Matteo (Ops):");
+    expect(body("SRC-202")).toContain("till Jonas posts the policy");
+    expect(B2_TO).toContain("until Jonas confirms");
+  });
+
+  it.each(["README.md", "docs/MCP_DEMO.md", "e2e/demo.spec.ts", "evals/golden.json", "evals/heldout.json", "lib/workspace/variantBodies.ts", "tests/helpers/fixtures.ts", "data/seed/sources.json", "data/seed/docs/DOC-101.md", "data/seed/docs/SRC-202.md"])("%s has no old name", (file) => {
+    expect(read(file).split("\n").filter((l) => /\b(?:Sara|Bilal|Hamza|Zara|Malik|Ahmed)\b/.test(l))).toEqual([]);
+  });
+
+  it("SPEC Appendix A has them too", () => {
+    const spec = read("SPEC.md");
+    const appendix = spec.slice(spec.indexOf("## Appendix A"), spec.indexOf("## Appendix B"));
+    expect(appendix).not.toMatch(/\b(?:Sara|Bilal|Hamza|Zara|Malik|Ahmed)\b/);
+    expect(appendix).toContain("owner Marie Dubois (active)");
+    expect(appendix).toContain("owner Jonas Weber (active)");
+    expect(appendix).toContain("owner Elena (inactive)");
   });
 });
 
