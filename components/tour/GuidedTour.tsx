@@ -75,7 +75,8 @@ const STEPS: Step[] = [
         The held one was not sent.
       </>
     ),
-    target: (ag) => (ag.sendState.kind === "sent" ? ['[data-tour="payoff"]'] : ['[data-tour="suggested"]', '[data-tour="decision"]']),
+    // With the panel closed after "Use this reply", what's left to do is press Send.
+    target: (ag) => (ag.sendState.kind === "sent" ? ['[data-tour="payoff"]'] : ['[data-tour="suggested"]', '[data-tour="decision"]', '[data-tour="send"]']),
     enter: ({ ag, showAgent }) => {
       ag.actions.setTab("check");
       ag.actions.setView("main");
@@ -153,7 +154,8 @@ function findTarget(selectors: string[]): HTMLElement | null {
     const el = document.querySelector<HTMLElement>(sel);
     if (el) {
       const r = el.getBoundingClientRect();
-      if (r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight) return el;
+      // On screen, which a closed slide-over or sheet isn't: it waits just outside, still with a size.
+      if (r.width > 0 && r.height > 0 && r.bottom > 0 && r.top < window.innerHeight && r.right > 0 && r.left < window.innerWidth) return el;
     }
   }
   return null;

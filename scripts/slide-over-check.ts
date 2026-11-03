@@ -131,6 +131,25 @@ async function main() {
     check(strip.bar === 0 && strip.hidden, `${width}: no scrollbar on the pill strip (bar ${strip.bar}px, overflow ${strip.overflow}, hidden ${strip.hidden})`);
     if (width === 1024) await page.screenshot({ path: process.env.SLIDE_OVER_SHOT ?? "design/audit/slide-over-1024.png" });
     await ctx.close();
+
+    // The guided tour's step 3 closes the panel: its card must leave Send uncovered (QA's second look, D-054).
+    const tourCtx = await browser.newContext({ viewport: { width, height: 800 } });
+    const tourPage = await tourCtx.newPage();
+    await tourPage.goto(base, { waitUntil: "networkidle" });
+    await tourPage.getByRole("button", { name: "Guided tour" }).click();
+    const card = tourPage.getByRole("dialog").first();
+    await card.waitFor();
+    await tourPage.getByRole("button", { name: "Send", exact: true }).click();
+    await tourPage.getByRole("region", { name: "Decision" }).waitFor();
+    await card.getByRole("button", { name: /^Next/ }).click();
+    await tourPage.waitForTimeout(400);
+    await card.getByRole("button", { name: /^Next/ }).click();
+    await tourPage.waitForTimeout(400);
+    await tourPage.getByRole("button", { name: "Use this reply", exact: true }).click();
+    await tourPage.waitForTimeout(600);
+    const free = await tourPage.getByRole("button", { name: "Send", exact: true }).click({ timeout: 3000, trial: true }).then(() => true, () => false);
+    check(free, `${width}: in the tour, Send is uncovered once the suggested reply is in the composer`);
+    await tourCtx.close();
   }
   // A short screen has no room for a panel under the strip: it's the old overlay, modal, at full height.
   const ctx = await browser.newContext({ viewport: { width: 844, height: 390 } });

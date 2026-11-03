@@ -243,14 +243,15 @@ flowchart TD
 
 | | What | Result |
 |---|---|---|
-| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 372 passed |
-| `snapshot-results.ts` | Every saved path's decision and reason code, before and after the Phase 11 rule and prompt: golden, tour, doc fix | 62 of 68 identical. The other 6: the no-claim reply (both personas), now a Double-check by rule D0e; and the tour's digit-only edit (4 paths), same decision, with the suggested reply now from the template |
+| `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; number words; the seed against SPEC Appendix A; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 372 passed |
+| `snapshot-results.ts` | Every saved path's decision and reason code, before and after Phase 12's new docs, names and prompts: golden, presets, tour, doc fix | 132 of 132 keep their decision, reason and each claim's verdict. On 4 paths, the tour's digit-only edit, the suggested reply now comes from the AI's rewrite instead of the template |
+| `scripts/slide-over-check.ts` | With the slide-over open at 1099, 1024, 900 and 700 px: the pills and Demo menu on top and working, by mouse and keyboard; Esc and focus; no scrollbar on the strip; a short screen's overlay; Send uncovered in the tour | 50 passed; 22 of its first 28 failed on the old production site |
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
 | `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs × 2 providers | see below |
 | `pnpm eval --heldout` | 19 clean held-out cases, and 6 exposed ones reported apart, × 3 runs × 2 providers | see below |
-| `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the frozen prompts | 34/40 as expected; 6 strict misses; 0 Good to send |
+| `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the previous prompt (`2026-11-02.6`) | 34/40 as expected; 6 strict misses; 0 Good to send |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
 **Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path works, not
@@ -396,8 +397,11 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   back to saved responses with a visible badge, and text with no saved response can't be checked until the limit clears.
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
-- The eval is small and built around one scenario; the held-out set (19 clean cases) is a first check on generalisation, not proof.
-- **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq with the frozen prompts, the four hedged held-out cases gave the expected verdict on 34 of
+- **A wrong timeline doesn't always get a Hold.** "A couple of working days" does, since it's read as 2. "A few days" has no number to compare, so it's a Double-check with the docs' value. "About a week" and "a fortnight" are calendar days, and rule D8 makes a unit mismatch a Double-check, as it does "within 5 days". None of them is Good to send on a ticket. The AI reads the number words, and the detector is only the net: it says something's there, not what it's worth. Over MCP with no `ticket_id`, wording it doesn't know reads as Good to send if the AI misses it too.
+- **The AI's reading can depend on odd things.** The name "Léa" in a greeting made the model lowercase the first letter of what it quoted on 7 of 10 readings, so the check failed closed with Couldn't check. Other names did it on 0 and 1 of 10. A line in the prompt fixed it (0 of 39), but I don't know why that name does it, and another name or a model upgrade could bring it back.
+- On a screen under 561 px tall, the slide-over still covers the conversation pills, since there's no room for it below them. Close it to change the conversation. Under about 450 px tall, Send can't be reached at all: that's older than this phase, and the demo isn't built for it.
+- The eval is small and built around one scenario; the held-out set (25 clean cases) is a first check on generalisation, not proof.
+- **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq on the previous prompt (`2026-11-02.6`), the four hedged held-out cases gave the expected verdict on 34 of
   40 runs. The other 6 were strict and none was Good to send: each is a hedge the AI read as definite, so it got a Hold, not a Double-check (5 on H18's "As far as I can tell", 1 on H14). H2 and H20
   were right 10 of 10. That's four sentences at temperature 0 in one sitting, so 0 unsafe in 40 doesn't prove never: even if the runs were independent, at 95% confidence a rate up to about 7% could go unseen, or about 26% for any one sentence (0 of 10). See
   [evals/hedge-runs.md](evals/hedge-runs.md). Over every Groq session on the last three prompts, H18 is a Hold on 16 of 35 runs.
