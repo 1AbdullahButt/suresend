@@ -1,0 +1,32 @@
+{
+  "key": "a476008cba8a9ae83bf398d522fc798a8c157729e5bd942cefaf99487215cce9",
+  "identity": {
+    "task": "safe_reply",
+    "promptVersion": "2026-11-02.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "The transfer fee isn't refundable.",
+    "governing": {
+      "value": {
+        "flag": true
+      },
+      "quote": "Transfer fee is refunded with the principal.",
+      "decision": "HOLD"
+    },
+    "claims": [
+      {
+        "span": "The transfer fee isn't refundable.",
+        "topic": "fee_refund",
+        "correct": "refunded",
+        "quote": "Transfer fee is refunded with the principal.",
+        "sourceId": "DOC-101",
+        "wrong": true
+      }
+    ]
+  },
+  "output": {
+    "reply": "The transfer fee is refunded with the principal."
+  },
+  "recordedAt": "2026-11-03T12:38:16.254Z"
+}

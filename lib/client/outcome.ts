@@ -1,6 +1,7 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
 import type { CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
+import { governingScope } from "@/lib/engine/applicability";
 import { patternNoun, patternTopic } from "@/lib/engine/patterns";
 import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
 import { isCovered, topicDef, wordsFor } from "@/lib/topics";
@@ -77,7 +78,7 @@ const CAUTION_HEADLINE: Partial<Record<CheckResult["reasonCode"], string>> = {
   UNSUPPORTED: "No doc backs this up",
   UNIT_MISMATCH: "Check the units",
   HEDGED_CONTRADICTION: "Your hedge differs from the policy",
-  TOPIC_GAP: "Your reply doesn't answer this",
+  TOPIC_GAP: "Missing an answer",
 };
 
 const candidatesIn = (claim: ClaimResult) => claim.evidence.filter((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.claim.value);
@@ -108,9 +109,8 @@ export function summarize(result: CheckResult, ticketRail: "instant" | "standard
   const meta = OUTCOME[result.decision];
   const claim = mostSevereClaim(result);
   const gov = claim?.governing ?? null;
-  const govEv = governingEvidence(claim);
-  // Name the ticket's own transfer type when it is known (the governing rule applies to it); else the rule's scope.
-  const rail = ticketRail !== "unknown" ? ticketRail : (govEv?.claim.scope.rail ?? "any");
+  // A rule for all transfers names no type unless another type's rule differs (D-056).
+  const rail = claim ? governingScope(claim, ticketRail) : "any";
   const topic = claim && isCovered(claim.draftClaim.topic) ? topicDef(claim.draftClaim.topic) : null;
   // The sentence is the topic's own wording (D-041).
   const said = (verdict: "hold" | "allow") =>
@@ -216,7 +216,10 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     }
     case "TOPIC_GAP": {
       const topic = claim && isCovered(claim.draftClaim.topic) ? topicDef(claim.draftClaim.topic) : null;
-      return `${gov && claim ? docsSayWords(claim, gov.value) : (unreadLead(result) ?? `The customer asked about ${topic?.coverage ?? "this"}`)}; your reply doesn't say.`;
+      // What's missing first, then what the docs have to say about it: a missing answer, not an error (D-055).
+      const lead = `Your reply doesn't answer their question about ${topic?.question ?? "this"}.`;
+      const docs = gov && claim ? docsSayWords(claim, gov.value) : (unreadLead(result) ?? (claim && candidatesIn(claim).length > 0 ? "Your docs don't give one answer for this ticket" : null));
+      return docs ? `${lead} ${docs}.` : lead;
     }
     case "UNIT_MISMATCH":
       return `Your reply says ${claim?.draftClaim.valueText ?? "one unit"}, but the policy says ${gov && claim ? wordsFor(claim.draftClaim.topic, gov.value) : "a different unit"}.`;
@@ -281,6 +284,12 @@ export interface ClaimLine {
   tone: OutcomeTone;
 }
 
+/** The words to show for a claim: its span, or its own value text when another claim has the same span, so a sentence isn't repeated (D-057). */
+export function claimWords(result: CheckResult, claim: ClaimResult): string {
+  const { span, valueText } = claim.draftClaim;
+  return valueText && result.claims.filter((c) => c.draftClaim.span === span).length > 1 ? valueText : span;
+}
+
 /** The reply's claims in the order it makes them, each with its own verdict; empty for a reply with one claim or none. */
 export function claimLines(result: CheckResult): ClaimLine[] {
   if (result.claims.length < 2) return [];
@@ -289,7 +298,7 @@ export function claimLines(result: CheckResult): ClaimLine[] {
   return result.claims.map((c, i) => ({
     key: c.draftClaim.claimId || String(i),
     label: c.reasonCode === "TOPIC_GAP" ? "Not answered" : made > 1 ? `Claim ${++n} of ${made}` : "Your reply",
-    says: c.draftClaim.span,
+    says: claimWords(result, c),
     quoted: c.reasonCode !== "TOPIC_GAP",
     name: OUTCOME[c.decision].name,
     tone: OUTCOME[c.decision].tone,
@@ -350,7 +359,7 @@ export function whyModel(result: CheckResult, only?: ClaimResult): WhyModel {
         : unconfirmed
           ? "Can't confirm"
           : ev.applicability === "SCOPE_UNRESOLVED"
-          ? "Only for one rail"
+          ? "Only for one transfer type"
           : "Disagrees";
       others.push({ id: ev.source.id, title: ev.source.title, line: `${v ? wordsFor(ev.claim.topic, v) : ev.claim.valueText}, ${railShort(ev.claim.scope.rail)}`, label });
     } else {
@@ -410,7 +419,7 @@ function soSentence(result: CheckResult, claim: ClaimResult | null, govEv: Evide
     case "ESCALATE":
       second =
         code === "SCOPE_UNKNOWN"
-          ? "The rules differ by rail and this ticket's rail is unknown, so ask first."
+          ? "The rules differ by transfer type and this ticket's type is unknown, so ask first."
           : "They disagree and no rule picks a winner, so ask first. Newer or verified doesn't decide it.";
       break;
     case "CAUTION":
@@ -495,11 +504,11 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
         ? `Your reply says “${c.draftClaim.span}”${c.draftClaim.definitive ? "" : ", hedged"}.`
         : `Your reply promises ${c.draftClaim.valueText}${c.draftClaim.definitive ? "" : ", hedged"}.`;
     case "D1:pass": {
-      const rail = /for the (instant|standard) rail/.exec(row.detail)?.[1];
-      return rail ? `The rail is known (${rail}), so there's no scope gap.` : "The rail doesn't change the answer here.";
+      const rail = /resolves for (instant|standard) transfers/.exec(row.detail)?.[1];
+      return rail ? `The transfer type is known (${rail}), so there's no scope gap.` : "The transfer type doesn't change the answer here.";
     }
     case "D1:fired":
-      return "The rail is unknown, and the docs give different answers for different rails.";
+      return "The transfer type is unknown, and the docs give different answers for different types.";
     case "D2:fired":
       return "Only proposals or upcoming changes cover this; nothing in force does.";
     case "D3:fired":
@@ -510,14 +519,14 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
       return `All applicable docs agree: ${V}.`;
     case "D5:fired": {
       const targets = others((e) => e.standing === "CANDIDATE" && e.applicability !== "NOT_APPLICABLE" && e.source.id !== g?.sourceId && e.relation !== "n/a");
-      return `${govName} explicitly replaces ${targets || "the other doc"} for this rail, so its ${V} governs.`;
+      return `${govName} explicitly replaces ${targets || "the other doc"} for this transfer type, so its ${V} governs.`;
     }
     case "D5:pass":
       return "No doc says it replaces another.";
     case "D6:fired":
-      return `${govName} is the only doc specific to this rail, so its ${V} governs.`;
+      return `${govName} is the only doc specific to this transfer type, so its ${V} governs.`;
     case "D6:pass":
-      return "No doc is specific to this rail.";
+      return "No doc is specific to this transfer type.";
     case "D7:fired":
       return "The docs still disagree and no rule picks a winner. Newer or verified doesn't win on its own.";
     case "D8:fired":
@@ -544,7 +553,7 @@ function claimSummary(row: TraceEntryLike, c: ClaimResult, ctx: TraceCtx): strin
       return "The governing doc has no verification problems, so there's no downgrade.";
     case "D11b:fired": {
       const signals = others((e) => (e.standing === "PROPOSAL" || e.standing === "NOT_YET_EFFECTIVE") && e.applicability === "APPLIES");
-      return `A change is signalled for this rail${signals ? ` (${signals})` : ""}, so the result drops to Double-check.`;
+      return `A change is signalled for this transfer type${signals ? ` (${signals})` : ""}, so the result drops to Double-check.`;
     }
     case "D11b:pass":
       return "No proposals or upcoming changes apply.";
@@ -624,8 +633,8 @@ export function traceRows(result: CheckResult): TraceRow[] {
     // A reply with several claims gets a header row per claim, so each claim's rules read as their own group (D-041).
     if (several) {
       push(
-        { rule: "Claim", outcome: c.decision === "ALLOW" ? "pass" : "fired", detail: `${c.decision} (${c.reasonCode}) for "${c.draftClaim.span}"` },
-        `Claim ${i + 1} of ${result.claims.length}: “${c.draftClaim.span}” · ${OUTCOME[c.decision].name}`,
+        { rule: "Claim", outcome: c.decision === "ALLOW" ? "pass" : "fired", detail: `${c.decision} (${c.reasonCode}) for "${claimWords(result, c)}"` },
+        `Claim ${i + 1} of ${result.claims.length}: “${claimWords(result, c)}” · ${OUTCOME[c.decision].name}`,
         true,
       );
     }

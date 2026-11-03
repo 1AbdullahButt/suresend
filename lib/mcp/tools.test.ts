@@ -16,7 +16,7 @@ describe("check_reply", () => {
     expect(r.reason_code).toBe("CONTRADICTS_GOVERNING");
     expect(r.suggested_reply?.text).toContain("1 business day");
     expect(r.suggested_reply?.check).toBe("Good to send");
-    expect(r.governing).toMatchObject({ doc_id: "DOC-103", doc_title: "Instant Rail: Reversal Exception", value: "1 business day" });
+    expect(r.governing).toMatchObject({ doc_id: "DOC-103", doc_title: "Instant Transfers: Reversal Exception", value: "1 business day" });
     expect(r.next_step).toBe("Don't send this reply. Send suggested_reply instead (the rules rechecked it), or ask a human.");
     expect(r.rules_that_mattered.some((x) => x.startsWith("D5 (fired)"))).toBe(true);
     expect(r.ticket).toEqual({ id: "TCK-9001", rail: "instant" });
@@ -36,7 +36,7 @@ describe("check_reply", () => {
     if (!out.ok) throw new Error(out.error);
     expect(out.value.decision).toBe("Ask first");
     expect(out.value.ticket).toEqual({ id: null, rail: "unknown" });
-    expect(out.value.next_step).toMatch(/depends on the payment rail/);
+    expect(out.value.next_step).toMatch(/depends on the transfer type/);
     expect(out.value.suggested_reply?.text).not.toMatch(/\d|\bdays?\b|\bhours?\b/i);
   });
 
@@ -101,7 +101,7 @@ describe("get_doc", () => {
   it("returns title, signals and text for a visible doc", () => {
     const out = getDoc("DOC-103");
     if (!out.ok) throw new Error(out.error);
-    expect(out.value).toMatchObject({ id: "DOC-103", title: "Instant Rail: Reversal Exception", verification: "verified", flagged_outdated: false });
+    expect(out.value).toMatchObject({ id: "DOC-103", title: "Instant Transfers: Reversal Exception", verification: "verified", flagged_outdated: false });
     expect(out.value.text).toContain("1 business day");
   });
 

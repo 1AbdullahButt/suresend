@@ -63,12 +63,12 @@ It returns a decision and a next_step; follow the next_step:
 - Good to send: no doc contradicts the reply.
 - Double-check: show the reason to a human; send only if they confirm.
 - Hold: the reply contradicts the governing doc. Don't send it. Send suggested_reply instead when its check is Good to send; if its check says Double-check, show a human first. Or ask a human.
-- Ask first: the answer depends on something unknown (the payment rail) or the docs disagree. Don't state what depends on it. Send suggested_reply (a holding reply) or ask a human.
+- Ask first: the answer depends on something unknown (the transfer type) or the docs disagree. Don't state what depends on it. Send suggested_reply (a holding reply) or ask a human.
 - Couldn't check: the check didn't run. Don't send the reply yet; retry or ask a human.
 
 ${COVERAGE}
 
-Pass ticket_id from list_tickets; its payment rail is used unless you pass rail. With neither, the rail is treated as unknown. The AI reads the reply and the docs, and drafts the suggested reply; fixed rules make every decision and recheck that reply, and governing and rules_that_mattered show why. ${DEMO_NOTE}`,
+Pass ticket_id from list_tickets; its transfer type is used unless you pass rail. With neither, the type is treated as unknown. The AI reads the reply and the docs, and drafts the suggested reply; fixed rules make every decision and recheck that reply, and governing and rules_that_mattered show why. ${DEMO_NOTE}`,
       inputSchema: CheckReplyInput,
       outputSchema: CheckReplyOutput,
       annotations: READ_ONLY,
@@ -88,14 +88,14 @@ Pass ticket_id from list_tickets; its payment rail is used unless you pass rail.
     "list_tickets",
     {
       title: "List open tickets",
-      description: `List the open support tickets in the demo workspace: id, customer, payment rail and the customer's message. Use the id as check_reply's ticket_id. ${DEMO_NOTE}`,
+      description: `List the open support tickets in the demo workspace: id, customer, transfer type (rail) and the customer's message. Use the id as check_reply's ticket_id. ${DEMO_NOTE}`,
       outputSchema: TicketsOutput,
       annotations: READ_ONLY,
     },
     async () => {
       try {
         const out = listTickets();
-        const lines = out.tickets.map((t) => `${t.id} · ${t.customer} · ${t.rail} rail\n  "${t.customer_message}"`);
+        const lines = out.tickets.map((t) => `${t.id} · ${t.customer} · ${t.rail === "unknown" ? "transfer type unknown" : `${t.rail} transfer`}\n  "${t.customer_message}"`);
         return { content: text(`${lines.join("\n")}\n${out.note}`), structuredContent: out };
       } catch (e) {
         return unexpected("list_tickets", e);

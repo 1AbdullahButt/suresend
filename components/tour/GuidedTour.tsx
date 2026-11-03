@@ -41,7 +41,7 @@ const STEPS: Step[] = [
     title: "Send runs the check",
     body: (
       <>
-        Ayesha&apos;s transfer went over the <b>instant rail</b>, and the reply promises <b>4 business days</b>. Press <b>Send</b>: SureSend
+        Léa&apos;s transfer was an <b>instant transfer</b>, and the reply promises <b>4 business days</b>. Press <b>Send</b>: SureSend
         checks the reply against your docs first, and holds it if it&apos;s wrong.
       </>
     ),
@@ -56,7 +56,7 @@ const STEPS: Step[] = [
     title: "Why it's on hold",
     body: (
       <>
-        The AI read the reply and the docs, and quoted them. <b>Fixed rules</b> made the call: the instant-rail exception says it replaces the SOP for
+        The AI read the reply and the docs, and quoted them. <b>Fixed rules</b> made the call: the instant-transfer exception says it replaces the SOP for
         instant transfers, so its 1 business day applies. The SOP is verified too, but verified or newer never breaks a tie.
       </>
     ),
@@ -86,7 +86,7 @@ const STEPS: Step[] = [
     title: "Ask first: no guessing",
     body: (
       <>
-        Usman&apos;s rail is <b>unknown</b>, and instant and standard transfers have different timelines. SureSend asks you to confirm
+        Lukas&apos;s transfer type is <b>unknown</b>, and instant and standard transfers have different timelines. SureSend asks you to confirm
         instead of guessing, and its holding reply contains no timeline at all.
       </>
     ),
@@ -101,13 +101,13 @@ const STEPS: Step[] = [
     title: "Fix the doc that caused this",
     body: (
       <>
-        Ayesha&apos;s agent got <b>4 days</b> from the old SOP. SureSend suggests one added line to fix that doc, so the next agent gets it
+        Léa&apos;s agent got <b>4 days</b> from the old SOP. SureSend suggests one added line to fix that doc, so the next agent gets it
         right. Nothing changes until you approve it.
       </>
     ),
     target: (ag) => (ag.fixReview ? ['[data-tour="fix-review"]'] : ['[data-tour="fix-link"]', '[data-tour="decision"]']),
     keepClear: (ag) => (ag.fixReview?.status === "ready" ? '[data-tour="fix-approve"]' : null),
-    // Ayesha's Hold tells the story best (D-039). The step's own button holds her reply if needed, then opens the review.
+    // Léa's Hold tells the story best (D-039). The step's own button holds the reply if needed, then opens the review.
     enter: ({ ag, showAgent }) => {
       if (!ag.fixReview) {
         ag.actions.prepareTicket("TCK-9001");
@@ -412,7 +412,7 @@ export function GuidedTour({
             New here? Take the 2-minute tour
           </h2>
           <p id={bodyId} className={s.body}>
-            Catch a wrong reply at Send, see why the rules held it, send a checked one, handle an unknown rail, fix the doc behind it and
+            Catch a wrong reply at Send, see why the rules held it, send a checked one, handle an unknown transfer type, fix the doc behind it and
             edit a doc live. Skip at any step.
           </p>
           <div className={s.nav}>
@@ -438,7 +438,7 @@ export function GuidedTour({
   const hasHold = t1 && ag.stored?.result.decision === "HOLD";
   const restoreFirst = state.step === EDIT_STEP && startEdited;
 
-  // Step 5: review the fix for Ayesha's held 4-day reply. If it wasn't held this session, hold it first (saved responses).
+  // Step 5: review the fix for Léa's held 4-day reply. If it wasn't held this session, hold it first (saved responses).
   const showFix = async () => {
     if (overlay) ag.actions.setPanelOpen(true);
     const prior = ag.heldReplies["TCK-9001"];
@@ -569,7 +569,7 @@ export function GuidedTour({
             {held(ag, "TCK-9001") ? (
               <span className={s.done}>
                 <CircleCheck aria-hidden="true" />
-                Held. Nothing reached Ayesha, and one wrong reply is counted as stopped.
+                Held. Nothing reached Léa, and one wrong reply is counted as stopped.
               </span>
             ) : (
               sendFor("TCK-9001", "Press Send for me")
@@ -579,7 +579,7 @@ export function GuidedTour({
 
         {state.step === 1 && !hasHold ? (
           <div className={s.actions}>
-            <span className={s.note}>There&apos;s no held reply for Ayesha yet.</span>
+            <span className={s.note}>There&apos;s no held reply for Léa yet.</span>
             <button
               type="button"
               className={s.tbtn}
@@ -615,7 +615,7 @@ export function GuidedTour({
                 Use this reply and send it
               </button>
             ) : (
-              <span className={s.note}>Go back to step 1 to hold Ayesha&apos;s wrong reply first.</span>
+              <span className={s.note}>Go back to step 1 to hold Léa&apos;s wrong reply first.</span>
             )}
           </div>
         ) : null}

@@ -1,0 +1,57 @@
+{
+  "key": "6e55b0dc913d457e7123bf79a7cf4f01fb2638667fa663e8f1364d3eba4ae1da",
+  "identity": {
+    "task": "source_extraction",
+    "promptVersion": "2026-11-03.1",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.\n\n## 1. Scope\nCovers outgoing transfers from wallet to other banks (all transfer types).\n\n## 2. Common failure reasons\n- beneficiary account closed / title mismatch\n- bank side timeout (rare, mostly month-end)\n\n## 3. Reversal timeline\nWhen an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days. For instant transfers, failed transfers are reversed within 1 business day (see Instant Transfers: Reversal Exception). How to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel. Do NOT promise same day. If it's been longer than that, raise a Jira ticket to Settlement with the TxID.\n\n## 4. Fees\nTransfer fee is refunded with the principal. No separate request needed.\n",
+    "sourceKind": "sop"
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 4,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "4 business days",
+        "rail": "any",
+        "effectiveFrom": null,
+        "statusWording": "unstated",
+        "supersedes": null,
+        "quote": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days."
+      },
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "1 business day",
+        "rail": "instant",
+        "effectiveFrom": null,
+        "statusWording": "unstated",
+        "supersedes": null,
+        "quote": "For instant transfers, failed transfers are reversed within 1 business day (see Instant Transfers: Reversal Exception)."
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded with the principal",
+        "rail": "any",
+        "effectiveFrom": null,
+        "statusWording": "unstated",
+        "supersedes": null,
+        "quote": "Transfer fee is refunded with the principal."
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T12:49:03.396Z"
+}

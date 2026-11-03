@@ -393,7 +393,7 @@ These are unit or route tests on the engine using **hand-written extraction fixt
 Owner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.
 
 ## 1. Scope
-Covers outgoing transfers from wallet to other banks (all rails).
+Covers outgoing transfers from wallet to other banks (all transfer types).
 
 ## 2. Common failure reasons
 - beneficiary account closed / title mismatch
@@ -406,16 +406,16 @@ When an outgoing transfer fails, the amount is reversed to the customer's wallet
 Transfer fee is refunded with the principal. No separate request needed.
 ```
 
-**DOC-103 · Instant Rail: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Bilal Ahmed (active) · visibility everyone
+**DOC-103 · Instant Transfers: Reversal Exception** · kind `policy` · verified 2026-10-26 · updated 2026-10-26 · owner Bilal Ahmed (active) · visibility everyone
 
 ```markdown
-# Instant Rail – Reversal Exception
-Effective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.
+# Instant Transfers – Reversal Exception
+Effective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.
 
-For instant-rail transfers only, failed transfers are reversed within 1 business day.
-This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.
+For instant transfers only, failed transfers are reversed within 1 business day.
+This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.
 
-How to tell the rail: check "Rail" on the transaction in the admin panel.
+How to tell the transfer type: check "Transfer type" on the transaction in the admin panel.
 ```
 
 **SRC-202 · Slack #ops-announcements · 2026-10-24** · kind `slack` · visibility everyone
@@ -443,9 +443,9 @@ If a failed transfer is under fraud review (flag FR-HOLD), do not share any reve
 ```
 
 **Tickets**
-- TCK-9001 · Ayesha K. · rail `instant` · "My transfer to another bank failed yesterday. When do I get my money back?"
-- TCK-9002 · Usman R. · rail `unknown` · "Transfer failed, money gone from wallet. when will it come back??"
-- TCK-9003 · Hina S. · rail `standard` · "Hi, my bank transfer failed this morning. How long until the refund?"
+- TCK-9001 · Léa K. · rail `instant` · "My transfer to another bank failed yesterday. When do I get my money back?"
+- TCK-9002 · Lukas R. · rail `unknown` · "Transfer failed, money gone from wallet. when will it come back??"
+- TCK-9003 · Sofia S. · rail `standard` · "Hi, my bank transfer failed this morning. How long until the refund?"
 
 ## Appendix B: variants used by tests, the eval and the demo
 

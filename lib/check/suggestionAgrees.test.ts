@@ -21,7 +21,7 @@ const deps = aiDeps(createRuntime({ liveGate: async () => false }));
 describe("a suggestion's check matches its Send", () => {
   // No golden case reaches an Ask first with a kept claim. This is the reply QA round 2 found refused at Send.
   it("Ask first with a kept claim, on the demo's own preset", async () => {
-    const preset = PRESETS["TCK-9002"]!.find((p) => p.id === "usman-both")!;
+    const preset = PRESETS["TCK-9002"]!.find((p) => p.id === "lukas-both")!;
     for (const role of ROLES) {
       const input: CheckInput = { ticketId: "TCK-9002", rail: "unknown", draft: preset.draft, role };
       const r = await runCheck(input, deps);

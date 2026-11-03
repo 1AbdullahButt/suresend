@@ -37,7 +37,7 @@ describe("source matching", () => {
 
   it("a correct reply gets no proposal, and neither does a rail-specific doc the agent misapplied", async () => {
     expect(findFixSource(await check(fixAwareDeps().deps, "TCK-9001", "instant", ONE_DAY_DRAFT))).toBeNull();
-    // 1 business day on a standard transfer is held, but DOC-103 already says "instant-rail transfers only".
+    // 1 business day on a standard transfer is held, but DOC-103 already says "instant transfers only".
     const misapplied = await check(fixAwareDeps().deps, "TCK-9003", "standard", ONE_DAY_DRAFT);
     expect(misapplied.decision).toBe("HOLD");
     expect(findFixSource(misapplied)).toBeNull();
@@ -64,10 +64,10 @@ describe("validation", () => {
     const cases: Array<[Partial<FixEdit>, RegExp]> = [
       [{ target: "Transfer fee is refunded with the principal." }, /other than the claim sentence/],
       [{ target: "This sentence is not in the doc." }, /other than the claim sentence/],
-      [{ text: "Instant-rail transfers are reversed faster; see the exception." }, /doesn't state "1 business day"/],
-      [{ text: "Instant-rail transfers: 1 business day, or 24 hours on weekends." }, /adds another timeline or amount \("24 hours"\)/],
-      [{ text: "Instant-rail transfers: 1 business day.\nSee the exception." }, /one short plain paragraph/],
-      [{ action: "replace", text: "Instant-rail transfers are reversed within 1 business day." }, /must keep the claim sentence word for word/],
+      [{ text: "Instant transfers are reversed faster; see the exception." }, /doesn't state "1 business day"/],
+      [{ text: "Instant transfers: 1 business day, or 24 hours on weekends." }, /adds another timeline or amount \("24 hours"\)/],
+      [{ text: "Instant transfers: 1 business day.\nSee the exception." }, /one short plain paragraph/],
+      [{ action: "replace", text: "Instant transfers are reversed within 1 business day." }, /must keep the claim sentence word for word/],
     ];
     for (const [change, reason] of cases) {
       const v = validateFix(body, { ...ok, ...change }, fix);
@@ -80,19 +80,19 @@ describe("validation", () => {
     const fix = await fixFor();
     const cases: Array<[FixEdit, RegExp]> = [
       // 1. The claim plus the next sentence as the target: a replace would delete "Do NOT promise same day."
-      [{ action: "replace", target: `${SOP_QUOTE} Do NOT promise same day.`, text: `${SOP_QUOTE} Instant-rail: 1 business day.` }, /other than the claim sentence/],
+      [{ action: "replace", target: `${SOP_QUOTE} Do NOT promise same day.`, text: `${SOP_QUOTE} Instant transfers: 1 business day.` }, /other than the claim sentence/],
       // 2-3. A fragment of the claim as the target: its first match is in the scope line or a heading.
-      [{ action: "replace", target: "transfer", text: "transfer (instant-rail: 1 business day)" }, /other than the claim sentence/],
-      [{ action: "replace", target: "fail", text: "fail (instant-rail: 1 business day)" }, /other than the claim sentence/],
+      [{ action: "replace", target: "transfer", text: "transfer (instant transfers: 1 business day)" }, /other than the claim sentence/],
+      [{ action: "replace", target: "fail", text: "fail (instant transfers: 1 business day)" }, /other than the claim sentence/],
       // 4. A rewrite that flips the meaning.
       [
-        { action: "replace", target: SOP_QUOTE, text: "Failed transfers are never reversed within 4 business days; instant-rail ones take 1 business day." },
+        { action: "replace", target: SOP_QUOTE, text: "Failed transfers are never reversed within 4 business days; instant ones take 1 business day." },
         /must keep the claim sentence word for word/,
       ],
       // 5. Number words and a promise in an added sentence.
-      [{ action: "add_after", target: SOP_QUOTE, text: "Instant-rail: 1 business day. Standard transfers can take two weeks." }, /another timeline or amount \("two weeks"\)/],
-      [{ action: "add_after", target: SOP_QUOTE, text: "Instant-rail transfers take 1 business day, and refunds are guaranteed." }, /contains "guaranteed"/],
-      [{ action: "add_after", target: SOP_QUOTE, text: "Instant-rail transfers are not reversed within 1 business day." }, /contains "not"/],
+      [{ action: "add_after", target: SOP_QUOTE, text: "Instant transfers: 1 business day. Standard transfers can take two weeks." }, /another timeline or amount \("two weeks"\)/],
+      [{ action: "add_after", target: SOP_QUOTE, text: "Instant transfers take 1 business day, and refunds are guaranteed." }, /contains "guaranteed"/],
+      [{ action: "add_after", target: SOP_QUOTE, text: "Instant transfers are not reversed within 1 business day." }, /contains "not"/],
     ];
     for (const [edit, reason] of cases) {
       const v = validateFix(body, edit, fix);
@@ -104,16 +104,16 @@ describe("validation", () => {
   it("rejects QA's second-round additions: curly or other contractions, wrong or all rails, months, 'immediately', fees", async () => {
     const fix = await fixFor();
     const cases: Array<[string, RegExp]> = [
-      ["Instant-rail transfers don’t get 1 business day yet.", /contains "don't"/],
-      ["The instant-rail change to 1 business day wasn't approved.", /contains "wasn't"/],
-      ["Instant-rail transfers didn't move to 1 business day.", /contains "didn't"/],
-      ["Standard-rail transfers are reversed within 1 business day.", /doesn't name the instant rail|beyond the instant rail/],
-      ["All transfers on the instant rail are reversed within 1 business day.", /beyond the instant rail/],
-      ["Instant-rail transfers take 1 business day; standard ones can take two months.", /another timeline \("months"\)|beyond the instant rail/],
-      ["Instant-rail transfers take 1 business day, or eleven days at month-end.", /another timeline/],
-      ["Instant-rail transfers take 1 business day, usually immediately.", /another timeline \("immediately"\)/],
+      ["Instant transfers don’t get 1 business day yet.", /contains "don't"/],
+      ["The instant-transfer change to 1 business day wasn't approved.", /contains "wasn't"/],
+      ["Instant transfers didn't move to 1 business day.", /contains "didn't"/],
+      ["Standard transfers are reversed within 1 business day.", /doesn't name instant transfers|beyond instant transfers/],
+      ["All transfers on instant transfers are reversed within 1 business day.", /beyond instant transfers/],
+      ["Instant transfers take 1 business day; standard ones can take two months.", /another timeline \("months"\)|beyond instant transfers/],
+      ["Instant transfers take 1 business day, or eleven days at month-end.", /another timeline/],
+      ["Instant transfers take 1 business day, usually immediately.", /another timeline \("immediately"\)/],
       // D-041: the fee detector now catches it first; either way it's refused for the fee wording.
-      ["Instant-rail transfers take 1 business day and the fee is waived.", /contains "fee"|contains "waived"|("fee is waived")/],
+      ["Instant transfers take 1 business day and the fee is waived.", /contains "fee"|contains "waived"|("fee is waived")/],
     ];
     for (const [text, reason] of cases) {
       const v = validateFix(body, { action: "add_after", target: SOP_QUOTE, text }, fix);
@@ -122,15 +122,15 @@ describe("validation", () => {
     }
     // The AI's recorded wording and the template still pass.
     const recorded =
-      'For instant-rail transfers, failed transfers are reversed within 1 business day (see Instant Rail: Reversal Exception). How to tell the rail: check "Rail" on the transaction in the admin panel.';
+      'For instant transfers, failed transfers are reversed within 1 business day (see Instant Transfers: Reversal Exception). How to tell the transfer type: check "Transfer type" on the transaction in the admin panel.';
     expect(validateFix(body, { action: "add_after", target: SOP_QUOTE, text: recorded }, fix).ok).toBe(true);
   });
 
   it("accepts a replace that keeps the claim sentence word for word, as an addition after it", async () => {
     const fix = await fixFor();
-    const v = validateFix(body, { action: "replace", target: SOP_QUOTE, text: `${SOP_QUOTE} Instant-rail transfers: 1 business day.` }, fix);
+    const v = validateFix(body, { action: "replace", target: SOP_QUOTE, text: `${SOP_QUOTE} Instant transfers: 1 business day.` }, fix);
     if (!v.ok) throw new Error(v.reason);
-    expect(v.edit).toEqual({ action: "add_after", target: SOP_QUOTE, text: "Instant-rail transfers: 1 business day." });
+    expect(v.edit).toEqual({ action: "add_after", target: SOP_QUOTE, text: "Instant transfers: 1 business day." });
     expect(v.changed).toHaveLength(1);
   });
 
@@ -183,7 +183,7 @@ describe("proposeFix", () => {
   });
 
   it("uses the AI's draft when it passes validation and the recheck", async () => {
-    const text = `${EXCEPTION_QUOTE} See Instant Rail: Reversal Exception.`;
+    const text = `${EXCEPTION_QUOTE} See Instant Transfers: Reversal Exception.`;
     const draftDocFix = async () => ({ edit: { action: "add_after" as const, target: SOP_QUOTE, text }, info: { mode: "live" as const, model: "fake", latencyMs: 0, promptVersion: "fake" } });
     const { proposal } = await proposeFix(input("TCK-9001", "instant"), fixAwareDeps().deps, { draftDocFix });
     expect(proposal).toMatchObject({ origin: "ai", aiSetAside: null, edit: { text } });

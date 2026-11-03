@@ -2,11 +2,28 @@
 // Demo menu stay on top and work, by mouse and by keyboard, and the pill strip shows no scrollbar. Against a running app; no AI needed
 // for the panel, and "Send" on each ticket uses saved responses when AI_MODE=saved.
 //   pnpm tsx scripts/slide-over-check.ts [baseUrl]     default http://127.0.0.1:3100
+//   pnpm tsx scripts/slide-over-check.ts --serve       start `pnpm start -p 3100` (AI_MODE=saved) first, stop it afterwards
 import { chromium, type Page } from "@playwright/test";
+import { spawn, spawnSync, type ChildProcess } from "node:child_process";
 
 const base = process.argv.slice(2).find((a) => a.startsWith("http")) ?? "http://127.0.0.1:3100";
 const WIDTHS = [1099, 1024, 900, 700];
 let failures = 0;
+
+async function startServer(): Promise<ChildProcess> {
+  const child = spawn("pnpm", ["start", "-p", "3100"], { shell: true, stdio: "ignore", env: { ...process.env, AI_MODE: "saved", AI_PROVIDER: "groq", AI_FALLBACK_PROVIDER: "gemini" } });
+  for (let i = 0; i < 120; i++) {
+    if (await fetch(base).then((r) => r.ok, () => false)) return child;
+    await new Promise((r) => setTimeout(r, 500));
+  }
+  throw new Error(`server did not start on ${base}`);
+}
+
+function stopServer(child: ChildProcess) {
+  // On Windows the shell wrapper's PID owns the tree.
+  if (process.platform === "win32" && child.pid) spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"], { stdio: "ignore" });
+  else child.kill();
+}
 
 function check(ok: boolean, line: string) {
   if (!ok) failures++;
@@ -32,6 +49,7 @@ async function openPanel(page: Page) {
 }
 
 async function main() {
+  const server = process.argv.includes("--serve") ? await startServer() : null;
   // Headless Chromium hides scrollbars by default, which would hide the bug this looks for.
   const browser = await chromium.launch({ ignoreDefaultArgs: ["--hide-scrollbars"] });
   for (const width of WIDTHS) {
@@ -82,7 +100,7 @@ async function main() {
       await page.keyboard.press("Escape");
       await page.waitForTimeout(250);
     }
-    const strip = await page.getByRole("navigation", { name: "Conversations" }).evaluate((el) => {
+    const strip = await page.getByRole("navigation", { name: "Conversations" }).evaluate((el: HTMLElement) => {
       const style = getComputedStyle(el);
       return { bar: el.offsetHeight - el.clientHeight - parseFloat(style.borderTopWidth) - parseFloat(style.borderBottomWidth), hidden: style.scrollbarWidth === "none", overflow: el.scrollWidth > el.clientWidth };
     });
@@ -92,6 +110,7 @@ async function main() {
     await ctx.close();
   }
   await browser.close();
+  if (server) stopServer(server);
   console.log(failures ? `${failures} failed` : "all passed");
   process.exit(failures ? 1 : 0);
 }

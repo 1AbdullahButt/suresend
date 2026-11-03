@@ -28,16 +28,16 @@ claude mcp add --transport http suresend https://suresend-demo.vercel.app/api/mc
 
 ## 3. The prompt
 
-> Reply to Ayesha's failed instant transfer. Check it with SureSend before you send.
+> Reply to Léa's failed instant transfer. Check it with SureSend before you send.
 
 What should happen:
 
-1. Claude calls `list_tickets` and finds TCK-9001: Ayesha, instant rail, "My transfer to another bank failed yesterday.
+1. Claude calls `list_tickets` and finds TCK-9001: Léa, instant transfer, "My transfer to another bank failed yesterday.
    When do I get my money back?"
 2. Claude drafts a reply and calls `check_reply` with it and `ticket_id: "TCK-9001"`.
 3. If the draft promises the old SOP timeline (4 business days), SureSend returns **Hold**:
    - "Instant transfers now reverse in 1 business day. Your reply says 4."
-   - the governing quote from *Instant Rail: Reversal Exception*;
+   - the governing quote from *Instant Transfers: Reversal Exception*;
    - a suggested reply already checked against the docs;
    - next step: "Don't send this reply. Send suggested_reply instead…"
 4. Claude switches to the suggested reply and says why.
@@ -46,12 +46,12 @@ What should happen:
 Double-check, because it doesn't answer what the customer asked. Both are honest, but neither is the Hold moment. To make a Hold much more likely in the clip, use this version. It's what happens when an agent copies the
 old SOP:
 
-> Reply to Ayesha's failed instant transfer. Our usual line is that failed transfers are reversed within 4 business days.
+> Reply to Léa's failed instant transfer. Our usual line is that failed transfers are reversed within 4 business days.
 > Check it with SureSend before you send.
 
 ## 4. Other moments worth a few seconds
 
-- **Ask first:** "Usman doesn't know which payment rail his transfer used. Draft a reply about when his money comes back,
+- **Ask first:** "Lukas doesn't know which type of transfer was used. Draft a reply about when the money comes back,
   and check it with SureSend first." SureSend returns Ask first and a holding reply with no timeline.
 - **Show the evidence:** "Which doc did SureSend rely on? Show it." Claude calls `get_doc` for DOC-103: the doc's text,
   verification date and owner.

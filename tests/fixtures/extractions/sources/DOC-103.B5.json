@@ -1,7 +1,7 @@
 {
   "sourceId": "DOC-103",
   "variant": "B5",
-  "body": "# Instant Rail – Reversal Exception\nEffective 1 Jan 2030. Approved by Head of Ops after the instant-rail settlement change.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n",
+  "body": "# Instant Transfers – Reversal Exception\nEffective 1 Jan 2030. Approved by Head of Ops after the instant-transfer settlement change.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
   "claims": [
     {
       "claimId": "DOC-103#1",
@@ -15,14 +15,14 @@
       "statusWording": "in_force",
       "supersedes": {
         "targetText": "section 3 of the Outgoing Transfers – Reversal SOP",
-        "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers."
+        "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers."
       },
       "value": {
         "amount": 1,
         "unit": "business_days"
       },
       "valueText": "1 business day",
-      "quote": "For instant-rail transfers only, failed transfers are reversed within 1 business day."
+      "quote": "For instant transfers only, failed transfers are reversed within 1 business day."
     }
   ]
 }

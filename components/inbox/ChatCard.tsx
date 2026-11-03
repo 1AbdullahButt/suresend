@@ -73,7 +73,7 @@ export function ChatCard({
   }, [sent.length]);
 
   return (
-    <main className={cx(s.card, s.chat)} aria-label="Conversation">
+    <main className={cx(s.card, s.chat)} aria-label="Conversation" inert={overlay && agentOpen}>
       <div className={s.chatHead}>
         <div className={s.chatTitle}>
           <span className={s.chatWho}>

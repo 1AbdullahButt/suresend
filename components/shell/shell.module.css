@@ -324,6 +324,30 @@
     gap: 12px;
   }
 }
+/* The slide-over and its scrim share the chat's row, so the header and the conversation pills stay on top and clickable (D-054). */
+@media (min-width: 700px) and (max-width: 1099px) {
+  .body {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+  .body > * {
+    grid-column: 1;
+    min-width: 0;
+    min-height: 0;
+  }
+  .body > :first-child {
+    grid-row: 1;
+  }
+  .body > :not(:first-child) {
+    grid-row: 2;
+  }
+  .scrim {
+    position: relative;
+    inset: auto;
+    border-radius: var(--radius-card);
+  }
+}
 @media (max-width: 699px) {
   .app {
     padding: 14px 12px 0;

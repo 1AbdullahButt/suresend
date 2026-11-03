@@ -4,7 +4,7 @@
 import { z } from "zod";
 import { handleCheck, handleFix } from "@/lib/check/handlers";
 import type { FixDeps, FixResult } from "@/lib/fix/propose";
-import { OUTCOME, summarize, traceRows } from "@/lib/client/outcome";
+import { claimWords, OUTCOME, summarize, traceRows } from "@/lib/client/outcome";
 import { isCovered, topicDef } from "@/lib/topics";
 import type { CheckDeps, CheckResult, Rail, Suggestion } from "@/lib/engine/types";
 import { visibleSources } from "@/lib/workspace/permissions";
@@ -22,8 +22,8 @@ export const RAILS = ["instant", "standard", "unknown"] as const;
 
 export const CheckReplyInput = {
   reply: z.string().min(1).max(1000).describe("The exact reply you are about to send to the customer (up to 1,000 characters)."),
-  ticket_id: z.string().max(32).optional().describe("The ticket from list_tickets, e.g. TCK-9001. Its payment rail is used unless you pass rail."),
-  rail: z.enum(RAILS).optional().describe("The transfer's payment rail, if you know it better than the ticket does."),
+  ticket_id: z.string().max(32).optional().describe("The ticket from list_tickets, e.g. TCK-9001. Its transfer type is used unless you pass rail."),
+  rail: z.enum(RAILS).optional().describe("The transfer type (instant, standard or unknown), if you know it better than the ticket does."),
 };
 
 export const CheckReplyOutput = {
@@ -142,7 +142,7 @@ function nextStep(result: CheckResult, suggestionCheck: string | null): string {
       const lead = result.claims.find((c) => c.reasonCode === result.reasonCode);
       const what = lead && isCovered(lead.draftClaim.topic) ? topicDef(lead.draftClaim.topic).subject : "this";
       return result.reasonCode === "SCOPE_UNKNOWN"
-        ? `Don't state ${what} yet: it depends on the payment rail, which isn't known. Send suggested_reply (a holding reply that doesn't state it), or ask a human to confirm the rail.${holding}`
+        ? `Don't state ${what} yet: it depends on the transfer type, which isn't known. Send suggested_reply (a holding reply that doesn't state it), or ask a human to confirm the type.${holding}`
         : `Don't state ${what} yet: the docs disagree and no rule can pick one. Send suggested_reply (a holding reply that doesn't state it), or ask a human to settle the docs.${holding}`;
     }
     case "AI_UNAVAILABLE":
@@ -197,7 +197,7 @@ export function present(result: CheckResult, ticket: { id: string | null; rail: 
     suggested_reply: result.suggestion && check ? { text: result.suggestion.text, check } : null,
     governing: governingOf(result),
     claims: result.claims.map((c) => ({
-      says: c.draftClaim.span,
+      says: claimWords(result, c),
       in_reply: c.reasonCode !== "TOPIC_GAP",
       topic: isCovered(c.draftClaim.topic) ? topicDef(c.draftClaim.topic).label.replace(/-/g, " ") : "outside coverage",
       decision: OUTCOME[c.decision].name as CheckReplyResult["decision"],
@@ -279,7 +279,7 @@ export async function proposeDocFix(
             edit: { action: p.edit.action, text: p.edit.text },
             changed_lines: p.changed,
             drafted_by: p.origin === "ai" ? "AI, checked by the rules" : `template${p.aiSetAside ? ` (${p.aiSetAside})` : ""}, checked by the rules`,
-            canonical_recheck: p.recheck.map((r) => `${r.ticketId} ${r.rail} rail, "${r.draft}": ${r.decision} (unchanged)`),
+            canonical_recheck: p.recheck.map((r) => `${r.ticketId} ${r.rail === "unknown" ? "transfer type unknown" : `${r.rail} transfer`}, "${r.draft}": ${r.decision} (unchanged)`),
           }
         : null,
       why,
@@ -311,7 +311,7 @@ export function checkReplyText(r: CheckReplyResult): string {
     r.suggested_reply ? `Suggested reply (${r.suggested_reply.check}): "${r.suggested_reply.text}"` : null,
     r.governing ? `Governing doc: ${r.governing.doc_title} (${r.governing.doc_id}): "${r.governing.quote}"` : null,
     r.rules_that_mattered.length ? `Rules that mattered:\n${r.rules_that_mattered.map((x) => `- ${x}`).join("\n")}` : null,
-    `${r.ticket.id ? `Ticket ${r.ticket.id}` : "No ticket"}, ${r.ticket.rail} rail · checked with ${r.checked_with.ai_mode === "saved" ? "saved AI responses" : `${r.checked_with.ai_mode} AI`}${r.checked_with.provider ? ` (${r.checked_with.provider})` : ""}`,
+    `${r.ticket.id ? `Ticket ${r.ticket.id}` : "No ticket"}, ${r.ticket.rail === "unknown" ? "transfer type unknown" : `${r.ticket.rail} transfer`} · checked with ${r.checked_with.ai_mode === "saved" ? "saved AI responses" : `${r.checked_with.ai_mode} AI`}${r.checked_with.provider ? ` (${r.checked_with.provider})` : ""}`,
     r.note,
   ]
     .filter((x): x is string => x !== null)

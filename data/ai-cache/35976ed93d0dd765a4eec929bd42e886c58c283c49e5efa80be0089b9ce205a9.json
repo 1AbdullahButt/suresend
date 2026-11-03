@@ -1,0 +1,40 @@
+{
+  "key": "35976ed93d0dd765a4eec929bd42e886c58c283c49e5efa80be0089b9ce205a9",
+  "identity": {
+    "task": "safe_reply",
+    "promptVersion": "2026-11-02.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "You can relax, the funds return on their own by Monday, less the small charge for the transfer.",
+    "governing": {
+      "value": {
+        "flag": true
+      },
+      "quote": "Transfer fee is refunded with the principal.",
+      "decision": "HOLD"
+    },
+    "claims": [
+      {
+        "span": "the funds return on their own by Monday",
+        "topic": "reversal_window",
+        "correct": "1 business day",
+        "quote": "For instant transfers only, failed transfers are reversed within 1 business day.",
+        "sourceId": "DOC-103",
+        "wrong": true
+      },
+      {
+        "span": "less the small charge for the transfer",
+        "topic": "fee_refund",
+        "correct": "refunded",
+        "quote": "Transfer fee is refunded with the principal.",
+        "sourceId": "DOC-101",
+        "wrong": true
+      }
+    ]
+  },
+  "output": {
+    "reply": "You can relax, the funds return on their own within 1 business day, with the fee refunded."
+  },
+  "recordedAt": "2026-11-03T12:45:35.292Z"
+}

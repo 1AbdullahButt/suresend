@@ -15,10 +15,10 @@ const WRONG_DRAFT = "Failed transfers are reversed within 4 business days.";
 test("wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped", async ({ page }) => {
   await page.goto("/");
 
-  // Step 1 — SPEC §16 step 2 (Catch): open TCK-9001 (Ayesha K., instant rail) and type the wrong draft.
+  // Step 1 — SPEC §16 step 2 (Catch): open TCK-9001 (Léa K., instant transfer) and type the wrong draft.
   await page
     .getByRole("navigation", { name: "Conversations" })
-    .getByRole("button", { name: /Ayesha K\./ })
+    .getByRole("button", { name: /Léa K\./ })
     .click();
   const composer = page.getByRole("textbox", { name: "Your reply" });
   await composer.fill(WRONG_DRAFT);

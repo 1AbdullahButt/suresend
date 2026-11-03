@@ -58,7 +58,7 @@ async function main() {
   check(list.length === 3, `list_tickets: ${list.map((t) => `${t.id}/${t.rail}`).join(", ")}`);
 
   const doc = await call(client, "get_doc", { id: "DOC-103" });
-  check(!doc.r.isError && doc.s.title === "Instant Rail: Reversal Exception", `get_doc DOC-103: ${String(doc.s.title)}`);
+  check(!doc.r.isError && doc.s.title === "Instant Transfers: Reversal Exception", `get_doc DOC-103: ${String(doc.s.title)}`);
   const hidden = await call(client, "get_doc", { id: "DOC-105" });
   check(hidden.r.isError === true, "get_doc DOC-105: refused like an unknown ID");
 
@@ -96,7 +96,7 @@ async function main() {
     `propose_doc_fix 4 days on TCK-9001: fix to ${proposal?.doc_id} drafted by ${proposal?.drafted_by}, applied ${String(fix.s.applied)}`,
   );
   const after = await call(client, "check_reply", { reply: FOUR_DAYS, ticket_id: "TCK-9001" });
-  check(after.s.decision === "Hold" && after.s.governing?.doc_title === "Instant Rail: Reversal Exception", "  nothing applied: the same reply still holds against the unedited docs");
+  check(after.s.decision === "Hold" && after.s.governing?.doc_title === "Instant Transfers: Reversal Exception", "  nothing applied: the same reply still holds against the unedited docs");
 
   const bad = await call(client, "check_reply", { reply: "x".repeat(1001) });
   check(bad.r.isError === true, "check_reply over 1,000 characters: refused");

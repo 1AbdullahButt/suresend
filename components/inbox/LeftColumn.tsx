@@ -9,7 +9,7 @@ import { RailSelect } from "./RailSelect";
 import { initials, ticketMeta } from "./ticketMeta";
 import s from "./inbox.module.css";
 
-const SUB: Record<Rail, string> = { instant: "Instant transfer", standard: "Standard transfer", unknown: "Rail unknown" };
+const SUB: Record<Rail, string> = { instant: "Instant transfer", standard: "Standard transfer", unknown: "Transfer type unknown" };
 const TAG_CLS = { good: s.ctGood, check: s.ctCheck, hold: s.ctHold, ask: s.ctAsk, off: s.ctOff };
 
 /** Customer card + Conversations (design v2). Under 1100 px the CSS turns this column into a conversation switcher. */

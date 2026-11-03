@@ -9,7 +9,7 @@ export type DurationValue = { amount: number; amountMax?: number; unit: Unit };
  * (the acceptance tests read `governing.value.amount`) still compiles and reads undefined. Narrow with isDuration.
  */
 type NoDuration = { amount?: undefined; amountMax?: undefined; unit?: undefined };
-/** Any other amount: a fee amount, a limit ("PKR 500,000", "3 transfers a day"). Claims on topic "other" carry it. */
+/** Any other amount: a fee amount, a limit ("€5,000", "3 transfers a day"). Claims on topic "other" carry it. */
 export type QuantityValue = { quantity: number; of: string } & NoDuration;
 
 /** A yes/no fact (fee_refund: is the transfer fee refunded?). The topic words it ("refunded"). */

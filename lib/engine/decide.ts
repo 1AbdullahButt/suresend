@@ -1,6 +1,6 @@
 // The decision function (SPEC §6.1: "The AI never decides the outcome"). Pure: no I/O, time is passed in.
 // decide(extractions, sources, ticket, now) applies rules S, A and D0a–D11, writing every step to the trace.
-import { RAIL_LABEL, applicability } from "./applicability";
+import { RAIL_LABEL, applicability, governingScope } from "./applicability";
 import { formatDate, normalizeText } from "./normalize";
 import { detectPolicyPatterns, patternNoun, patternTopic } from "./patterns";
 import { resolve, skip } from "./resolve";
@@ -326,7 +326,7 @@ function topicGap(topic: string, i: number, pool: EvaluatedClaim[], docsSay: (to
       {
         rule: "D0e",
         outcome: "fired",
-        detail: `The customer asked about ${def.coverage}, and the reply makes no claim on it.${governing ? ` The docs say ${governing.valueText} (${governing.sourceId}).` : ""} Check it manually.`,
+        detail: `The reply doesn't answer the customer's question about ${def.question}.${governing ? ` The docs say ${governing.valueText} (${governing.sourceId}).` : ""} Check it manually.`,
       },
     ],
     governing,
@@ -344,7 +344,7 @@ function scopeUnsettled(C: EvaluatedClaim[]) {
   return {
     unresolved,
     scopeMatters: unresolved.some((u) => C.some((o) => o !== u && !sameValue(o.claim.value!, u.claim.value!))),
-    // D-012.1: also escalate when every candidate is scoped to a rail we can't confirm; a rail-specific rule must not
+    // D-012.1: also escalate when every candidate is scoped to a rail we can't confirm; a rule for one rail must not
     // govern a ticket whose rail is unknown.
     onlyUnresolved: C.length > 0 && unresolved.length === C.length,
   };
@@ -448,8 +448,8 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
       rule: "D1",
       outcome: "fired",
       detail: scopeMatters
-        ? `${ticket.id}'s rail is unknown and the answer depends on it: ${describe(C)}.`
-        : `${ticket.id}'s rail is unknown and every applicable rule is rail-specific: ${describe(C)}.`,
+        ? `${ticket.id}'s transfer type is unknown and the answer depends on it: ${describe(C)}.`
+        : `${ticket.id}'s transfer type is unknown and every applicable rule is for one type: ${describe(C)}.`,
     });
     skip(trace, ["D2", "D3", "D4", "D5", "D6", "D7", "D8", "D9", "D10", "D11a", "D11b"], "Escalated: scope unknown.");
     return result("ESCALATE", "SCOPE_UNKNOWN");
@@ -457,7 +457,7 @@ function decideClaim(dc: DraftClaim, pool: EvaluatedClaim[], ticket: DecideTicke
   trace.push({
     rule: "D1",
     outcome: "pass",
-    detail: unresolved.length === 0 ? `Every candidate's scope resolves for the ${RAIL_LABEL[ticket.rail]}.` : "Scope-unresolved claims agree with the rest.",
+    detail: unresolved.length === 0 ? `Every candidate's scope resolves for ${RAIL_LABEL[ticket.rail]}.` : "Scope-unresolved claims agree with the rest.",
   });
 
   // D2 / D3
@@ -586,7 +586,8 @@ function headlineFor(
   const cite = gSource ? `${gSource.title}${gClaimEffective ? `, effective ${formatDate(gClaimEffective)}` : ""}` : "";
   const draftVal = lead?.draftClaim.value ? describeValue(lead.draftClaim.topic, lead.draftClaim.value) : "";
   const rail = RAIL_LABEL[ticket.rail];
-  const railTransfers = ticket.rail === "unknown" ? "transfers" : `${ticket.rail}-rail transfers`;
+  const speaksFor = lead ? governingScope(lead, ticket.rail) : "any";
+  const railTransfers = speaksFor === "any" ? null : RAIL_LABEL[speaksFor];
 
   switch (reasonCode) {
     case "CONTRADICTS_GOVERNING":
@@ -596,13 +597,13 @@ function headlineFor(
     case "SUPPORTED":
       return `Allow: matches ${cite} (${g?.valueText}).`;
     case "SCOPE_UNKNOWN":
-      return `Escalate: ${topic?.subject ?? "the answer"} depends on the payment rail, and this ticket's rail is unknown.`;
+      return `Escalate: ${topic?.subject ?? "the answer"} depends on the transfer type, and this ticket's type is unknown.`;
     case "CONFLICT_UNRESOLVED":
       return "Escalate: applicable sources disagree and no rule can pick a winner. Newer or verified doesn't win on its own.";
     case "WEAK_BASIS":
       return `Caution: the right value is probably ${g?.valueText} (${cite}), but that source's verification is in doubt. Verify before sending.`;
     case "CHANGE_SIGNALLED":
-      return `Caution: ${draftVal} matches the current policy (${cite}), but a change is signalled for the ${rail}. Confirm before sending.`;
+      return `Caution: ${draftVal} matches the current policy (${cite}), but a change is signalled for ${rail}. Confirm before sending.`;
     case "UNIT_MISMATCH":
       return `Caution: the draft says ${draftVal} but the policy says ${g?.valueText}. Check the units.`;
     case "HEDGED_CONTRADICTION":
@@ -612,7 +613,7 @@ function headlineFor(
     case "UNSUPPORTED":
       return g ? `Caution: the policy says ${g.valueText} (${cite}), and the draft gives no checkable value.` : "Caution: no source supports this claim. Check it manually.";
     case "TOPIC_GAP":
-      return `Caution: the customer asked about ${topic?.coverage ?? "a checked topic"}, and the draft doesn't say.${g ? ` The policy says ${g.valueText} (${cite}).` : ""}`;
+      return `Caution: the draft doesn't answer the customer's question about ${topic?.question ?? "a checked topic"}.${g ? ` The policy says ${g.valueText} (${cite}).` : ""}`;
     case "EXTRACTION_GAP":
       return `Caution: SureSend couldn't confirm ${gapNoun || "a policy claim"} in this draft. Check it manually.`;
     case "OUTSIDE_COVERAGE":

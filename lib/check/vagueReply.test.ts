@@ -45,14 +45,14 @@ function sourceClaims(id: string): SourceClaim[] {
   }
   if (id === "DOC-103") {
     return [
-      sc(id, "For instant-rail transfers only, failed transfers are reversed within 1 business day.", {
+      sc(id, "For instant transfers only, failed transfers are reversed within 1 business day.", {
         value: { amount: 1, unit: "business_days" },
         valueText: "1 business day",
         scope: { rail: "instant" },
         effectiveFrom: "2026-10-27",
         supersedes: {
           targetText: "section 3 of the Outgoing Transfers – Reversal SOP",
-          quote: "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers.",
+          quote: "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers.",
         },
       }),
     ];
@@ -177,7 +177,7 @@ describe("the fee taken off the money reads as not refunded (D-052)", () => {
     expect(r.reasonCode).toBe("CONTRADICTS_GOVERNING");
     const { headline, sentence } = summarize(r, c.rail);
     expect(headline).toBe("Don't send this yet");
-    expect(sentence).toBe("The transfer fee is refunded for instant transfers. Your reply says it's not refunded.");
+    expect(sentence).toBe("The transfer fee is refunded. Your reply says it's not refunded.");
     expect(r.suggestion?.text).toContain("1 business day");
     expect(r.suggestion?.text).toContain("refunded");
     expect(r.suggestion?.recheckDecision).toBe("ALLOW");
@@ -277,7 +277,7 @@ describe("a doc that governs can't be read: no other doc's value is offered as t
     const r = await runCheck(input(CASES[1]!), unreadDeps([]));
     expect(r.reasonCode).toBe("TOPIC_GAP");
     expect(r.claims[0]?.governing).toBeNull();
-    expect(summarize(r, "instant").sentence).toBe("DOC-103 couldn't be read, so SureSend can't say what your docs give; your reply doesn't say.");
+    expect(summarize(r, "instant").sentence).toBe("Your reply doesn't answer their question about timing. DOC-103 couldn't be read, so SureSend can't say what your docs give.");
   });
 
   it("MCP reports no governing value", async () => {
@@ -367,12 +367,12 @@ describe("only SureSend's own holding reply gets past D0e", () => {
   // QA round 3: a span is just words. With anything added to the reply, one that happens to match the sentence is about those words.
   describe("with words added, a span that matches the sentence is still a claim", () => {
     const timeline: DraftClaim = { claimId: "t", topic: "reversal_window", value: { amount: 1, unit: "business_days" }, valueText: "1 business day", span: "Back within 1 business day", definitive: true };
-    const ayesha = CASES[1]!;
+    const lea = CASES[1]!;
 
     it("a vague fee whose span is a fragment of the sentence", async () => {
       const fee: DraftClaim = { claimId: "f", topic: "fee_refund", value: null, valueText: "minus the charge", span: "for your transfer", definitive: true };
       const draft = `${ESCALATE_TEMPLATE} Back within 1 business day, minus the charge for your transfer.`;
-      const r = await runCheck({ ...input(ayesha), draft }, depsFor([timeline, fee]));
+      const r = await runCheck({ ...input(lea), draft }, depsFor([timeline, fee]));
       expect(r.decision).toBe("CAUTION");
       expect(r.rejectedExtractions).toEqual([]);
     });
@@ -380,7 +380,7 @@ describe("only SureSend's own holding reply gets past D0e", () => {
     it("a second, vague timeline claim", async () => {
       const second: DraftClaim = { claimId: "s", topic: "reversal_window", value: null, valueText: "as soon as I have it", span: "as soon as I have it", definitive: true };
       const draft = `${ESCALATE_TEMPLATE} Back within 1 business day, or as soon as I have it.`;
-      const r = await runCheck({ ...input(ayesha), draft }, depsFor([timeline, second]));
+      const r = await runCheck({ ...input(lea), draft }, depsFor([timeline, second]));
       expect(r.decision).toBe("CAUTION");
     });
 

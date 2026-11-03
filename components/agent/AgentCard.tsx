@@ -12,12 +12,14 @@ const TABS: Array<{ id: Tab; label: string }> = [
 
 /**
  * The SureSend card (design v2): two tabs, Check and Docs. A normal card at ≥1100 px, a slide-over below that and a
- * bottom sheet under 700 px. In overlay modes focus moves in when it opens, Tab is trapped and Esc closes it.
+ * bottom sheet under 700 px. In overlay modes focus moves in when it opens and Esc closes it. Only the bottom sheet traps Tab:
+ * the slide-over sits below the header and the conversation pills, which stay in reach (D-054).
  */
 export function AgentCard({
   tab,
   onTab,
   overlay,
+  sheet,
   open,
   onClose,
   children,
@@ -25,6 +27,7 @@ export function AgentCard({
   tab: Tab;
   onTab: (t: Tab) => void;
   overlay: boolean;
+  sheet: boolean;
   open: boolean;
   onClose: () => void;
   children: ReactNode;
@@ -46,7 +49,7 @@ export function AgentCard({
       onClose();
       return;
     }
-    if (e.key !== "Tab" || !ref.current) return;
+    if (!sheet || e.key !== "Tab" || !ref.current) return;
     const items = Array.from(
       ref.current.querySelectorAll<HTMLElement>('button:not([disabled]), [href], input, select, textarea, summary, [tabindex]:not([tabindex="-1"])'),
     ).filter((el) => el.offsetParent !== null);

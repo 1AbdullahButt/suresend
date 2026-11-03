@@ -1,0 +1,15 @@
+{
+  "key": "6546be0abfe971f1eaa28dc07881db3e1f4f37e78166afd5d17596995405eb76",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.1",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Sorry about the trouble with your transfer. I'm looking into it now and will keep you posted here."
+  },
+  "output": {
+    "claims": []
+  },
+  "recordedAt": "2026-11-03T12:37:40.459Z"
+}

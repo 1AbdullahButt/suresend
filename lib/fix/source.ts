@@ -29,7 +29,7 @@ export function matchingSourceEvidence(draftValue: Value, evidence: Evidence[]):
 }
 
 /**
- * The one pattern this demo fixes: a general doc (scope "all rails", in force) states the value the reply copied, and an
+ * The one pattern this demo fixes: a general doc (scope "any", in force) states the value the reply copied, and an
  * in-force exception in another doc gives that rail a different value. The fix adds the exception to the general doc.
  * Anything else (no matching doc, a rail-specific doc the agent misapplied, docs that disagree, an exception that's
  * already in the general doc) gets no proposal.

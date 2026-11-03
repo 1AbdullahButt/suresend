@@ -14,7 +14,7 @@ export interface TopicDef {
   valueWords?: (v: AnyValue) => string;
   /** For the trace: "a definitive reversal-window claim". */
   label: string;
-  /** For headlines: "the reversal timeline depends on the payment rail". */
+  /** For headlines: "the reversal timeline depends on the transfer type". */
   subject: string;
   /** For coverage notes (MCP): "when the money from a failed transfer comes back". */
   coverage: string;
@@ -22,6 +22,8 @@ export interface TopicDef {
   confirming: string;
   /** A customer's message asks about this topic (rule D0e, D-045). Deterministic, like the detector patterns. */
   asks: RegExp;
+  /** What a customer's question is about, for a reply that leaves it open: "their question about timing" (D-055). */
+  question: string;
   /** How a reply falls short when it gives no value: "gives no number" (D-046). */
   noValue: string;
   /** Extraction prompt lines (lib/ai/prompts.ts). */
@@ -41,8 +43,8 @@ export interface TopicDef {
   };
   /** Detector patterns: the "nothing found is never proof of safety" net for this topic (SPEC §6.6.2). */
   patterns: ReadonlyArray<{ kind: string; re: RegExp; noun: string }>;
-  /** The engine headline for a Hold on this topic. */
-  holdHeadline(p: { railTransfers: string; governing: string; cite: string; draft: string }): string;
+  /** The engine headline for a Hold on this topic. railTransfers is null when the rule is for all transfers (D-056). */
+  holdHeadline(p: { railTransfers: string | null; governing: string; cite: string; draft: string }): string;
   /** The safe-reply template sentence stating the governing value (SPEC §6.7). */
   replyTemplate(v: AnyValue): string;
   /** One plain sentence for the decision card (design v2), and the value to emphasise in it. */

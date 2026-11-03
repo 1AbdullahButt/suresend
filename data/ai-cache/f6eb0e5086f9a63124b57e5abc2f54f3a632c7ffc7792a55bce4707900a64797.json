@@ -1,0 +1,40 @@
+{
+  "key": "f6eb0e5086f9a63124b57e5abc2f54f3a632c7ffc7792a55bce4707900a64797",
+  "identity": {
+    "task": "safe_reply",
+    "promptVersion": "2026-11-02.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Your money will be back within 1 business day, but the transfer fee isn't refundable.",
+    "governing": {
+      "value": {
+        "flag": true
+      },
+      "quote": "Transfer fee is refunded with the principal.",
+      "decision": "HOLD"
+    },
+    "claims": [
+      {
+        "span": "Your money will be back within 1 business day",
+        "topic": "reversal_window",
+        "correct": "1 business day",
+        "quote": "For instant transfers only, failed transfers are reversed within 1 business day.",
+        "sourceId": "DOC-103",
+        "wrong": false
+      },
+      {
+        "span": "the transfer fee isn't refundable",
+        "topic": "fee_refund",
+        "correct": "refunded",
+        "quote": "Transfer fee is refunded with the principal.",
+        "sourceId": "DOC-101",
+        "wrong": true
+      }
+    ]
+  },
+  "output": {
+    "reply": "Your money will be back within 1 business day, and the transfer fee is refunded."
+  },
+  "recordedAt": "2026-11-03T12:39:46.313Z"
+}

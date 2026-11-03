@@ -29,9 +29,9 @@ function sc(sourceId: string, quote: string, over: Partial<SourceClaim>): Source
   };
 }
 
-const FEE_LINE = "Fees on instant-rail transfers are kept: the transfer fee is not returned when an instant transfer fails.";
+const FEE_LINE = "Fees on instant transfers are kept: the transfer fee is not returned when an instant transfer fails.";
 
-/** What a good extractor returns for the seed docs (and for DOC-103 with the instant-rail fee line added). */
+/** What a good extractor returns for the seed docs (and for DOC-103 with the instant-transfer fee line added). */
 function sourceClaims(id: string, body: string): SourceClaim[] {
   switch (id) {
     case "DOC-101":
@@ -50,7 +50,7 @@ function sourceClaims(id: string, body: string): SourceClaim[] {
       ];
     case "DOC-103": {
       const claims = [
-        sc("DOC-103", "For instant-rail transfers only, failed transfers are reversed within 1 business day.", {
+        sc("DOC-103", "For instant transfers only, failed transfers are reversed within 1 business day.", {
           value: { amount: 1, unit: "business_days" },
           valueText: "1 business day",
           scope: { rail: "instant" },
@@ -58,7 +58,7 @@ function sourceClaims(id: string, body: string): SourceClaim[] {
           statusWording: "in_force",
           supersedes: {
             targetText: "section 3 of the Outgoing Transfers – Reversal SOP",
-            quote: "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers.",
+            quote: "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers.",
           },
         }),
       ];
@@ -168,7 +168,7 @@ describe("fee_refund through the unchanged rules", () => {
     expect(r.decision).toBe("HOLD");
     expect(r.reasonCode).toBe("CONTRADICTS_GOVERNING");
     expect(r.headline).toBe(
-      "Hold: the transfer fee is refunded for standard-rail transfers (Outgoing Transfers: Reversal SOP). The draft says it's not refunded.",
+      "Hold: the transfer fee is refunded (Outgoing Transfers: Reversal SOP). The draft says it's not refunded.",
     );
     expect(r.suggestion?.text).toBe("The transfer fee is refunded.");
     // Right about the fee; the customer's own question is still open, and the recheck says so (D-045).
@@ -182,7 +182,7 @@ describe("fee_refund through the unchanged rules", () => {
     expect(r.reasonCode).toBe("HEDGED_CONTRADICTION");
   });
 
-  it("scoped like the timeline: an instant-rail fee rule wins on instant, doesn't apply on standard, asks first on unknown", async () => {
+  it("scoped like the timeline: an instant-transfer fee rule wins on instant, doesn't apply on standard, asks first on unknown", async () => {
     const edited = [verifiedSave("DOC-103", `${seedBody("DOC-103").trimEnd()}\n\n${FEE_LINE}\n`, "2026-10-29T09:00:00Z")];
     const draft = "Your transfer fee will be refunded too.";
     const claims = [fee(true, "Your transfer fee will be refunded too")];
@@ -194,13 +194,13 @@ describe("fee_refund through the unchanged rules", () => {
     expect([standard.decision, standard.reasonCode]).toEqual(["CAUTION", "TOPIC_GAP"]);
     const unknown = await check("TCK-9002", "unknown", draft, claims, edited);
     expect([unknown.decision, unknown.reasonCode]).toEqual(["ESCALATE", "SCOPE_UNKNOWN"]);
-    expect(unknown.headline).toBe("Escalate: whether the transfer fee is refunded depends on the payment rail, and this ticket's rail is unknown.");
+    expect(unknown.headline).toBe("Escalate: whether the transfer fee is refunded depends on the transfer type, and this ticket's type is unknown.");
     expect(unknown.suggestion?.text).toBe(
       "Thanks for your patience. I'm confirming the transfer fee details for your transfer and will update you here as soon as I have it.",
     );
   });
 
-  it("a weakened instant-rail fee rule can't override by specificity (D6 needs no weakeners)", async () => {
+  it("a weakened instant-transfer fee rule can't override by specificity (D6 needs no weakeners)", async () => {
     const edited = [draftSave("DOC-103", `${seedBody("DOC-103").trimEnd()}\n\n${FEE_LINE}\n`, "2026-10-29T09:00:00Z")];
     const r = await check("TCK-9001", "instant", "Your transfer fee will be refunded too.", [fee(true, "Your transfer fee will be refunded too")], edited);
     expect([r.decision, r.reasonCode]).toEqual(["ESCALATE", "CONFLICT_UNRESOLVED"]);
@@ -261,8 +261,8 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
     const noClaims = await check("TCK-9001", "instant", "Your money will be back in 4 business days.", []);
     expect(whyModel(noClaims).noDocs).toContain("didn't compare this with your docs");
 
-    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 25, of: "PKR" }, valueText: "PKR 25", span: "a PKR 25 fee", definitive: true };
-    const outside = await check("TCK-9003", "standard", "There's a PKR 25 fee on every transfer.", [amount]);
+    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 2, of: "EUR" }, valueText: "€2", span: "a €2 fee", definitive: true };
+    const outside = await check("TCK-9003", "standard", "There's a €2 fee on every transfer.", [amount]);
     expect(whyModel(outside).noDocs).toBe("SureSend doesn't check this topic against your docs. Check it by hand.");
   });
 
@@ -304,8 +304,8 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
   });
 
   it("an out-of-topic claim's span still accounts for a hit, as the spec says", async () => {
-    const draft = "There's a PKR 25 fee on every transfer.";
-    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 25, of: "PKR" }, valueText: "PKR 25", span: draft, definitive: true };
+    const draft = "There's a €2 fee on every transfer.";
+    const amount: DraftClaim = { claimId: "d#3", topic: "other", value: { quantity: 2, of: "EUR" }, valueText: "€2", span: draft, definitive: true };
     const r = await check("TCK-9003", "standard", draft, [amount]);
     expect([r.decision, r.reasonCode]).toEqual(["CAUTION", "OUTSIDE_COVERAGE"]);
   });
@@ -319,11 +319,11 @@ describe("the nothing-found net works per topic (QA, D-041)", () => {
 });
 
 describe("a reply with both claims", () => {
-  const AYESHA = "Your money will be back within 1 business day, but the transfer fee isn't refundable.";
+  const LEA = "Your money will be back within 1 business day, but the transfer fee isn't refundable.";
   const both = [timeline(1, "within 1 business day"), fee(false, "the transfer fee isn't refundable")];
 
   it("gets a decision per claim; the overall result is the most severe", async () => {
-    const r = await check("TCK-9001", "instant", AYESHA, both);
+    const r = await check("TCK-9001", "instant", LEA, both);
     expect(r.claims.map((c) => `${c.draftClaim.topic}:${c.decision}/${c.reasonCode}`)).toEqual([
       "reversal_window:ALLOW/SUPPORTED",
       "fee_refund:HOLD/CONTRADICTS_GOVERNING",
@@ -332,7 +332,7 @@ describe("a reply with both claims", () => {
   });
 
   it("the suggested reply fixes only the wrong claim and keeps the right one", async () => {
-    const r = await check("TCK-9001", "instant", AYESHA, both);
+    const r = await check("TCK-9001", "instant", LEA, both);
     expect(r.suggestion?.text).toBe(
       "For transfers on this payment type, the current policy gives a reversal window of 1 business day. The transfer fee is refunded.",
     );
@@ -348,7 +348,7 @@ describe("a reply with both claims", () => {
         throw new Error("no AI in this test");
       },
     };
-    await runCheck({ ticketId: "TCK-9001", rail: "instant", draft: AYESHA, role: "support_agent", decisionTime: NOW }, d);
+    await runCheck({ ticketId: "TCK-9001", rail: "instant", draft: LEA, role: "support_agent", decisionTime: NOW }, d);
     expect(asked!.claims.map((c) => [c.span, c.wrong, c.correct])).toEqual([
       ["within 1 business day", false, "1 business day"],
       ["the transfer fee isn't refundable", true, "refunded"],
@@ -365,7 +365,7 @@ describe("a reply with both claims", () => {
   });
 
   it("MCP check_reply lists each claim with its own verdict", async () => {
-    const r = await check("TCK-9001", "instant", AYESHA, both);
+    const r = await check("TCK-9001", "instant", LEA, both);
     const out = present(r, { id: "TCK-9001", rail: "instant" });
     expect(out.decision).toBe("Hold");
     expect(out.claims).toEqual([

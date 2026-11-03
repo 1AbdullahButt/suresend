@@ -6,7 +6,7 @@
 
 **Live demo:** https://suresend-demo.vercel.app · **Source:** https://github.com/1AbdullahButt/suresend
 
-![SureSend demo: a 4-day draft is held because the instant-rail exception says 1 business day; the safe reply is used and sent; an unknown-rail ticket escalates with a holding reply.](docs/demo.gif)
+![SureSend demo: a 4-day draft is held because the instant-transfer exception says 1 business day; the safe reply is used and sent; a ticket with an unknown transfer type escalates with a holding reply.](docs/demo.gif)
 
 ## The problem
 
@@ -44,12 +44,12 @@ hypothesis (Slite may have something similar internally):
 No setup needed: the canonical path and the guided tour replay saved AI responses, so they work even when live AI is
 unavailable or rate-limited.
 
-- **Ayesha → Send → Hold.** Open Ayesha's ticket (instant rail) and press Send on the 4-day reply. It's held, because the
-  instant-rail exception says 1 business day. Use the suggested reply and send it.
+- **Léa → Send → Hold.** Open Léa's ticket (instant transfer) and press Send on the 4-day reply. It's held, because the
+  instant-transfer exception says 1 business day. Use the suggested reply and send it.
 - **Fix the doc.** On the Hold, click "Fix the doc that caused this" to see the one line SureSend would add to the SOP,
   then approve or dismiss it.
 - **Guided tour.** Press "Guided tour" in the header (on phones: Demo menu → Start guided tour) for the 6-step walkthrough.
-- **The second topic.** Under the reply, "Try another reply" has presets. For Ayesha, "Right timeline, wrong fee" is held
+- **The second topic.** Under the reply, "Try another reply" has presets. For Léa, "Right timeline, wrong fee" is held
   on the fee claim only, and the suggested reply keeps the right timeline.
 
 <a name="use-it-from-claude"></a>
@@ -78,10 +78,10 @@ this URL with a Copy button.
 
 Try these prompts:
 
-1. "Reply to Ayesha's failed instant transfer. Check it with SureSend before you send."
-2. "Usman doesn't know which payment rail his transfer used. Draft a reply about when his money comes back, and check it
+1. "Reply to Léa's failed instant transfer. Check it with SureSend before you send."
+2. "Lukas doesn't know which type of transfer was used. Draft a reply about when the money comes back, and check it
    with SureSend first."
-3. "Is 'Your refund will arrive within 4 business days' right for Hina's standard transfer? Show me the doc SureSend relied on."
+3. "Is 'Your refund will arrive within 4 business days' right for Sofia's standard transfer? Show me the doc SureSend relied on."
 
 How the MCP server works (inputs, limits, transport) is under [Architecture](#architecture).
 
@@ -91,7 +91,7 @@ A Hold or an Ask first is a signal that some doc taught the agent the wrong thin
 fix to it, and a person approves it, like fixes reviewed in Slite's Triage: nothing is applied without approval.
 
 1. **Find the doc.** The held reply's value is matched against the claims in the visible docs. In the demo, "4 business
-   days" comes from the SOP, which covers all rails but never mentions the instant-rail exception. If no general doc taught
+   days" comes from the SOP, which covers all transfers but never mentions the instant-transfer exception. If no general doc taught
    the value, or the doc already covers the exception, there's no proposal and nothing is shown.
 2. **Draft a minimal fix.** The AI drafts one added sentence from the exception's own quote, and the rules validate it so
    nothing else in the doc can change (the full rules are under [Architecture](#architecture)). If the AI's draft fails,
@@ -134,7 +134,7 @@ Key rules (full table in [SPEC.md §6](SPEC.md)):
 
 The rules don't know which topics exist. A topic is one file in [`lib/topics`](lib/topics), and its values are compared by
 a comparator chosen by value kind ([`lib/engine/values.ts`](lib/engine/values.ts)). `fee_refund` ("is the transfer fee
-refunded when a transfer fails?", yes or no, scoped by rail like the timeline) was added in
+refunded when a transfer fails?", yes or no, scoped by transfer type like the timeline) was added in
 [one commit](https://github.com/1AbdullahButt/suresend/commit/43f1bbf4970f649a4da6a1271e388e4bc88dc2a6) that changes no decision rule:
 
 | File | What changed |
@@ -161,19 +161,19 @@ the rules were generalised, in `decide.ts`, and nothing in it names a topic. Wit
 second QA round found the same gap in one more place: a claim whose span was the whole sentence still vouched for the
 other topic in that sentence. [That fix](https://github.com/1AbdullahButt/suresend/commit/d8a9d61da69be3080ec0c8725f3155d86230bda5) closes it, again in `decide.ts` and again naming no topic.
 
-**Scope is one axis today: the payment rail.** A claim says which rail it applies to (`instant`, `standard` or `any`), a ticket
-says which rail it's on, and [`applicability.ts`](lib/engine/applicability.ts) compares the two. A new topic reuses that axis. A topic
+**Scope is one axis today: the transfer type (`rail` in the code).** A claim says which type it applies to (`instant`, `standard` or `any`), a ticket
+says which type it's on, and [`applicability.ts`](lib/engine/applicability.ts) compares the two. A new topic reuses that axis. A topic
 that varies by plan tier or country needs more than a topic file:
 
 - a new field on a claim's `scope`, in the schema and the extraction prompt (both versions bumped), and on the ticket;
 - `applicability.ts` comparing every axis, so a claim applies only when all of them match, and "unknown" works per axis;
-- `decide.ts` and `resolve.ts` reading "the scope" where they read the rail today: D1 (ask first when the answer depends on what's
+- `decide.ts` and `resolve.ts` reading "the scope" where they read `rail` today: D1 (ask first when the answer depends on what's
   unknown) and D6 (the one specific claim wins);
-- the wording that names the rail (headlines, topic sentences, the Ask-first template) and the rail picker in the UI.
+- the wording that names the transfer type (headlines, topic sentences, the Ask-first template) and its picker in the UI.
 
 That's a change to the rules' input, unlike a new topic, and nothing here has been built for it.
 
-So the next topic that fits the rail needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
+So the next topic that fits this axis needs a file in `lib/topics` with its examples, two lines to register it, and the prompt and schema
 versions bumped. Only a new kind of value (not a duration, an amount or a yes/no) also needs a comparator in `values.ts`
 and its JSON shape in `schemas.ts`. Its tests, golden cases and saved responses come on top.
 
@@ -224,7 +224,7 @@ flowchart TD
     reply, the governing quote and its doc, each claim with its own verdict, and the rules that mattered. It runs the same
     validation, caps, persona filter and engine as the web app, and covers the same two topics: when a failed transfer's
     money comes back, and whether the transfer fee is refunded. Other values come back Double-check.
-  - `list_tickets` returns each demo ticket's customer, payment rail and message. `get_doc` returns one visible doc's
+  - `list_tickets` returns each demo ticket's customer, transfer type and message. `get_doc` returns one visible doc's
     title, verification signals and text; the restricted DOC-105 is never returned. `propose_doc_fix` takes the same inputs
     as `check_reply` and returns the reason and only the changed lines, before and after.
   - The tool descriptions tell the agent to call `check_reply` before sending any reply that states a timeline, and to
@@ -234,7 +234,7 @@ flowchart TD
     answers GET with 405, since it's stateless. The demo's canonical replies replay saved responses; new wording uses live AI.
 - **Doc-fix validation:** the added sentence goes right after the claim sentence, which must be quoted exactly and appear
   once in the doc, so nothing else can change. It must state the exception's value exactly ("1 business day") and name
-  that rail and no other. It may contain no other digits, no other detected timeline (including number words, months and
+  that transfer type and no other. It may contain no other digits, no other detected timeline (including number words, months and
   "immediately"), and no negation, promise or fee wording. A rewrite counts only if it keeps the claim sentence word for word.
 - **Hardening:** security headers (`frame-ancestors 'none'`, `nosniff`, referrer and permissions policies), generic 500
   bodies with the detail logged server-side only, zod on every request body, and a read-only CI token with SHA-pinned actions.
@@ -299,7 +299,7 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
   [A test](lib/ai/heldoutIntegrity.test.ts) fails if any of them shares a three-word phrase with the prompts, schema,
   golden set or presets, or if the system prompts or schemas change after the freeze.
 - **The timeline cases** (H1–H4, H6–H10) were written after an earlier freeze: reworded drafts ("working days", a number word, a
-  hedge), the unknown-rail ticket, a reworded SOP on both rails, a reworded Slack proposal, an injection inside the draft and
+  hedge), the ticket with an unknown transfer type, a reworded SOP on both transfer types, a reworded Slack proposal, an injection inside the draft and
   a no-claim reply. They were in the repo while the fee prompts were written and already passed on earlier prompts, so they
   show nothing broke, not that the new topic works. H1 reuses phrases that older prompt already had.
 
@@ -381,7 +381,7 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
   held-out cases.
 - A fee statement with a timing word in it ("refunded within the same transfer") gets a Double-check even when it's right,
   because a claim on one topic never vouches for another. That's the safe direction.
-- A currency amount is flagged only when no claim on a checked topic was found. In "The transfer fee is refunded, all PKR 25 of
+- A currency amount is flagged only when no claim on a checked topic was found. In "The transfer fee is refunded, all €2 of
   it", with only the fee claim extracted, the amount isn't checked.
 - The Gemini fallback can't answer within the 9-second timeout while Gemini is overloaded, as on 2 Nov (503 errors, and 20 to 30
   seconds per call). A check that needs the fallback then gets saved responses, or can't be checked until Gemini recovers.

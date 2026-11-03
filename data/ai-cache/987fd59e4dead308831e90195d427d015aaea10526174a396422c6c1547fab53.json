@@ -1,0 +1,15 @@
+{
+  "key": "987fd59e4dead308831e90195d427d015aaea10526174a396422c6c1547fab53",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.1",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Thanks for your patience. I'm confirming the exact reversal timeline for your transfer and will update you here as soon as I have it."
+  },
+  "output": {
+    "claims": []
+  },
+  "recordedAt": "2026-11-03T12:24:31.479Z"
+}

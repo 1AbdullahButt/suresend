@@ -8,7 +8,7 @@ unless marked "exact".
 |---|---|---|
 | Conversations list | `navigation` | "Conversations" |
 | Conversation row | `button` (inside Conversations) | contains the customer name, e.g. "Ayesha K." |
-| Rail picker (customer card pill) | `combobox` | "Rail" |
+| Transfer type picker (customer card pill) | `combobox` | "Transfer type" |
 | Composer | `textbox` | "Your reply" |
 | Send (ready) | `button` | "Send" (exact). Pressing it runs the server check via `POST /api/send`. |
 | Send (held) | `button`, disabled | "Send (held)" (exact) |

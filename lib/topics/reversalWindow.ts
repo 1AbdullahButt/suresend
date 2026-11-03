@@ -2,7 +2,8 @@
 import { formatValue, isDuration, unitsMatch, valueWords, type AnyValue } from "@/lib/engine/values";
 import type { ScopeLike, TopicDef } from "./types";
 
-const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same)`;
+// Counts in words too, with or without a number behind them: the AI says what they're worth, and this net only sees that they're there.
+const NUMBER = String.raw`(?:\d+(?:[.,]\d+)?(?:\s*[-–—]\s*\d+)?|one|two|three|four|five|six|seven|eight|nine|ten|same|a couple of|a few|several|a handful of)`;
 
 function scopeSubject(rail: ScopeLike): string {
   return rail === "instant" ? "Instant transfers" : rail === "standard" ? "Standard transfers" : "Failed transfers";
@@ -25,6 +26,7 @@ export const reversalWindow = {
   confirming: "the exact reversal timeline",
   coverage: "when the money from a failed transfer comes back",
   asks: /\b(?:money|funds?|cash|amount|balance)\b[^.!?\n]{0,40}\b(?:back|return(?:ed|s)?|gone)\b|\b(?:come|comes|coming|get|getting|got|be) (?:it )?back\b|\brefund|\brevers(?:e|ed|al)\b/i,
+  question: "timing",
   noValue: "gives no number",
   prompt: {
     taxonomy: `- "reversal_window": how long it takes for a FAILED transfer's money to be reversed/refunded/returned to the customer.`,
@@ -35,12 +37,12 @@ export const reversalWindow = {
   patterns: [
     {
       kind: "duration",
-      re: new RegExp(String.raw`\b${NUMBER}[\s-]*(?:business |working |calendar )?(?:day|days|hour|hours|week|weeks)\b`, "gi"),
+      re: new RegExp(String.raw`\b${NUMBER}[\s-]*(?:business |working |calendar )?(?:day|days|hour|hours|week|weeks)\b|\ba (?:business |working |calendar )?(?:week|fortnight)\b|\ba (?:business|working) day\b|\ba day or two\b`, "gi"),
       noun: "the timing",
     },
     { kind: "relative_time", re: /\b(?:same day|today|tomorrow|within|by end of)\b/gi, noun: "the timing" },
   ],
-  holdHeadline: ({ railTransfers, governing, cite, draft }) => `Hold: ${railTransfers} reverse in ${governing} (${cite}). The draft says ${draft}.`,
+  holdHeadline: ({ railTransfers, governing, cite, draft }) => `Hold: ${railTransfers ?? "failed transfers"} reverse in ${governing} (${cite}). The draft says ${draft}.`,
   replyTemplate: (v) => `For transfers on this payment type, the current policy gives a reversal window of ${formatValue(v)}.`,
   sentence({ verdict, rail, governing, draft, draftText }) {
     const subject = scopeSubject(rail);

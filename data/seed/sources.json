@@ -15,7 +15,7 @@
   },
   {
     "id": "DOC-103",
-    "title": "Instant Rail: Reversal Exception",
+    "title": "Instant Transfers: Reversal Exception",
     "kind": "policy",
     "bodyFile": "DOC-103.md",
     "version": 1,

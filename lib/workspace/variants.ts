@@ -6,8 +6,8 @@ import { doc103Variant } from "./variantBodies";
 
 export type VariantId = "B1" | "B2" | "B3" | "B4" | "B5" | "B6" | "B7" | "F1";
 
-/** D-041, golden only: the instant-rail exception also keeps the transfer fee on instant transfers. */
-export const F1_FEE_LINE = "For instant-rail transfers, the transfer fee is not refunded.";
+/** D-041, golden only: the instant-transfer exception also keeps the transfer fee on instant transfers. */
+export const F1_FEE_LINE = "For instant transfers, the transfer fee is not refunded.";
 
 export function seedBody(id: string): string {
   const s = seedSources().find((x) => x.id === id);

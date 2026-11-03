@@ -1,0 +1,26 @@
+{
+  "key": "d728e73cf7c5e4ab928e16f7a4d3e4063cc5a8a9af03b959239609fa5a1cf450",
+  "identity": {
+    "task": "doc_fix",
+    "promptVersion": "2026-11-03.1",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops). Last reviewed with Settlement team in Sept.\n\n## 1. Scope\nCovers outgoing transfers from wallet to other banks (all transfer types).\n\n## 2. Common failure reasons\n- beneficiary account closed / title mismatch\n- bank side timeout (rare, mostly month-end)\n\n## 3. Reversal timeline\nWhen an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days. Do NOT promise same day. If it's been longer than that, raise a Jira ticket to Settlement with the TxID.\n\n## 4. Fees\nTransfer fee is refunded with the principal. No separate request needed.\n",
+    "fix": {
+      "sourceId": "DOC-101",
+      "sourceQuote": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.",
+      "exceptionQuote": "For instant transfers only, failed transfers are reversed within 1 business day.",
+      "exceptionTitle": "Instant Transfers: Reversal Exception",
+      "exceptionValue": "1 business day",
+      "exceptionRail": "instant",
+      "railHint": "How to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel."
+    }
+  },
+  "output": {
+    "action": "add_after",
+    "target": "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.",
+    "text": "For instant transfers, failed transfers are reversed within 1 business day (see Instant Transfers: Reversal Exception). How to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel."
+  },
+  "recordedAt": "2026-11-03T12:48:50.066Z"
+}

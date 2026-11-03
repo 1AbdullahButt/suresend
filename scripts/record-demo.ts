@@ -45,7 +45,7 @@ async function demo(page: Page) {
   await pause(page, 600);
 
   // 1. Catch: TCK-9001, 4-day draft → Send runs the check → held
-  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Ayesha K\./ }).click();
+  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Léa K\./ }).click();
   const composer = page.getByRole("textbox", { name: "Your reply" });
   await composer.fill(DRAFT);
   await pause(page, 700);
@@ -66,8 +66,8 @@ async function demo(page: Page) {
   await page.getByRole("status").filter({ hasText: "Sent · checked by SureSend" }).waitFor();
   await pause(page, 2200);
 
-  // 4. Ambiguity: TCK-9002 (rail unknown) → Ask first
-  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Usman R\./ }).click();
+  // 4. Ambiguity: TCK-9002 (transfer type unknown) → Ask first
+  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Lukas R\./ }).click();
   await composer.fill(DRAFT);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await page.getByRole("region", { name: "Decision" }).getByText("Ask first").first().waitFor();
@@ -84,7 +84,7 @@ async function preview(page: Page) {
   await page.getByRole("contentinfo").waitFor();
   const notNow = page.getByRole("button", { name: "Not now" });
   if (await notNow.isVisible({ timeout: 1500 }).catch(() => false)) await notNow.click();
-  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Ayesha K\./ }).click();
+  await page.getByRole("navigation", { name: "Conversations" }).getByRole("button", { name: /Léa K\./ }).click();
   await page.getByRole("textbox", { name: "Your reply" }).fill(DRAFT);
   await page.getByRole("button", { name: "Send", exact: true }).click();
   await page.getByRole("region", { name: "Decision" }).getByText("Hold").first().waitFor();

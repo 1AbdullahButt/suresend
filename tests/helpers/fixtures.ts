@@ -61,7 +61,7 @@ export function variantBody(name: VariantName): string {
     case "B2":
       return replaceExact(
         doc103,
-        "Effective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.",
+        "Effective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.",
         "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.",
       );
     case "B3":

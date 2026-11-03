@@ -90,7 +90,7 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
       superseders.push({
         s,
         detail:
-          `1) ${s.source.id} applies to the ${RAIL_LABEL[s.claim.scope.rail]}, which matches ${ctx.ticketId}. ` +
+          `1) ${s.source.id} applies to ${RAIL_LABEL[s.claim.scope.rail]}, which matches ${ctx.ticketId}. ` +
           `2) Its supersedes sentence is quoted verbatim: "${sup.quote.trim().replace(/[.\s]+$/, "")}". ` +
           `3) "${sup.targetText}" names ${named.join(", ")}. ` +
           `4) ${dated.join("; ")}. ` +
@@ -127,7 +127,7 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
       trace.push({
         rule: "D6",
         outcome: "fired",
-        detail: `${s.source.id} is the only candidate scoped to the ${RAIL_LABEL[ctx.rail]}, has no weakeners, and every other disagreeing candidate covers all rails. V = ${formatValue(valueOf(s), s)}.`,
+        detail: `${s.source.id} is the only candidate scoped to ${RAIL_LABEL[ctx.rail]}, has no weakeners, and every other disagreeing candidate covers all transfers. V = ${formatValue(valueOf(s), s)}.`,
       });
       skip(trace, ["D7"], "V settled by specificity.");
       return { kind: "governed", governing: governingFrom(s, "SPECIFIC_EXCEPTION"), basis: [s] };
@@ -137,14 +137,14 @@ export function resolve(C: EvaluatedClaim[], ctx: Ctx, trace: TraceEntry[]): Res
       outcome: "fail",
       detail:
         s.weakeners.length > 0
-          ? `${s.source.id} is specific to the ${RAIL_LABEL[ctx.rail]} but has weakeners (${s.weakeners.join(", ")}); an inferred override from a doubtful source cannot set V.`
+          ? `${s.source.id} is specific to ${RAIL_LABEL[ctx.rail]} but has weakeners (${s.weakeners.join(", ")}); an inferred override from a doubtful source cannot set V.`
           : `${s.source.id} is specific, but another disagreeing candidate is also scoped.`,
     });
   } else {
     trace.push({
       rule: "D6",
       outcome: "pass",
-      detail: specific.length === 0 ? "No candidate is scoped specifically to this ticket's rail." : `${specific.length} candidates are scoped to this rail.`,
+      detail: specific.length === 0 ? "No candidate is scoped specifically to this ticket's transfer type." : `${specific.length} candidates are scoped to this transfer type.`,
     });
   }
 

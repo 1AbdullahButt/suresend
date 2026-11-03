@@ -70,7 +70,7 @@ async function sendDraft(page: Page, name: RegExp, draft = DRAFT) {
 }
 
 async function held(page: Page) {
-  await sendDraft(page, /Ayesha K\./);
+  await sendDraft(page, /Léa K\./);
   await page.getByRole("region", { name: "Decision" }).getByText("Hold").first().waitFor({ timeout: 20_000 });
 }
 
@@ -121,7 +121,7 @@ const states: Array<{ name: string; localOnly?: boolean; run: (page: Page) => Pr
   {
     name: "ask-first",
     run: async (page) => {
-      await sendDraft(page, /Usman R\./);
+      await sendDraft(page, /Lukas R\./);
       await page.getByRole("region", { name: "Decision" }).getByText("Ask first").first().waitFor({ timeout: 20_000 });
     },
   },
@@ -132,7 +132,7 @@ const states: Array<{ name: string; localOnly?: boolean; run: (page: Page) => Pr
     // draft is simply checked, so this state is only audited locally.
     localOnly: true,
     run: async (page) => {
-      await sendDraft(page, /Hina S\./, "Your refund should arrive in 3 working days.");
+      await sendDraft(page, /Sofia S\./, "Your refund should arrive in 3 working days.");
       await page.getByRole("button", { name: "Try again", exact: true }).waitFor({ timeout: 20_000 });
     },
   },

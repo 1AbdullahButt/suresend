@@ -1,7 +1,7 @@
 // Pure Appendix B variant bodies: the exact replacements applied to a seed body. No I/O, so the browser
 // (guided tour) and the Node scripts (variants.ts) share one definition and the saved responses replay.
 
-export const B2_FROM = "Effective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.";
+export const B2_FROM = "Effective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.";
 export const B2_TO =
   "Proposed change, pending sign-off from Compliance. Not approved yet; do not use with customers until Bilal confirms.";
 export const B3_BODY =

@@ -270,3 +270,10 @@ Then re-record, check the 68 saved results, rerun golden and held-out on Groq (3
 not). README: the 41% line matches the source's subgroup wording; no team-size claim about Slite.
 - **Gate:** typecheck, lint, all tests, e2e, axe; the 6 tests recorded failing, then passing; every changed saved result explained by the
   new rule; evals published as they are; D-045 onward; QA APPROVED; then merged, deployed, pushed; `git worktree list` clean.
+
+## 15. Phase 12: a European-friendly demo, and fixes from the re-check (added 2026-11-03, Abdullah's brief)
+Branch `phase-12`. Tests first, QA, then merge and deploy. Part A, under a one-time unlock of `data/seed/`, SPEC.md Appendix A, `tests/` and `e2e/`, recorded in DECISIONS.md with the diff and re-locked after: Léa, Lukas and Sofia on the same personas and rails; euros; "instant transfer" and "standard transfer" for the rail, with the code field left as `rail`; the GIF, the OG image and the video script's names.
+Part B: 1. the pills and Demo menu reachable beside the slide-over at 700–1100 px, verified at 1024. 2. The topic-gap copy as a missing answer. 3. Each claim's value text when two share a span. 4. "A couple of" is 2 and "a few" stays vague, with held-out cases committed first and the Hold rate on paraphrased wrong timelines reported. 5. No "for instant transfers" when the governing doc covers all. 6. No scrollbar on the pill strip. 7. D-045 corrected.
+Then re-record, confirm decisions and reason codes for every saved result except those Part B means to change, and rerun Groq golden and held-out; Gemini when its quota allows, in its own commit. The README isn't cut in this phase.
+- **Gate:** typecheck, lint, all tests, e2e, axe, the slide-over check at 1024; new checks recorded failing, then passing; the saved results compared; evals published as they are; QA APPROVED; the re-lock proven; then merged, deployed, pushed; `git worktree list` clean.
+

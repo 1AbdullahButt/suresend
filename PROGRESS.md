@@ -1499,7 +1499,7 @@ $ pnpm vitest run lib/check/vagueReply.test.ts lib/client/copyRules.test.ts   (b
      × next-week: Double-check, never Good to send
 ```
 **The repro before the fix.** Production returned the review's result. It's a cached reading (`latencyMs: 0` on the second call): Groq
-returned 0 claims once and the instance kept that. Fresh calls with the same prompt read the fee part as a contradiction, 5 of 5.
+returned 0 claims once and the instance kept that. (Corrected in Phase 12, D-045: the review's own result was a live call, 690 ms. The cached one was my repeat of it.) Fresh calls with the same prompt read the fee part as a contradiction, 5 of 5.
 ```
 production, today: 200 ALLOW NO_POLICY_CLAIM claims: [] ai: live
 $ pnpm tsx scripts/probe-draft.ts groq   (the old prompt, live)

@@ -50,7 +50,7 @@ const NEGATION_OR_PROMISE = /\b(?:\w+n't|not|no|never|none|nothing|cannot|unless
 const EXTRA_TIME =
   /\b(?:months?|years?|immediately|instantly|right away|straight away|asap|(?:eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|hundred|a|an|a couple of|a few|few|several)\s+(?:business\s+|working\s+|calendar\s+)?(?:days?|hours?|weeks?))\b/i;
 // Words that would widen or move the exception to another rail.
-const ALL_RAILS = /\b(?:all|every|any)\s+(?:transfers?|rails?|payments?)\b/i;
+const ALL_RAILS = /\b(?:all|every|any)\s+(?:transfers?|transfer types?|rails?|payments?)\b/i;
 
 export function validateFix(body: string, edit: FixEdit, fix: FixSource): FixCheck {
   const quote = fix.source.quote;
@@ -87,9 +87,9 @@ export function validateFix(body: string, edit: FixEdit, fix: FixSource): FixChe
 
   // 5. It's about the exception's rail, and only that rail.
   const other = fix.exception.rail === "instant" ? "standard" : "instant";
-  if (!new RegExp(`\\b${fix.exception.rail}\\b`, "i").test(plain)) return { ok: false, reason: `the new text doesn't name the ${fix.exception.rail} rail` };
+  if (!new RegExp(`\\b${fix.exception.rail}\\b`, "i").test(plain)) return { ok: false, reason: `the new text doesn't name ${fix.exception.rail} transfers` };
   if (new RegExp(`\\b${other}\\b`, "i").test(plain) || ALL_RAILS.test(plain)) {
-    return { ok: false, reason: `the new text widens or moves the exception beyond the ${fix.exception.rail} rail` };
+    return { ok: false, reason: `the new text widens or moves the exception beyond ${fix.exception.rail} transfers` };
   }
 
   const validated: FixEdit = { action: "add_after", target: quote, text: added };
@@ -98,15 +98,15 @@ export function validateFix(body: string, edit: FixEdit, fix: FixSource): FixChe
   return { ok: true, edit: validated, after, changed: changedLines(body, after) };
 }
 
-/** Deterministic fallback: the exception's own sentence, a pointer to its doc and, if it has one, how to tell the rail. */
+/** Deterministic fallback: the exception's own sentence, a pointer to its doc and, if it has one, how to tell the transfer type. */
 export function templateFix(fix: FixSource, railHint: string | null): FixEdit {
   const pointer = `${fix.exception.quote.trim().replace(/[.\s]*$/, ".")} See ${fix.exception.title}.`;
   return { action: "add_after", target: fix.source.quote, text: railHint ? `${pointer} ${railHint}` : pointer };
 }
 
-/** "How to tell the rail: …" from the exception doc, when it has such a line (no numbers, short). */
+/** "How to tell the transfer type: …" from the exception doc, when it has such a line (no numbers, short). */
 export function railHintFrom(exceptionBody: string): string | null {
-  const line = exceptionBody.split("\n").find((l) => /how to tell the rail/i.test(l));
+  const line = exceptionBody.split("\n").find((l) => /how to tell the transfer type/i.test(l));
   const hint = line?.trim();
   return hint && hint.length <= 200 && numbers(hint).length === 0 ? hint : null;
 }

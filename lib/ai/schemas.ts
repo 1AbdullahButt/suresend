@@ -8,7 +8,7 @@ import { kindOf } from "@/lib/engine/values";
 import { isCovered, topicDef, topicIds } from "@/lib/topics";
 
 /** Bump whenever a zod schema or the topic taxonomy changes (SPEC §10 cache identity). */
-export const SCHEMA_VERSION = "2026-11-02.3";
+export const SCHEMA_VERSION = "2026-11-03.1";
 
 const MONTHS: Record<string, number> = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
 
@@ -67,8 +67,8 @@ const WIRE: Record<ValueKind, WireKind> = {
     json: {
       type: "object",
       properties: {
-        quantity: { type: "number", description: "The amount, e.g. 25 for 'a PKR 25 fee', 3 for '3 transfers a day'." },
-        of: { type: "string", description: "What it counts, as written: 'PKR', 'USD', 'transfers a day'." },
+        quantity: { type: "number", description: "The amount, e.g. 2 for 'a €2 fee', 3 for '3 transfers a day'." },
+        of: { type: "string", description: "What it counts, as written: 'EUR', 'USD', 'transfers a day'." },
       },
       required: ["quantity", "of"],
       additionalProperties: false,

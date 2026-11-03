@@ -397,6 +397,10 @@
   .custTop .custMeta {
     display: none;
   }
+  /* The pills need the room more: the strip no longer shows a scrollbar, so it should rarely have to scroll. */
+  .avatar {
+    display: none;
+  }
   .custName {
     font-size: 20px;
     white-space: nowrap;
@@ -411,6 +415,11 @@
     align-items: center;
     overflow-x: auto;
     min-width: 0;
+    /* Still scrolls, by touch, trackpad and arrow keys. A bar would take 15 px from a strip this short. */
+    scrollbar-width: none;
+  }
+  .convs::-webkit-scrollbar {
+    display: none;
   }
   .convsTitle {
     position: absolute;
@@ -437,7 +446,6 @@
   }
 }
 @media (max-width: 860px) {
-  .avatar,
   .amount {
     display: none;
   }

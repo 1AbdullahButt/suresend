@@ -1,11 +1,11 @@
 {
-  "about": "Held-out cases (D-035, D-041). Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. The timeline cases (H1–H4, H6–H10) were written after the prompts were frozen at 2026-10-30.2, were in the repo while the fee prompts were written, and already passed on earlier prompts; H1 reuses phrases that older prompt already had. H12 (fee_refund) was written on 2026-11-02 before any fee_refund prompt text existed and shares no three-word phrase with the prompts, schema, golden set or presets. H17–H19 (fee_refund) were written after the freeze below and share no three-word phrase with those files. Cases marked \"exposed\" (H5, H11, H13, H14, H15, H16) no longer count as held-out: their wording reached the prompts or the golden set, or came from them, even where it was later removed. They stay as extra regression cases and are reported separately. `frozen`: the versions and the fingerprint of the prompts and schemas the published results rely on; lib/ai/heldoutIntegrity.test.ts fails if they change.",
+  "about": "Held-out cases (D-035, D-041). Run with `pnpm eval --heldout`; report-only, no gate, never recorded into data/ai-cache. Reworded drafts and docs only; the rules and expected outcomes follow SPEC §6 unchanged. The timeline cases (H1–H4, H6–H10) were written after the prompts were frozen at 2026-10-30.2, were in the repo while the fee prompts were written, and already passed on earlier prompts; H1 reuses phrases that older prompt already had. H12 (fee_refund) was written on 2026-11-02 before any fee_refund prompt text existed and shares no three-word phrase with the prompts, schema, golden set or presets. H17–H19 (fee_refund) were written after the freeze below and share no three-word phrase with those files. H26–H39 (paraphrased wrong timelines) were committed before any change for them; H26–H31 use wording Abdullah's brief names, so they're exposed from the start; H36 and H37 use words now in the detector patterns, though not in the prompt; the rest of H32–H39 share no three-word phrase with those files. Cases marked \"exposed\" (H5, H11, H13, H14, H15, H16, H26–H31, H36, H37) no longer count as held-out: their wording reached the prompts or the golden set, or came from them, even where it was later removed. They stay as extra regression cases and are reported separately. `frozen`: the versions and the fingerprint of the prompts and schemas the published results rely on; lib/ai/heldoutIntegrity.test.ts fails if they change.",
   "frozen": {
-    "prompt": "2026-11-02.6",
+    "prompt": "2026-11-03.1",
     "reply": "2026-11-02.2",
-    "fix": "2026-11-01.1",
-    "schema": "2026-11-02.3",
-    "fingerprint": "835cdd57eb1c7cb90ba01ec62f055ca25cb3ecd63e9d256d2f75896575f2a26c"
+    "fix": "2026-11-03.1",
+    "schema": "2026-11-03.1",
+    "fingerprint": "6d9d4655f21c42d3135022b630e4cc756bc9075ae1458a2f89086f22caea21e7"
   },
   "decisionTime": "2026-10-30T12:00:00Z",
   "saveTime": "2026-10-29T09:00:00Z",
@@ -15,7 +15,7 @@
       "note": "Reworded draft; \"working days\" means business days",
       "ticketId": "TCK-9001",
       "rail": "instant",
-      "draft": "Hi Ayesha, so sorry about this! The money from a failed transfer comes back to your wallet within 4 working days.",
+      "draft": "Hi Léa, so sorry about this! The money from a failed transfer comes back to your wallet within 4 working days.",
       "expect": {
         "decision": "HOLD",
         "reasonCode": "CONTRADICTS_GOVERNING",
@@ -46,7 +46,7 @@
     },
     {
       "id": "H4-unknown-rail",
-      "note": "Reworded draft on the unknown-rail ticket",
+      "note": "Reworded draft on the ticket with an unknown transfer type",
       "ticketId": "TCK-9002",
       "rail": "unknown",
       "draft": "Don't worry, the refund for a failed transfer always arrives within 4 business days.",
@@ -70,7 +70,7 @@
     },
     {
       "id": "H6-sop-reworded-standard",
-      "note": "SOP rewritten in different words (number word, reworded negation), standard rail",
+      "note": "SOP rewritten in different words (number word, reworded negation), standard transfer",
       "ticketId": "TCK-9003",
       "rail": "standard",
       "draft": "Failed transfers are reversed within 4 business days.",
@@ -78,7 +78,7 @@
         {
           "id": "DOC-101",
           "save": "verify",
-          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the rail.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
+          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
         }
       ],
       "expect": {
@@ -88,7 +88,7 @@
     },
     {
       "id": "H7-sop-reworded-instant",
-      "note": "Same reworded SOP, instant rail: the exception still supersedes it",
+      "note": "Same reworded SOP, instant transfer: the exception still supersedes it",
       "ticketId": "TCK-9001",
       "rail": "instant",
       "draft": "Failed transfers are reversed within 4 business days.",
@@ -96,7 +96,7 @@
         {
           "id": "DOC-101",
           "save": "verify",
-          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the rail.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
+          "body": "# Outgoing Transfers – Reversal SOP\nOwner: Sara (Payments Ops).\n\nApplies to every outgoing wallet-to-bank transfer, whatever the transfer type.\n\nIf a transfer to another bank fails, we put the full amount back in the customer's wallet within four business days, together with the transfer fee. Never promise a same-day reversal. If the money still hasn't arrived after that, open a Jira ticket for Settlement with the TxID.\n"
         }
       ],
       "expect": {
@@ -115,7 +115,7 @@
         {
           "id": "SRC-202",
           "save": "draft",
-          "body": "Bilal (Compliance): FYI we've proposed moving instant-rail reversals to 2 business days because of the new bank cut-off. Still a proposal, nothing changes for customers yet."
+          "body": "Bilal (Compliance): FYI we've proposed moving instant reversals to 2 business days because of the new bank cut-off. Still a proposal, nothing changes for customers yet."
         }
       ],
       "expect": {
@@ -139,7 +139,7 @@
       "note": "A follow-up promise with no value",
       "ticketId": "TCK-9003",
       "rail": "standard",
-      "draft": "Thanks for your patience, Hina. I've passed this to our payments team and I'll update you here as soon as I hear back.",
+      "draft": "Thanks for your patience, Sofia. I've passed this to our payments team and I'll update you here as soon as I hear back.",
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "TOPIC_GAP"
@@ -162,7 +162,7 @@
     },
     {
       "id": "H12-fee-comes-back",
-      "note": "Fee refunded, reworded (\"comes back together with the transfer amount\"), standard rail",
+      "note": "Fee refunded, reworded (\"comes back together with the transfer amount\"), standard transfer",
       "ticketId": "TCK-9003",
       "rail": "standard",
       "draft": "Good news: the fee you paid comes back together with the transfer amount.",
@@ -174,7 +174,7 @@
     },
     {
       "id": "H13-fee-unknown-rail",
-      "note": "Fee refunded on the unknown-rail ticket: the fee rule covers all rails, so the rail doesn't matter",
+      "note": "Fee refunded on the ticket with an unknown transfer type: the fee rule covers all transfers, so the type doesn't matter",
       "ticketId": "TCK-9002",
       "rail": "unknown",
       "draft": "You won't lose the transfer fee either. It is returned along with your money.",
@@ -204,17 +204,17 @@
       "note": "Fee refunded (right) plus a daily limit amount, which is outside coverage",
       "ticketId": "TCK-9003",
       "rail": "standard",
-      "draft": "Your transfer fee is refunded with the principal. Also, your daily transfer limit is PKR 500,000.",
+      "draft": "Your transfer fee is refunded with the principal. Also, your daily transfer limit is €5,000.",
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "OUTSIDE_COVERAGE"
       },
       "exposed": true,
-      "exposedWhy": "Its \"PKR 500,000\" was the amount example in the prompt and schema, later removed."
+      "exposedWhy": "Its limit amount was the example in the prompt and schema, later removed."
     },
     {
       "id": "H16-fee-scoped-instant",
-      "note": "A verified edit to the instant-rail exception keeps the fee for instant transfers, so \"refunded\" is wrong on the instant rail",
+      "note": "A verified edit to the instant-transfer exception keeps the fee for instant transfers, so \"refunded\" is wrong on them",
       "ticketId": "TCK-9001",
       "rail": "instant",
       "draft": "Your transfer fee will be refunded too.",
@@ -222,7 +222,7 @@
         {
           "id": "DOC-103",
           "save": "verify",
-          "body": "# Instant Rail – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n\nFees on instant-rail transfers are kept: the transfer fee is not returned when an instant transfer fails.\n"
+          "body": "# Instant Transfers – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n\nFees on instant transfers are kept: the transfer fee is not returned when an instant transfer fails.\n"
         }
       ],
       "expect": {
@@ -234,7 +234,7 @@
     },
     {
       "id": "H17-fee-scoped-two-claims",
-      "note": "Two claims after a verified edit to the instant-rail exception: the timeline is right, the fee is wrong on this rail",
+      "note": "Two claims after a verified edit to the instant-transfer exception: the timeline is right, the fee is wrong on this type",
       "ticketId": "TCK-9001",
       "rail": "instant",
       "draft": "It takes one working day for the funds to reach you again, and the service charge gets reimbursed.",
@@ -242,7 +242,7 @@
         {
           "id": "DOC-103",
           "save": "verify",
-          "body": "# Instant Rail – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-rail settlement change.\n\nFor instant-rail transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant-rail transfers. Standard transfers are unchanged.\n\nHow to tell the rail: check \"Rail\" on the transaction in the admin panel.\n\nCustomers do not recover the service charge on a failed instant transfer.\n"
+          "body": "# Instant Transfers – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n\nCustomers do not recover the service charge on a failed instant transfer.\n"
         }
       ],
       "expect": {
@@ -266,7 +266,7 @@
       "note": "Fee refunded (right) plus a weekly cap amount, which is outside coverage",
       "ticketId": "TCK-9003",
       "rail": "standard",
-      "draft": "Rest assured, we also repay the service charge, and your weekly sending cap is Rs 80,000.",
+      "draft": "Rest assured, we also repay the service charge, and your weekly sending cap is €2,000.",
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "OUTSIDE_COVERAGE"
@@ -274,7 +274,7 @@
     },
     {
       "id": "H20-vague-mid-month",
-      "note": "A timeline with no number, standard rail: Double-check, with the docs' value",
+      "note": "A timeline with no number, standard transfer: Double-check, with the docs' value",
       "ticketId": "TCK-9003",
       "rail": "standard",
       "draft": "It normally clears up around mid-month and the amount reappears in your balance.",
@@ -285,7 +285,7 @@
     },
     {
       "id": "H21-vague-before-long",
-      "note": "A timeline with no number, instant rail: the docs' value is the exception's",
+      "note": "A timeline with no number, instant transfer: the docs' value is the exception's",
       "ticketId": "TCK-9001",
       "rail": "instant",
       "draft": "Leave it with us, your cash will find its way home before long.",
@@ -471,7 +471,9 @@
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "UNIT_MISMATCH"
-      }
+      },
+      "exposed": true,
+      "exposedWhy": "Its words are in this phase's new detector patterns, though not in the prompt, which the AI reads and the detector doesn't."
     },
     {
       "id": "H37-para-handful-days-standard",
@@ -482,7 +484,9 @@
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "UNSUPPORTED"
-      }
+      },
+      "exposed": true,
+      "exposedWhy": "Its words are in this phase's new detector patterns, though not in the prompt, which the AI reads and the detector doesn't."
     },
     {
       "id": "H38-para-several-working-instant",

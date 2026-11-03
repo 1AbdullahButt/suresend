@@ -97,7 +97,10 @@ describe("a question the reply leaves open reads as a missing answer, not an err
   });
 
   it("with no doc on the topic, it only says what's missing", async () => {
-    const r = await check("TCK-9001", "instant", draft, refunded, [], { extractSource: async () => ({ claims: [], info: INFO }) });
+    const r = await check("TCK-9001", "instant", draft, refunded, [], {
+      extractSource: async (s) => ({ claims: sourceClaims(s.id).filter((c) => c.topic === "fee_refund"), info: INFO }),
+    });
+    expect(r.reasonCode).toBe("TOPIC_GAP");
     expect(summarize(r, "instant").sentence).toBe("Your reply doesn't answer their question about timing.");
   });
 
@@ -121,8 +124,9 @@ describe("a question the reply leaves open reads as a missing answer, not an err
   it("MCP says the same, in the same words", async () => {
     const out = await checkReply({ reply: draft, ticket_id: "TCK-9001" }, deps(refunded));
     if (!out.ok) throw new Error("unexpected");
-    expect(out.value.headline).toBe("Your reply doesn't answer their question about timing. Your docs say 1 business day.");
-    expect(checkReplyText(out.value)).toContain("doesn't answer their question about timing");
+    expect(out.value.reason).toBe("Your reply doesn't answer their question about timing. Your docs say 1 business day.");
+    expect(out.value.headline).toMatch(/^Caution: the draft doesn't answer the customer's question about timing\. The policy says 1 business day \(/);
+    expect(checkReplyText(out.value)).toContain("doesn't answer the customer's question about timing");
   });
 });
 

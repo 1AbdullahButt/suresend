@@ -24,13 +24,13 @@ describe("duration comparator (moved unchanged)", () => {
 });
 
 describe("quantity comparator (amounts outside the covered topics)", () => {
-  const limit: QuantityValue = { quantity: 500000, of: "PKR" };
+  const limit: QuantityValue = { quantity: 5000, of: "EUR" };
   it("formats and compares amounts", () => {
     expect(kindOf(limit)).toBe("quantity");
     expect(isDuration(limit)).toBe(false);
     expect(limit.amount).toBeUndefined();
-    expect(formatValue(limit)).toBe("500,000 PKR");
-    expect(sameValue(limit, { quantity: 500000, of: " pkr " })).toBe(true);
+    expect(formatValue(limit)).toBe("5,000 EUR");
+    expect(sameValue(limit, { quantity: 5000, of: " eur " })).toBe(true);
     expect(unitsMatch(limit, { quantity: 500000, of: "USD" })).toBe(false);
   });
   it("never matches a value of another kind", () => {
@@ -79,16 +79,16 @@ describe("coverage: an amount on topic other is OUTSIDE_COVERAGE (D0c), alone or
   const limit: DraftClaim = {
     claimId: "d#2",
     topic: "other",
-    value: { quantity: 500000, of: "PKR" },
-    valueText: "PKR 500,000",
-    span: "your daily limit is PKR 500,000",
+    value: { quantity: 5000, of: "EUR" },
+    valueText: "€5,000",
+    span: "your daily limit is €5,000",
     definitive: true,
   };
   const run = (text: string, claims: DraftClaim[]) =>
     decide({ draft: { ok: true, text, claims, rejectedCount: 0 }, sources }, [doc], { id: "TCK-1", rail: "standard" }, NOW);
 
   it("alone: the amount is covered by the claim, so D0c fires (not EXTRACTION_GAP)", () => {
-    const r = run("Your daily limit is PKR 500,000.", [limit]);
+    const r = run("Your daily limit is €5,000.", [limit]);
     expect(r.decision).toBe("CAUTION");
     expect(r.reasonCode).toBe("OUTSIDE_COVERAGE");
   });
@@ -102,7 +102,7 @@ describe("coverage: an amount on topic other is OUTSIDE_COVERAGE (D0c), alone or
       span: "within 4 business days",
       definitive: true,
     };
-    const r = run("Your money is back within 4 business days, and your daily limit is PKR 500,000.", [four, limit]);
+    const r = run("Your money is back within 4 business days, and your daily limit is €5,000.", [four, limit]);
     expect(r.claims.map((c) => `${c.draftClaim.topic}:${c.decision}`)).toEqual(["reversal_window:ALLOW", "other:CAUTION"]);
     expect(r.decision).toBe("CAUTION");
     expect(r.reasonCode).toBe("OUTSIDE_COVERAGE");

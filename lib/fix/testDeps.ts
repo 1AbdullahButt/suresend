@@ -1,10 +1,10 @@
 // Test helper for "Fix the doc" (D-037): the locked fixture deps, plus hand-written extractions for DOC-101 once a fix has
-// added the instant-rail sentence. `badScope` extracts that sentence as "all rails", to prove an unsafe fix is dropped.
+// added the instant-transfer sentence. `badScope` extracts that sentence as scope "any", to prove an unsafe fix is dropped.
 import type { CheckDeps, SourceClaim, SourceForExtraction } from "@/lib/engine/types";
 import { fixtureDeps, seedBody } from "../../tests/helpers/fixtures";
 
 const SOP_QUOTE = "When an outgoing transfer fails, the amount is reversed to the customer's wallet within 4 business days.";
-export const EXCEPTION_QUOTE = "For instant-rail transfers only, failed transfers are reversed within 1 business day.";
+export const EXCEPTION_QUOTE = "For instant transfers only, failed transfers are reversed within 1 business day.";
 
 function claim(source: SourceForExtraction, n: number, quote: string, amount: number, rail: SourceClaim["scope"]["rail"]): SourceClaim {
   return {

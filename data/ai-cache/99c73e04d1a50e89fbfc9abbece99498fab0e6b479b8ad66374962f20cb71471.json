@@ -1,0 +1,23 @@
+{
+  "key": "99c73e04d1a50e89fbfc9abbece99498fab0e6b479b8ad66374962f20cb71471",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.1",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "No action needed from you. The money lands back in your wallet before the week is out."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "before the week is out",
+        "span": "The money lands back in your wallet before the week is out.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T12:44:21.046Z"
+}

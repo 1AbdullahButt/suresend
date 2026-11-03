@@ -88,6 +88,7 @@ export function App() {
   const ag = useSureSend();
   const { actions } = ag;
   const overlay = useMediaQuery("(max-width: 1099px)");
+  const sheet = useMediaQuery("(max-width: 699px)");
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [tour, setTour] = useState<TourState | null>(null);
@@ -105,7 +106,8 @@ export function App() {
 
   const closeAgent = useCallback(() => {
     actions.setPanelOpen(false);
-    agentReturnRef.current?.focus();
+    // After the render that lifts `inert` from the chat: an inert element can't take focus.
+    requestAnimationFrame(() => agentReturnRef.current?.focus());
   }, [actions]);
 
   // Under 1100 px the agent card is a slide-over / bottom sheet: open it whenever Send starts a check or one finishes.
@@ -254,7 +256,7 @@ export function App() {
               <main className={s.body} aria-label="Conversation" aria-busy="true" />
             )}
             {overlay && ag.panelOpen ? <div className={s.scrim} onClick={closeAgent} aria-hidden="true" /> : null}
-            <AgentCard tab={ag.tab} onTab={actions.setTab} overlay={overlay} open={ag.panelOpen} onClose={closeAgent}>
+            <AgentCard tab={ag.tab} onTab={actions.setTab} overlay={overlay} sheet={sheet} open={ag.panelOpen} onClose={closeAgent}>
               {ag.tab === "check" ? (
                 <CheckView
                   stored={ag.stored}

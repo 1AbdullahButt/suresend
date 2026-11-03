@@ -17,7 +17,7 @@ function addedPart({ before, after }: ChangedLine): { head: string; added: strin
 }
 
 function railWord(rail: string): string {
-  return rail === "unknown" ? "unknown rail" : `${rail} rail`;
+  return rail === "unknown" ? "unknown type" : `${rail} transfer`;
 }
 
 export function FixReview({
@@ -75,7 +75,7 @@ export function FixReview({
         {p.doc.title}
       </h3>
       <p className={s.fixWhy}>
-        <b>{copied}</b> It covers all rails, but {p.exception.title} gives {p.exception.rail}-rail transfers {p.exception.valueText}, and
+        <b>{copied}</b> It covers all transfers, but {p.exception.title} gives {p.exception.rail} transfers {p.exception.valueText}, and
         this doc doesn&apos;t say so.
       </p>
 

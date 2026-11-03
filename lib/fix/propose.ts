@@ -77,7 +77,7 @@ async function recheck(input: CheckInput, overrides: SourceOverride[], deps: Che
 }
 
 function reasonFor(fix: FixSource): string {
-  return `Replies that promise ${fix.draftValueText} match this doc: "${fix.source.quote}" It covers all rails, but ${fix.exception.title} gives ${fix.exception.rail}-rail transfers ${fix.exception.valueText}, and this doc doesn't say so.`;
+  return `Replies that promise ${fix.draftValueText} match this doc: "${fix.source.quote}" It covers all transfers, but ${fix.exception.title} gives ${fix.exception.rail} transfers ${fix.exception.valueText}, and this doc doesn't say so.`;
 }
 
 export async function proposeFix(input: CheckInput, deps: CheckDeps, fixDeps: FixDeps = {}): Promise<FixResult> {

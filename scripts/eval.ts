@@ -378,6 +378,8 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     let feeTotal = 0;
     let vagueOk = 0;
     let vagueTotal = 0;
+    // Paraphrased wrong timelines (Phase 12): how many readings got a Hold, whatever each case expected.
+    const para = { ok: 0, total: 0, HOLD: 0, CAUTION: 0, ESCALATE: 0, ALLOW: 0 };
     const rows = cases.map((c) => {
       const rs = p.results[c.id] ?? [];
       const okCount = rs.filter((r) => r.ok).length;
@@ -391,6 +393,11 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
         vagueOk += okCount;
         vagueTotal += rs.length;
       }
+      if (c.id.includes("-para-")) {
+        para.ok += okCount;
+        para.total += rs.length;
+        for (const r of rs) if (r.decision in para) para[r.decision as "HOLD" | "CAUTION" | "ESCALATE" | "ALLOW"]++;
+      }
       const label = heldOutMode ? (c.note ?? "") : gate.includes(c.id) ? "gate" : "";
       return `| ${c.id} | ${label} | ${c.expect.decision} / ${c.expect.reasonCode} | ${rs
         .map((r) => (r.ok ? "✓" : `✗ ${r.decision}/${r.reasonCode}`))
@@ -398,7 +405,7 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
     });
     const quoteRejections = t.quotesTotal - t.quotesValid;
     return {
-      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}${feeLine && vagueTotal ? `\n- Vague replies only: **${pct(vagueOk, vagueTotal)}** (${vagueOk}/${vagueTotal})` : ""}
+      summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}${feeLine && vagueTotal ? `\n- Vague replies only: **${pct(vagueOk, vagueTotal)}** (${vagueOk}/${vagueTotal})` : ""}${para.total ? `\n- Paraphrased wrong timelines: **Hold ${para.HOLD}/${para.total}**, Double-check ${para.CAUTION}, Ask first ${para.ESCALATE}, Good to send ${para.ALLOW}; verdict and reason as expected ${para.ok}/${para.total}` : ""}
 - Quote validity: **${pct(t.quotesValid, t.quotesTotal)}** (${t.quotesValid}/${t.quotesTotal} extracted quotes/spans verbatim; ${quoteRejections} rejected)`,
       table: `| Case | ${heldOutMode ? "What it probes" : ""} | Expected | Runs | Correct |
 |---|---|---|---|---|
@@ -507,11 +514,12 @@ function writeHeldOut() {
 
 ${clean.length} clean held-out cases (\`evals/heldout.json\`), run with prompt \`${PROMPT_VERSION}\`. Each runs 3× per provider, live. Report only: no gate, not used for the provider selection, never recorded into \`data/ai-cache\`. Failures are reported as they are.
 
-- **The timeline cases** (H1–H4, H6–H10) were written after the prompts were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both rails, a reworded Slack proposal, a hedge, an unknown rail, an injection inside the draft and a no-claim reply. They were in the repo, with published results, while the fee prompts were written, and they already passed on earlier prompts. H1 reuses phrases that older prompt already had, so it's easier than it looks.
+- **The timeline cases** (H1–H4, H6–H10) were written after the prompts were frozen at \`2026-10-30.2\`: reworded drafts, a reworded SOP on both transfer types, a reworded Slack proposal, a hedge, an unknown transfer type, an injection inside the draft and a no-claim reply. They were in the repo, with published results, while the fee prompts were written, and they already passed on earlier prompts. H1 reuses phrases that older prompt already had, so it's easier than it looks.
 - **H12** (the fee) was written before any fee prompt text existed. It shares no three-word phrase with the prompts, schema, golden set or presets.
 - **H17–H19** (the fee) were written after the prompts were frozen at \`2026-11-02.4\`, and share no three-word phrase with those files: two claims after a doc edit, a hedge, and an amount outside coverage.
 - **H20–H22** (vague replies) were written and committed before any prompt work on valueless claims, and share no three-word phrase with those files (D-045). They're scored against the expected reason, so a reply the AI misses but rule D0e catches is still Double-check, and still counts as a miss here.
 - **H23–H25** (a fee taken off the money) were written and committed before the prompt said that means not refunded (e00cd5d), and share no three-word phrase with those files.
+- **H26–H31** (paraphrased wrong timelines) were committed before any change for them (3ba00ad), but Abdullah's brief names their wording and the prompt's number-word rule now states it, so they're exposed. **H32–H39** were committed at the same time: other number words, other counts with no number. H36 and H37 use words now in the detector patterns, though not in the prompt, so they're exposed too; the rest share no three-word phrase with those files. A line below gives the Hold rate on each group. "A few", "about a week" and other calendar units can't get a Hold by design: a count with no number has nothing to compare, and rule D8 makes a unit mismatch a Double-check.
 - **H10, H12 and H13** changed their expected result when rule D0e arrived (D-045): each is a reply that leaves the customer's question open, so each is now Double-check. The rule changed, not the case.
 
 The seven fee cases are the real evidence for the second topic, and the three vague cases for valueless claims; a line below scores each group on its own.

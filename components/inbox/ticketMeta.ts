@@ -14,12 +14,12 @@ const META: Record<string, TicketMeta> = {
   "TCK-9001": {
     time: "9:41",
     created: "Oct 30, 9:41",
-    transfer: "TX-48213 · PKR 25,000",
+    transfer: "TX-48213 · €250",
     avatarTone: "a",
     draftHint: { rail: "instant", text: "This reply promises 4 days. The docs say 1. Press Send." },
   },
-  "TCK-9002": { time: "9:28", created: "Oct 30, 9:28", transfer: "TX-48197 · PKR 12,500", avatarTone: "b" },
-  "TCK-9003": { time: "8:55", created: "Oct 30, 8:55", transfer: "TX-48150 · PKR 40,000", avatarTone: "c" },
+  "TCK-9002": { time: "9:28", created: "Oct 30, 9:28", transfer: "TX-48197 · €125", avatarTone: "b" },
+  "TCK-9003": { time: "8:55", created: "Oct 30, 8:55", transfer: "TX-48150 · €400", avatarTone: "c" },
 };
 
 export function ticketMeta(id: string): TicketMeta {
@@ -28,7 +28,7 @@ export function ticketMeta(id: string): TicketMeta {
 
 export function initials(name: string): string {
   return name
-    .replace(/[^A-Za-z ]/g, "")
+    .replace(/[^\p{L} ]/gu, "")
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
@@ -37,4 +37,4 @@ export function initials(name: string): string {
 }
 
 export const RAIL_LABEL: Record<Rail, string> = { instant: "Instant", standard: "Standard", unknown: "Unknown" };
-export const RAIL_TAG: Record<Rail, string> = { instant: "Instant rail", standard: "Standard rail", unknown: "Rail unknown" };
+export const RAIL_TAG: Record<Rail, string> = { instant: "Instant transfer", standard: "Standard transfer", unknown: "Transfer type unknown" };
