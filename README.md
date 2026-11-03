@@ -245,17 +245,17 @@ flowchart TD
 |---|---|---|
 | `pnpm test` | Locked acceptance tests T1–T8 (engine on hand-written fixtures), cache-identity test, unit tests (incl. saved-response replay for the tour, the doc fix and the presets; Fix the doc; the fee topic; the guard that the rules name no topic; vague replies and rule D0e; that a suggestion's check matches its Send; the copy rules; number words; the seed against SPEC Appendix A; the quota guard; held-out integrity; and the MCP tools, also over an in-memory MCP client, and the `/api/mcp` route) | 445 passed |
 | `snapshot-results.ts` | Every saved path's decision and reason code, before and after Phase 12's new docs, names and prompts: golden, presets, tour, doc fix | 132 of 132 keep their decision, reason and each claim's verdict. On 4 paths, the tour's digit-only edit, the suggested reply now comes from the AI's rewrite instead of the template |
-| `scripts/slide-over-check.ts` | With the slide-over open at 1099, 1024, 900 and 700 px: the pills and Demo menu on top and working, by mouse and keyboard; Esc and focus; no scrollbar on the strip; a short screen's overlay; Send uncovered in the tour | 50 passed; 22 of its first 28 failed on the old production site |
+| `scripts/slide-over-check.ts` | With the slide-over open at 1099, 1024, 900 and 700 px: the pills and Demo menu on top and working, by mouse and keyboard; Esc and focus; no scrollbar on the strip; a short screen's overlay; Send uncovered in the tour | 51 passed; on the old production site, 22 of the 24 that ran failed |
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
-| `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs × 2 providers | see below |
-| `pnpm eval --heldout` | 25 clean held-out cases, and 14 exposed ones reported apart, × 3 runs × 2 providers | see below |
+| `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs, per provider | see below; Gemini hasn't run this prompt yet |
+| `pnpm eval --heldout` | 25 clean held-out cases, and 14 exposed ones reported apart, × 3 runs, per provider | see below; Gemini has run the 19 and 6 of the previous set |
 | `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the previous prompt (`2026-11-02.6`) | 34/40 as expected; 6 strict misses; 0 Good to send |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 
 **Regression on the 25-case demo set.** The prompts were tuned on these cases, so this shows the demo path works, not
-that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-03.2`). Gemini's quota for the day had gone on its last rerun, so its row is the previous prompt until its rerun follows in its own commit:
+that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-03.2`). Gemini hasn't run on this prompt yet, so its row is the previous prompt until its rerun follows in its own commit:
 
 | Provider · model | Decision accuracy | Quote validity | Extraction field accuracy | Gate (canonical + B1, B2, B3, B7, 3/3 runs) |
 |---|---|---|---|---|
@@ -263,27 +263,27 @@ that it generalises. From [evals/results.md](evals/results.md) (prompt `2026-11-
 | Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt | 92.0% (69/75) | 100% (111/111) | 100% (180/180) | PASS |
 | Groq, previous prompt | 98.7% (74/75) | 100% (115/115) | 96.1% (173/180) | PASS |
 
-Groq's two misses are both `vague-monday-less-charge`, and both still got the right Hold with the right reason. Each lost a quote: the AI's copy of the timeline's words wasn't verbatim, so that claim was dropped, and the suggested reply stated only the fee. I can't see those two runs' words; a probe of the same reply gave one such miscopy in 10 readings ("on its own" for "on their own"). A dropped claim costs the suggestion, not the verdict here, and no miss reached Good to send.
+Groq's two misses are both `vague-monday-less-charge`. Both got the right Hold and reason, so what failed is that the suggested reply didn't say "1 business day". The run also rejected 2 quotes, which that report doesn't tie to a case. The likely story: the AI miscopied the timeline's words, that claim was dropped (see Limitations), and the suggestion stated only the fee. A probe of the same reply gave one such miscopy in 10 readings ("on its own" for "on their own"), but those two runs' words weren't kept; the report keeps them from now on. On the prompt just before this one, whose only difference is the span line (see Limitations), golden was 75/75 with 117 of 117 quotes, so I can't rule that line out. No miss reached Good to send.
 
 Groq's field accuracy is below 100% mainly because it reads DOC-101 and DOC-104 as "in force" where the hand-written fixtures say "unstated". On recent prompts it's gone
 170, 178, 173, then 171 of 180, with no decision changed.
 
-Gemini's 6 misses are two vague replies where it found no claim on every run, so rule D0e's Double-check caught them: the right verdict, for a different reason. On the verdict alone, Gemini is 75/75 and
-Groq 74/75. Its previous-prompt session scored 65/75.
+Gemini's 6 misses are two vague replies where it found no claim on every run, so rule D0e's Double-check caught them: the right verdict, for a different reason. On `2026-11-02.6`, on the verdict alone, Gemini was 75/75 and
+Groq 74/75. On `2026-11-02.5` Gemini scored 65/75. On the current prompt, on the verdict alone, Groq is 75/75.
 
 A first Gemini run missed the Slack proposal and rejected two quotes until the prompt said proposals are claims and quotes
 exclude markdown labels (the fix was in the prompt, never the rules or tests).
 
 **Held-out set (25 clean cases).** A case whose wording reached the prompts or golden set doesn't count, even after that
-wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each, with the prompts frozen first:
+wording is removed. The current prompt's rows are from [evals/heldout.md](evals/heldout.md), and older rows from the report of their day. All live, 3 runs each, with the prompts frozen first:
 
 | Provider · model | All clean cases | Fee cases only (H12, H17–H19, H23–H25) | Vague replies only (H20–H22) | Quote validity |
 |---|---|---|---|---|
 | Groq · `openai/gpt-oss-120b` | 92.0% (69/75) | 85.7% (18/21) | 100% (9/9) | 100% (158/158) |
 | Groq, previous prompt (`2026-11-02.6`), 19 cases | 98.2% (56/57) | 95.2% (20/21) | 100% (9/9) | 100% (130/130) |
 | Gemini (fallback) · `gemini-3.5-flash-lite`, previous prompt (`2026-11-02.6`), 19 cases | 87.7% (50/57) | 100% (21/21) | 22.2% (2/9) | 100% (119/119) |
-| Gemini, previous prompt (`2026-11-02.5`), 16 cases | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
-| Groq, previous prompt (`2026-11-02.5`), 16 cases, two sessions | 95.8% (46/48), then 97.9% (47/48) | 83.3% (10/12), then 91.7% (11/12) | 100% (9/9) both | 100% |
+| Gemini, earlier prompt (`2026-11-02.5`), 16 cases | 91.7% (44/48) | 83.3% (10/12) | 77.8% (7/9) | 100% (91/91) |
+| Groq, earlier prompt (`2026-11-02.5`), 16 cases, two sessions | 95.8% (46/48), then 97.9% (47/48) | 83.3% (10/12), then 91.7% (11/12) | 100% (9/9) both | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Groq, two sessions | 92.3% (36/39), then 100% (39/39) | 75% (9/12), then 100% (12/12) | no such cases | 100% |
 | Earlier prompt (`2026-11-02.4`), 13 cases: Gemini | 100% (39/39) | 100% (12/12) | no such cases | 100% (81/81) |
 
@@ -291,8 +291,8 @@ wording is removed. From [evals/heldout.md](evals/heldout.md), live, 3 runs each
 - **Why the clean score fell from 56/57 to 69/75.** Six misses, none Good to send. H18 got a Hold on all 3 runs: a hedge the AI read as definite (below). H38's "several working days" found no claim on 2 of 3, so the detector made it a Double-check. H39's "a fortnight" read as no value on 1 of 3, still a Double-check. Quote validity is 158 of 158, and H1 ("Hi Léa…") is 3 of 3.
 - **The vague replies are the evidence for an earlier prompt change.** H20–H22 were committed before any prompt work on valueless
   claims, and the same test checks them for shared phrases. They're three cases, so it's a first check. They score against the reason, so a
-  reply the AI misses and rule D0e catches still counts as a miss here. All 7 of Gemini's misses are that: it found no claim on 7 of 9 runs, up from 2 of 9 on the previous prompt, though the timeline wording
-  in the prompt didn't change, and I don't know why. Its verdict was right on all 9, and on all 57 clean cases. So for Gemini on this wording, the rule is doing the work, not the prompt.
+  reply the AI misses and rule D0e catches still counts as a miss here. All 7 of Gemini's misses on `2026-11-02.6` are that: it found no claim on 7 of 9 runs, up from 2 of 9 on `2026-11-02.5`, though the timeline wording
+  in the prompt didn't change, and I don't know why. Its verdict was right on all 9, and on all 57 clean readings of that session. So for Gemini on this wording, the rule is doing the work, not the prompt.
 - **H23–H25 are the evidence for reading a fee taken off the money as not refunded.** They say it in other words, though H23 shares "taken off" with the new rule, below the three-word line ("with the service cost taken off", "once we deduct what the send cost you", "short of
   our handling charge"), and were committed before that prompt change (e00cd5d), under the same test for shared phrases. Groq: 9 of 9.
 - **Three expected results changed with the rule, not the case:** H10, H12 and H13 leave the customer's question open, so they're
@@ -312,8 +312,8 @@ frozen prompt, Groq returned Hold on all 3 runs of one session and Double-check 
 ([first session](https://github.com/1AbdullahButt/suresend/blob/1db5346/evals/heldout.md)). On `2026-11-02.5` it was 1 of 3, 2 of 3, then 6 of 10; on `2026-11-02.6` 2 of 3, then 5 of 10
 ([hedge runs](evals/hedge-runs.md)); on this prompt 0 of 3. H14, its exposed twin, has gone 3/3, 2/3, 3/3, 3/3, 10/10, 3/3, 9/10, then 1/3. A miss here errs strict: the reply is stopped, not let through.
 
-**A fee taken off the money reads as not refunded.** The previous prompt listed "minus the processing charge" as vague wording, and that had a cost: H11 ("the transfer charge stays with us", a plain "not refunded")
-fell from Hold on 3 of 3 to 4 of 6, so a wrong reply sometimes got only a Double-check. This prompt says money back with the fee taken off means the fee isn't refunded. H11 is back to 3 of 3 and H23–H25 are 9 of 9, so
+**A fee taken off the money reads as not refunded.** Prompt `2026-11-02.5` listed "minus the processing charge" as vague wording, and that had a cost: H11 ("the transfer charge stays with us", a plain "not refunded")
+fell from Hold on 3 of 3 to 4 of 6, so a wrong reply sometimes got only a Double-check. Since `2026-11-02.6` the prompt says money back with the fee taken off means the fee isn't refunded. H11 is back to 3 of 3 and H23–H25 are 9 of 9, so
 those replies are held. The detector also catches "minus", "less", "after deducting", "deducting" and "net of" before a fee word, so if the AI misses those, the reply is a Double-check, not Good to send. Other wording, like H23–H25's, rests on the AI alone (see Limitations).
 
 **Exposed cases (14): regression only, not held-out.** H5, H11, H13–H16, H26–H31, H36 and H37. Their wording reached the prompts, the detector or the
@@ -401,8 +401,9 @@ the spec; a Stop hook that refuses to end a phase without evidence). The log wit
 - Saved responses cover the seeded docs, the Appendix B variants, the canonical drafts, the tour's step-6 edit and the canonical doc fix;
   arbitrary new text needs live AI.
 - **A wrong timeline doesn't always get a Hold.** "A couple of working days" does, since it's read as 2. "A few days" has no number to compare, so it's a Double-check with the docs' value. "About a week" and "a fortnight" are calendar days, and rule D8 makes a unit mismatch a Double-check, as it does "within 5 days". None of them is Good to send on a ticket. The AI reads the number words, and the detector is only the net: it says something's there, not what it's worth. Over MCP with no `ticket_id`, wording it doesn't know reads as Good to send if the AI misses it too.
-- **The AI's reading can depend on odd things.** The name "Léa" in a greeting made the model lowercase the first letter of what it quoted on 7 of 10 readings, so the check failed closed with Couldn't check. Other names did it on 0 and 1 of 10. A line in the prompt fixed it (0 of 39), but I don't know why that name does it, and another name or a model upgrade could bring it back.
-- On a screen under 561 px tall, the slide-over still covers the conversation pills, since there's no room for it below them. Close it to change the conversation. Under about 450 px tall, Send can't be reached at all: that's older than this phase, and the demo isn't built for it.
+- **A claim dropped for a bad quote says nothing.** If the AI's copy of a reply's words isn't verbatim, that claim is dropped (SPEC §6.2), and the check stops only if every claim is dropped. So when another claim survives, a wrong one can vanish. With a hand-written reading of "Your money is back within 1 business day, with the service cost taken off", a fee span off by one letter gives Good to send, where the right span gives a Hold. A dropped timeline on a Hold shows "Not answered", though the reply gave one. It takes a miscopy on the one wrong claim, and I measured one miscopy in 10 readings on one reply. Capping Good to send at Double-check whenever a claim was dropped would close it. That's a rule change, so it's Abdullah's call, and it hasn't been made.
+- **The AI's reading can depend on odd things.** The name "Léa" in a greeting made the model lowercase the first letter of what it quoted on 7 of 10 readings, so the check failed closed with Couldn't check. Other names did it on 0 and 1 of 10. A line in the prompt fixed it (0 of 19 on that same reply, and 0 of 30 on three others), but I don't know why that name does it, and another name or a model upgrade could bring it back.
+- On a screen under 561 px tall, the slide-over still covers the conversation pills, since there's no room for it below them. Close it to change the conversation. Under about 450 px tall, Send is cut off for a mouse, though Tab still reaches it: that's older than this phase, and the demo isn't built for it.
 - The eval is small and built around one scenario; the held-out set (25 clean cases) is a first check on generalisation, not proof.
 - **Verdicts on hedged wording vary from run to run.** Run 10 times each on Groq on the previous prompt (`2026-11-02.6`), the four hedged held-out cases gave the expected verdict on 34 of
   40 runs. The other 6 were strict and none was Good to send: each is a hedge the AI read as definite, so it got a Hold, not a Double-check (5 on H18's "As far as I can tell", 1 on H14). H2 and H20

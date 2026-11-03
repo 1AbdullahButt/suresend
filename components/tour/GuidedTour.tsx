@@ -137,7 +137,7 @@ const STEPS: Step[] = [
       </>
     ),
     target: (ag) =>
-      ag.overrides["DOC-103"] && held(ag, "TCK-9001") ? ['[data-tour="decision"]'] : ['[data-tour="doc-DOC-103"]', '[data-tour="agent"]'],
+      ag.overrides["DOC-103"] && held(ag, "TCK-9001") ? ['[data-tour="decision"]', '[data-tour="send"]'] : ['[data-tour="doc-DOC-103"]', '[data-tour="agent"]', '[data-tour="send"]'],
     enter: ({ ag, showAgent }) => {
       // Start from the canonical Hold (a re-check, not a send). If DOC-103 is already edited here, leave it alone: the step
       // offers an explicit restore instead of changing it silently (D-024).
@@ -353,8 +353,9 @@ export function GuidedTour({
     const update = () => {
       if (pausedRef.current) return;
       const sel = isTour && step ? step.target(agRef.current) : selectors;
-      const key = sel.join(",");
       const el = findTarget(sel) ?? (isTour ? document.querySelector<HTMLElement>(sel[0] ?? "") : null);
+      // Per element, not per list: a doc that renders after the panel still needs scrolling to.
+      const key = `${sel.join(",")}|${el?.dataset.tour ?? ""}`;
       if (el && isTour && scrolledFor.current !== key) {
         scrolledFor.current = key;
         el.scrollIntoView({ block: "nearest" });

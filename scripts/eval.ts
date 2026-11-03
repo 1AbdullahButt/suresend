@@ -356,7 +356,7 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
           decision: r.decision,
           reasonCode: r.reasonCode,
           ok,
-          note: ok ? "" : `${!suggestionOk ? `suggestion "${r.suggestion?.text ?? "none"}"; ` : ""}rejected ${r.rejectedExtractions.length}`,
+          note: ok ? "" : `${!suggestionOk ? `suggestion "${r.suggestion?.text ?? "none"}"; ` : ""}rejected ${r.rejectedExtractions.length}${r.rejectedExtractions.length ? `: ${r.rejectedExtractions.map((x) => `"${x.snippet}"`).join(", ")}` : ""}`,
         };
       } catch (e) {
         entry = { decision: "ERROR", reasonCode: "-", ok: false, note: e instanceof Error ? e.message : String(e) };
@@ -404,12 +404,13 @@ async function evalProvider(provider: ProviderName | null): Promise<ProviderRepo
         .join(" · ")} | ${okCount}/${rs.length} |`;
     });
     const quoteRejections = t.quotesTotal - t.quotesValid;
+    const notes = cases.flatMap((c) => (p.results[c.id] ?? []).flatMap((r, i) => (r.note && r.note !== "rejected 0" ? [`- ${c.id}, run ${i + 1}: ${r.note}`] : [])));
     return {
       summary: `- Decision accuracy: **${pct(ok, total)}** (${ok}/${total})${feeLine && feeTotal ? `\n- Fee cases only: **${pct(feeOk, feeTotal)}** (${feeOk}/${feeTotal})` : ""}${feeLine && vagueTotal ? `\n- Vague replies only: **${pct(vagueOk, vagueTotal)}** (${vagueOk}/${vagueTotal})` : ""}${para.total ? `\n- Paraphrased wrong timelines: **Hold ${para.HOLD}/${para.total}**, Double-check ${para.CAUTION}, Ask first ${para.ESCALATE}, Good to send ${para.ALLOW}; verdict and reason as expected ${para.ok}/${para.total}` : ""}
 - Quote validity: **${pct(t.quotesValid, t.quotesTotal)}** (${t.quotesValid}/${t.quotesTotal} extracted quotes/spans verbatim; ${quoteRejections} rejected)`,
       table: `| Case | ${heldOutMode ? "What it probes" : ""} | Expected | Runs | Correct |
 |---|---|---|---|---|
-${rows.join("\n")}`,
+${rows.join("\n")}${notes.length ? `\n\nWhat the misses said:\n${notes.join("\n")}` : ""}`,
     };
   };
   const gatePass = gate.every((id) => {

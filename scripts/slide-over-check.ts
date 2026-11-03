@@ -165,6 +165,17 @@ async function main() {
     left = await page.evaluate(() => !document.activeElement?.closest('[aria-label="SureSend"]'));
   }
   check(!left, "844×390: Tab stays inside the panel, since it covers the pills");
+  // With no slide-over beside the chat, the page can still scroll to what a focus move lands on (QA's second pass).
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(300);
+  const send = page.getByRole("button", { name: "Send", exact: true });
+  await send.focus();
+  await page.waitForTimeout(150);
+  const shown = await send.evaluate((el) => {
+    const r = el.getBoundingClientRect();
+    return r.top >= 0 && r.bottom <= window.innerHeight;
+  });
+  check(shown, "844×390: focus on Send brings it into view");
   await ctx.close();
   await browser.close();
   if (server) stopServer(server);

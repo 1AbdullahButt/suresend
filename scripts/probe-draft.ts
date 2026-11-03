@@ -2,6 +2,7 @@
 //   pnpm tsx scripts/probe-draft.ts groq                     every golden case whose id starts with "vague-"
 //   pnpm tsx scripts/probe-draft.ts groq TCK-9001 "A reply"  one reply on one seed ticket, at that ticket's rail
 //   pnpm tsx scripts/probe-draft.ts groq --para 3 [H32,H34]  the held-out paraphrased wrong timelines, N fresh readings each
+//   pnpm tsx scripts/probe-draft.ts groq --spans 10 "A reply"  N fresh readings: how many have a span that isn't verbatim
 import { loadEnvConfig } from "@next/env";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -10,12 +11,35 @@ import { createAiCache } from "@/lib/ai/cache";
 import type { ProviderName } from "@/lib/ai/client";
 import { summarize } from "@/lib/client/outcome";
 import { runCheck } from "@/lib/check/runCheck";
+import { isVerbatim } from "@/lib/engine/normalize";
 import type { CheckInput } from "@/lib/engine/types";
 import { seedTickets } from "@/lib/workspace/seed";
 
 loadEnvConfig(process.cwd());
 
 type Row = { id: string; ticketId: string; rail: CheckInput["rail"]; draft: string; expect?: { decision: string; reasonCode: string } };
+
+/** A span that isn't verbatim drops its claim, and with no claim left the check can't run. How often does this reply get one? */
+async function spans(provider: string, runs: number, reply: string) {
+  let bad = 0;
+  let read = 0;
+  const seen = new Set<string>();
+  for (let i = 0; i < runs; i++) {
+    const deps = aiDeps(createRuntime({ only: provider as ProviderName, throttle: true, cache: createAiCache() }));
+    // A provider error gives no reading to count, and it says so rather than reading as 0 of 0.
+    const r = await deps.extractDraft(reply).catch((e: unknown) => {
+      console.error(`  no reading: ${e instanceof Error ? e.message.slice(0, 160) : "provider error"}`);
+      return null;
+    });
+    if (!r) continue;
+    read++;
+    const wrong = r.claims.filter((c) => !isVerbatim(c.span, reply));
+    if (wrong.length) bad++;
+    for (const c of wrong) seen.add(c.span);
+  }
+  console.log(`${bad} of ${read} readings had a span that isn't verbatim: "${reply.slice(0, 50)}…"`);
+  for (const s of seen) console.log(`  "${s}"`);
+}
 
 /** Each round is a new runtime, so the docs and replies are read again. Prints the verdicts per case and the totals. */
 async function paraphrases(provider: string, runs: number, only?: string) {
@@ -44,6 +68,7 @@ Total ${all.length} readings: Hold ${count("HOLD")}, Double-check ${count("CAUTI
 async function main() {
   const [provider = "groq", ticketId, reply] = process.argv.slice(2);
   if (ticketId === "--para") return paraphrases(provider, Number(reply) || 3, process.argv[5]);
+  if (ticketId === "--spans") return spans(provider, Number(reply) || 10, process.argv[5] ?? "");
   const golden = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "golden.json"), "utf8")) as { decisionTime: string; cases: Row[] };
   const ticket = seedTickets().find((t) => t.id === ticketId);
   const rows: Row[] = ticket && reply ? [{ id: "reply", ticketId: ticket.id, rail: ticket.rail, draft: reply }] : golden.cases.filter((c) => c.id.startsWith("vague-"));

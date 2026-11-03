@@ -77,7 +77,7 @@ export function ChatCard({
       <div className={s.chatHead}>
         <div className={s.chatTitle}>
           <span className={s.chatWho}>
-            {ticket.customer} ·
+            {ticket.customer}
             <RailSelect value={rail} onChange={onRail} />
           </span>
           <h1>Failed transfer</h1>

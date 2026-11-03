@@ -2153,3 +2153,14 @@ PASS 844×390: Tab stays inside the panel, since it covers the pills
 all passed
 ```
 
+**QA's second pass: APPROVED at 845c464**, no blockers or majors, 15 minors. It reran the gate itself and counted every published number by hand against the reports. What I did with the minors:
+- **Fixed in code:** `overflow: clip` had stopped a short screen scrolling to Send, so it's now only where the slide-over needs it. Tour step 6 falls back to Send, and scrolls to a doc that renders late. The phone's hanging dot is gone. The copy check's allowlist is scoped: a bare "rail" only outside JSX, MCP's phrases only in MCP. The eval's report keeps what each miss said.
+- **Fixed in words:** "previous prompt" meant two prompts in the README. "Groq 74/75", "65/75", "22 of its first 28", the unsourced line about Gemini's quota, and README's account of the golden misses, which now separates what's on disk from what's inferred.
+- **Left, and why (D-059):** a claim dropped for a bad quote can leave Good to send, which is a rule change for Abdullah. The tour's card over the doc from 700 to 793 px. Esc after the reset dialog. `inert` dropping the landmark while the panel is open, and "resolves for an unknown transfer type" behind Details: QA agrees with both.
+
+**The last span probe, by hand before the script existed (prompt `2026-11-03.2`):**
+```
+You can relax, the funds retur...: 1 of 10 not verbatim | the funds return on its own by Monday
+Hi Léa, so sorry about this! T...: 0 of 10 not verbatim |
+```
+
