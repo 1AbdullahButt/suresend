@@ -1,0 +1,23 @@
+{
+  "key": "fb20431e617ed29c74dccf4ef8cf03c2545c8f06f3c5c69c55650184bbc47417",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Hang tight, the bank sends these back on its own schedule and it never takes long."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "on its own schedule and it never takes long",
+        "span": "the bank sends these back on its own schedule and it never takes long",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:29:29.806Z"
+}

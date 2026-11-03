@@ -1,0 +1,36 @@
+{
+  "key": "faaa1b7cf007bcf2480d6555df538367032f2e0a1c50e65fa74b19a0725dc2cb",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Your money will be back within 4 business days, but the transfer fee isn't refundable."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 4,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "4 business days",
+        "span": "Your money will be back within 4 business days",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": false
+        },
+        "valueText": "isn't refundable",
+        "span": "the transfer fee isn't refundable",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:30:41.039Z"
+}

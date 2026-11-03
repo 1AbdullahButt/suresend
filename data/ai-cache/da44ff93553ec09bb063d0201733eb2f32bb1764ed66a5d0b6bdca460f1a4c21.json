@@ -1,0 +1,25 @@
+{
+  "key": "da44ff93553ec09bb063d0201733eb2f32bb1764ed66a5d0b6bdca460f1a4c21",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "The transfer fee isn't refundable."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": false
+        },
+        "valueText": "isn't refundable",
+        "span": "The transfer fee isn't refundable.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:23:28.331Z"
+}

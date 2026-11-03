@@ -1,0 +1,25 @@
+{
+  "key": "aad8e313432915ff9b141e2de77c1e515e8a1b2f649785c1ef43a069b812448f",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "The transfer fee is refunded as well."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded as well",
+        "span": "The transfer fee is refunded as well.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:25:05.285Z"
+}

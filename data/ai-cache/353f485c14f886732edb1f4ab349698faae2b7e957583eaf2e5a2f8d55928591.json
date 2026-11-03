@@ -1,0 +1,32 @@
+{
+  "key": "353f485c14f886732edb1f4ab349698faae2b7e957583eaf2e5a2f8d55928591",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Nothing to do on your side: the reversal is automatic and you'll see it reflected after the weekend, minus the processing charge."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "after the weekend",
+        "span": "the reversal is automatic and you'll see it reflected after the weekend",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": false
+        },
+        "valueText": "minus the processing charge",
+        "span": "minus the processing charge",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:26:07.728Z"
+}

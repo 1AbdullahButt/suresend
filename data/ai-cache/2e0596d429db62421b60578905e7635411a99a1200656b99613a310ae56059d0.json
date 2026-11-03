@@ -1,0 +1,34 @@
+{
+  "key": "2e0596d429db62421b60578905e7635411a99a1200656b99613a310ae56059d0",
+  "identity": {
+    "task": "source_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "# Instant Transfers – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n",
+    "sourceKind": "policy"
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "1 business day",
+        "rail": "instant",
+        "effectiveFrom": "2026-10-27",
+        "statusWording": "in_force",
+        "supersedes": {
+          "targetText": "section 3 of the Outgoing Transfers – Reversal SOP for instant transfers",
+          "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers."
+        },
+        "quote": "For instant transfers only, failed transfers are reversed within 1 business day."
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:20:44.807Z"
+}

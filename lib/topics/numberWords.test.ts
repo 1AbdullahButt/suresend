@@ -37,6 +37,12 @@ describe("the detector knows counts written in words", () => {
 });
 
 describe("the prompts say how to read them", () => {
+  // "Hi Léa, …" made the model lowercase the first letter of the span on 7 of 10 readings, and a span that isn't verbatim means Couldn't check (D-053).
+  it("a span keeps its capitals and accents", () => {
+    expect(DRAFT_SYSTEM).toContain("the same capitals, accents and punctuation");
+    expect(DRAFT_SYSTEM).toContain("A span that starts a sentence keeps its capital letter");
+  });
+
   it.each([["draft", DRAFT_SYSTEM], ["source", SOURCE_SYSTEM]])("%s: a couple of is 2, in the unit it names", (_name, prompt) => {
     expect(prompt).toContain('"a couple of working days" → amount 2, business_days');
     expect(prompt).toContain('"a couple of days" → amount 2, calendar_days');

@@ -1,0 +1,49 @@
+{
+  "key": "ba3556f9a172a8042657d17f336c2ab3f248d1441c13a462c902e099be9bb563",
+  "identity": {
+    "task": "source_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "# Instant Transfers – Reversal Exception\nEffective 27 Oct 2026. Approved by Head of Ops after the instant-transfer settlement change.\n\nFor instant transfers only, failed transfers are reversed within 1 business day.\nThis supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers. Standard transfers are unchanged.\n\nHow to tell the transfer type: check \"Transfer type\" on the transaction in the admin panel.\n\nFor instant transfers, the transfer fee is not refunded.\n",
+    "sourceKind": "policy"
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "1 business day",
+        "rail": "instant",
+        "effectiveFrom": "2026-10-27",
+        "statusWording": "in_force",
+        "supersedes": {
+          "targetText": "section 3 of the Outgoing Transfers – Reversal SOP for instant transfers",
+          "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers."
+        },
+        "quote": "For instant transfers only, failed transfers are reversed within 1 business day."
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": false
+        },
+        "valueText": "not refunded",
+        "rail": "instant",
+        "effectiveFrom": "2026-10-27",
+        "statusWording": "in_force",
+        "supersedes": {
+          "targetText": "section 3 of the Outgoing Transfers – Reversal SOP for instant transfers",
+          "quote": "This supersedes section 3 of the Outgoing Transfers – Reversal SOP for instant transfers."
+        },
+        "quote": "For instant transfers, the transfer fee is not refunded."
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:25:20.215Z"
+}

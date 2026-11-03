@@ -1,0 +1,25 @@
+{
+  "key": "3f09267e4b967e30f4cc664b79284341cc3baefdb827a9de006a7ded749ef1f1",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "The transfer fee probably isn't refunded."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": false
+        },
+        "valueText": "probably isn't refunded",
+        "span": "The transfer fee probably isn't refunded.",
+        "definitive": false
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:24:05.236Z"
+}

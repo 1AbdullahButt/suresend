@@ -1,0 +1,23 @@
+{
+  "key": "dcd0e95047b81cb7e1f58b4805ece8406cec9993d83f1d922a010edd1b90b72e",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Your balance gets topped up again early next week."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": null,
+        "valueText": "early next week",
+        "span": "Your balance gets topped up again early next week.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:29:41.332Z"
+}

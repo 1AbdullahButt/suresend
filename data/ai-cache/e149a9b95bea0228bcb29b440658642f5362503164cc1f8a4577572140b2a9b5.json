@@ -1,0 +1,36 @@
+{
+  "key": "e149a9b95bea0228bcb29b440658642f5362503164cc1f8a4577572140b2a9b5",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Nothing to do on your side: the reversal will be completed within 1 business day, and the processing charge is refunded."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "reversal_window",
+        "value": {
+          "amount": 1,
+          "amountMax": null,
+          "unit": "business_days"
+        },
+        "valueText": "1 business day",
+        "span": "the reversal will be completed within 1 business day",
+        "definitive": true
+      },
+      {
+        "topic": "fee_refund",
+        "value": {
+          "flag": true
+        },
+        "valueText": "refunded",
+        "span": "the processing charge is refunded",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:26:30.245Z"
+}

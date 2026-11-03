@@ -1,0 +1,26 @@
+{
+  "key": "715489d9c27953147559e8e133db7cfe02c6263b4c8331836600153d94c6b0e3",
+  "identity": {
+    "task": "draft_extraction",
+    "promptVersion": "2026-11-03.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "There's a €2 fee on every transfer."
+  },
+  "output": {
+    "claims": [
+      {
+        "topic": "other",
+        "value": {
+          "quantity": 2,
+          "of": "EUR"
+        },
+        "valueText": "€2 fee",
+        "span": "There's a €2 fee on every transfer.",
+        "definitive": true
+      }
+    ]
+  },
+  "recordedAt": "2026-11-03T14:25:52.159Z"
+}

@@ -1,0 +1,40 @@
+{
+  "key": "ce6c22b01b8819323f123481bf474dfb9e3a8a021639e11c15263a5a1fca8b90",
+  "identity": {
+    "task": "safe_reply",
+    "promptVersion": "2026-11-02.2",
+    "schemaVersion": "2026-11-03.1",
+    "provider": "groq",
+    "model": "openai/gpt-oss-120b",
+    "inputText": "Nothing to do on your side: the reversal is automatic and you'll see it reflected after the weekend, minus the processing charge.",
+    "governing": {
+      "value": {
+        "flag": true
+      },
+      "quote": "Transfer fee is refunded with the principal.",
+      "decision": "HOLD"
+    },
+    "claims": [
+      {
+        "span": "the reversal is automatic and you'll see it reflected after the weekend",
+        "topic": "reversal_window",
+        "correct": "1 business day",
+        "quote": "For instant transfers only, failed transfers are reversed within 1 business day.",
+        "sourceId": "DOC-103",
+        "wrong": true
+      },
+      {
+        "span": "minus the processing charge",
+        "topic": "fee_refund",
+        "correct": "refunded",
+        "quote": "Transfer fee is refunded with the principal.",
+        "sourceId": "DOC-101",
+        "wrong": true
+      }
+    ]
+  },
+  "output": {
+    "reply": "Nothing to do on your side: the reversal will be completed within 1 business day, and the processing charge is refunded."
+  },
+  "recordedAt": "2026-11-03T14:26:18.641Z"
+}
