@@ -2070,3 +2070,86 @@ Prompt 2026-11-03.1, Groq, 3 runs: golden 75/75, quotes 117/117, fields 173/180,
 - Quote validity: **98.7%** (153/155 extracted quotes/spans verbatim; 2 rejected)
 ```
 
+**Saved results, against the before-snapshot.** Prompt `2026-11-03.2`, 132 results: golden, presets, tour, doc fix.
+```
+$ pnpm tsx scripts/snapshot-results.ts evals/snapshots/phase12-after.json --compare evals/snapshots/phase12-before.json
+132 results → evals/snapshots/phase12-after.json (0 not on saved responses)
+Compared with evals/snapshots/phase12-before.json: 126 identical, 4 different, 2 missing.
+tour edit digitOnly verify (support_agent)
+  before: HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion template→CAUTION
+  after:  HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion ai→CAUTION
+tour edit digitOnly verify (ops_lead)
+  before: HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion template→CAUTION
+  after:  HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion ai→CAUTION
+after fix + tour edit digitOnly verify (support_agent)
+  before: HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion template→CAUTION
+  after:  HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion ai→CAUTION
+after fix + tour edit digitOnly verify (ops_lead)
+  before: HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion template→CAUTION
+  after:  HOLD/CONTRADICTS_GOVERNING [reversal_window:HOLD/CONTRADICTS_GOVERNING] suggestion ai→CAUTION
+missing: preset TCK-9002 Only the fee (any rail) (support_agent)
+missing: preset TCK-9002 Only the fee (any rail) (ops_lead)
+```
+The 2 "missing" rows are one preset's new label ("any transfer type"). With that mapped: 132 of 132 keep their decision, reason and each claim's verdict. The 4 "different" rows have the same decision and reason, and their suggested reply now comes from the AI's rewrite, not the template. **So nothing Part B set out to change moved a saved decision or reason:** its changes are copy, layout, and number words no saved reply uses.
+
+**Groq, prompt `2026-11-03.2`, 3 runs, as they came.** Today's provider timeouts stopped the golden run once, with its progress kept. It resumed with no answers scored from a failed call.
+```
+$ pnpm eval --provider groq
+- Runs per case: 3 · started: 2026-11-03T14:33:03.345Z · finished: 2026-11-03T16:02:55.894Z · throttled · provider errors retried, with no answer to score: 7
+- Decision accuracy: **97.3%** (73/75)
+- Quote validity: **98.3%** (115/117 extracted quotes/spans verbatim; 2 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **95.0%** (171/180)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
+| vague-monday-less-charge |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERNING | 1/3 |
+$ pnpm eval --heldout --provider groq
+- Runs per case: 3 · started: 2026-11-03T14:43:07.036Z · finished: 2026-11-03T15:43:05.696Z · throttled · provider errors retried, with no answer to score: 16
+**Clean held-out cases (25)**
+- Decision accuracy: **92.0%** (69/75)
+- Fee cases only: **85.7%** (18/21)
+- Vague replies only: **100.0%** (9/9)
+- Paraphrased wrong timelines: **Hold 12/18**, Double-check 6, Ask first 0, Good to send 0; verdict and reason as expected 15/18
+- Quote validity: **100.0%** (158/158 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures; seed docs only, the reworded texts have none): **95.4%** (103/108)
+| H18-fee-hedged-no | Hedged "not refunded", worded without the hedge list: Double-check, not Hold | CAUTION / HEDGED_CONTRADICTION | ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERN
+| H38-para-several-working-instant | "Several" is a count with no number too: vague | CAUTION / UNSUPPORTED | ✗ CAUTION/EXTRACTION_GAP · ✗ CAUTION/EXTRACTION_GAP · ✓ | 1/3 |
+| H39-para-fortnight-standard | A fortnight is 14 calendar days. The units differ, so Double-check | CAUTION / UNIT_MISMATCH | ✓ · ✓ · ✗ CAUTION/UNSUPPORTED | 2/3 |
+**Exposed cases (14): regression only, not held-out**
+- Decision accuracy: **81.0%** (34/42)
+- Paraphrased wrong timelines: **Hold 6/24**, Double-check 18, Ask first 0, Good to send 0; verdict and reason as expected 19/24
+- Quote validity: **100.0%** (72/72 extracted quotes/spans verbatim; 0 rejected)
+| H13-fee-unknown-rail | Fee refunded on the ticket with an unknown transfer type: the fee rule covers all transfers, so the type doesn't matter | CAUTION / TOPIC_GAP | ✓ · ✓ · ✗ CAUTION/UNS
+| H14-fee-hedged-no | Hedged "not refunded" contradicts the policy: Double-check, not Hold | CAUTION / HEDGED_CONTRADICTION | ✗ HOLD/CONTRADICTS_GOVERNING · ✓ · ✗ HOLD/CONTRADICTS_GOVERNING 
+| H31-para-about-week-standard | The same on a standard transfer | CAUTION / UNIT_MISMATCH | ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED | 0/3 |
+| H36-para-day-or-two-instant | "A day or two" is 1–2 calendar days. The units differ, so Double-check | CAUTION / UNIT_MISMATCH | ✓ · ✗ CAUTION/UNSUPPORTED · ✗ CAUTION/UNSUPPORTED | 1/3 |
+```
+**The gate on the code, after QA's first pass:**
+```
+$ pnpm typecheck && pnpm lint: clean
+$ pnpm test
+ Test Files  33 passed (33)
+      Tests  445 passed (445)
+$ pnpm e2e
+  ok 1 [chromium] › e2e\demo.spec.ts:15:5 › wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1
+  1 passed (27.9s)
+$ pnpm tsx scripts/ui-audit.ts --serve
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+$ pnpm mcp:e2e (local, saved mode)
+ALL PASS
+$ pnpm tsx scripts/slide-over-check.ts --serve   (50 checks; 1024 and the short screen shown)
+PASS 1024: with the panel open, on top: 3 pills and the Demo menu
+PASS 1024: Shift+Tab from the panel reaches the pills, with the panel still open
+PASS 1024: Esc closes the panel with focus outside it
+PASS 1024: closing leaves focus on a control, not the page
+PASS 1024: the page can't jump sideways when the panel opens (scrollLeft 0, overflow clip)
+PASS 1024: the Demo menu can be clicked with the panel open
+PASS 1024: the Demo menu opens
+PASS 1024: a pill can be clicked with the panel open, and switches the conversation
+PASS 1024: changing the conversation closes the panel (D-049)
+PASS 1024: arrow keys bring the last pill into view
+PASS 1024: no scrollbar on the pill strip (bar 0px, overflow false, hidden true)
+PASS 1024: in the tour, Send is uncovered once the suggested reply is in the composer
+PASS 844×390: the panel keeps its height (338 px)
+PASS 844×390: Tab stays inside the panel, since it covers the pills
+all passed
+```
+

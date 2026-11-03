@@ -1,9 +1,9 @@
 ## groq · `openai/gpt-oss-120b`
 
-- Runs per case: 3 · started: 2026-11-02T18:22:02.513Z · finished: 2026-11-02T18:43:54.260Z · throttled
-- Decision accuracy: **98.7%** (74/75)
-- Quote validity: **100.0%** (115/115 extracted quotes/spans verbatim; 0 rejected)
-- Extraction field accuracy (vs hand-written fixtures): **96.1%** (173/180)
+- Runs per case: 3 · started: 2026-11-03T14:33:03.345Z · finished: 2026-11-03T16:02:55.894Z · throttled · provider errors retried, with no answer to score: 7
+- Decision accuracy: **97.3%** (73/75)
+- Quote validity: **98.3%** (115/117 extracted quotes/spans verbatim; 2 rejected)
+- Extraction field accuracy (vs hand-written fixtures): **95.0%** (171/180)
 - Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
 
 | Case |  | Expected | Runs | Correct |
@@ -30,7 +30,7 @@
 | vague-repro |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 | vague-week-out |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-very-soon |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
-| vague-monday-less-charge |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✗ CAUTION/UNSUPPORTED · ✓ | 2/3 |
+| vague-monday-less-charge |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✗ HOLD/CONTRADICTS_GOVERNING · ✗ HOLD/CONTRADICTS_GOVERNING | 1/3 |
 | vague-unknown-rail |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 | vague-next-week |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
 
