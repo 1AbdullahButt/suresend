@@ -423,7 +423,7 @@
       "note": "A wrong range in words: 2–3 business days contradicts 1",
       "ticketId": "TCK-9001",
       "rail": "instant",
-      "draft": "Give it two to three working days and the sum is yours again.",
+      "draft": "Give it two to three working days, then the sum is yours again.",
       "expect": {
         "decision": "HOLD",
         "reasonCode": "CONTRADICTS_GOVERNING"
@@ -445,18 +445,18 @@
       "note": "A wrong number in a word on a standard transfer: 7 business days contradicts 4",
       "ticketId": "TCK-9003",
       "rail": "standard",
-      "draft": "Seven business days is what it takes for the sum to reappear.",
+      "draft": "Seven business days is how long the sum needs to reappear.",
       "expect": {
         "decision": "HOLD",
         "reasonCode": "CONTRADICTS_GOVERNING"
       }
     },
     {
-      "id": "H35-para-one-or-two-instant",
+      "id": "H35-para-one-and-two-instant",
       "note": "A range that only starts at the right value: 1–2 business days isn't within 1",
       "ticketId": "TCK-9001",
       "rail": "instant",
-      "draft": "One or two working days and the sum reappears.",
+      "draft": "Between one and two working days, then the sum reappears.",
       "expect": {
         "decision": "HOLD",
         "reasonCode": "CONTRADICTS_GOVERNING"
@@ -478,7 +478,7 @@
       "note": "A count with no number, like \"a few\", in words the prompt never uses: vague",
       "ticketId": "TCK-9003",
       "rail": "standard",
-      "draft": "A handful of days and the cash is home.",
+      "draft": "A handful of days, then the cash is home.",
       "expect": {
         "decision": "CAUTION",
         "reasonCode": "UNSUPPORTED"

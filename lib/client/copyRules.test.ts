@@ -36,6 +36,18 @@ describe("copy rules", () => {
     expect(found).toEqual([]);
   });
 
+  // D-053: a visitor reads "instant transfer" and "transfer type". The code field stays `rail`, and the prompts still explain it to the AI.
+  it('nothing a visitor reads says "rail"', () => {
+    const RAIL_WORDS = /\b(?:instant|standard|unknown|payment|one|this|the|by|which|another|other|any|all|every)[- ]rails?\b|\brails? (?:is|unknown|isn't)\b|\brail-specific\b|\}[- ]rails?\b|>\s*Rail\s*<|"Rail"|\bRail unknown\b|\bInstant rail\b/i;
+    const read = (f: string) => visible(f).replace(/\b(?:by_rail|rail: )/g, "");
+    const found = FILES.filter((f) => !/lib\/ai\/(?:prompts|schemas)\.ts$/.test(rel(f))).filter((f) => RAIL_WORDS.test(read(f))).map((f) => `${rel(f)}: ${RAIL_WORDS.exec(read(f))![0]}`);
+    expect(found).toEqual([]);
+  });
+
+  it("nothing a visitor reads has the old names or currency", () => {
+    expect(FILES.filter((f) => /Ayesha|Usman|\bHina\b|PKR/.test(visible(f))).map(rel)).toEqual([]);
+  });
+
   // SPEC: every screen carries the disclaimer. Next's default 404 doesn't.
   it("the 404 page has the disclaimer", () => {
     expect(visible(path.join(ROOT, "app", "not-found.tsx"))).toContain("Independent concept for Slite Agent · synthetic data · not affiliated with Slite");

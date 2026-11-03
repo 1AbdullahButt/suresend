@@ -1,7 +1,7 @@
 // Debug helper: one provider's live reading of the vague golden replies (or any reply), through the full check.
 //   pnpm tsx scripts/probe-draft.ts groq                     every golden case whose id starts with "vague-"
 //   pnpm tsx scripts/probe-draft.ts groq TCK-9001 "A reply"  one reply on one seed ticket, at that ticket's rail
-//   pnpm tsx scripts/probe-draft.ts groq --para 3            the held-out paraphrased wrong timelines, N fresh readings each
+//   pnpm tsx scripts/probe-draft.ts groq --para 3 [H32,H34]  the held-out paraphrased wrong timelines, N fresh readings each
 import { loadEnvConfig } from "@next/env";
 import { readFileSync } from "node:fs";
 import path from "node:path";
@@ -18,9 +18,9 @@ loadEnvConfig(process.cwd());
 type Row = { id: string; ticketId: string; rail: CheckInput["rail"]; draft: string; expect?: { decision: string; reasonCode: string } };
 
 /** Each round is a new runtime, so the docs and replies are read again. Prints the verdicts per case and the totals. */
-async function paraphrases(provider: string, runs: number) {
+async function paraphrases(provider: string, runs: number, only?: string) {
   const suite = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "heldout.json"), "utf8")) as { decisionTime: string; cases: Row[] };
-  const rows = suite.cases.filter((c) => c.id.includes("-para-"));
+  const rows = suite.cases.filter((c) => c.id.includes("-para-") && (!only || only.split(",").some((x) => c.id.startsWith(`${x}-`))));
   const verdicts = new Map<string, string[]>(rows.map((c) => [c.id, []]));
   for (let run = 1; run <= runs; run++) {
     const deps = aiDeps(createRuntime({ only: provider as ProviderName, throttle: true, cache: createAiCache() }));
@@ -43,7 +43,7 @@ Total ${all.length} readings: Hold ${count("HOLD")}, Double-check ${count("CAUTI
 
 async function main() {
   const [provider = "groq", ticketId, reply] = process.argv.slice(2);
-  if (ticketId === "--para") return paraphrases(provider, Number(reply) || 3);
+  if (ticketId === "--para") return paraphrases(provider, Number(reply) || 3, process.argv[5]);
   const golden = JSON.parse(readFileSync(path.join(process.cwd(), "evals", "golden.json"), "utf8")) as { decisionTime: string; cases: Row[] };
   const ticket = seedTickets().find((t) => t.id === ticketId);
   const rows: Row[] = ticket && reply ? [{ id: "reply", ticketId: ticket.id, rail: ticket.rail, draft: reply }] : golden.cases.filter((c) => c.id.startsWith("vague-"));
