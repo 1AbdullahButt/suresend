@@ -66,3 +66,34 @@ old SOP:
 - **Hidden doc:** the restricted fraud-hold doc (DOC-105) is never visible over MCP, the same as for the support-agent
   persona in the app.
 - **Self-check:** `pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp` runs the same flow with the MCP client SDK.
+
+## Reference
+
+SureSend is also an MCP server, so any agent can check a reply against the docs before it sends it: Claude, a help-desk
+bot, or an agent like Slite's.
+
+**Connector URL:** `https://suresend-demo.vercel.app/api/mcp`. **No auth:** it only reads the public, synthetic demo
+workspace, so don't send real customer data to it. In the app, the Demo menu's "Use it from Claude (MCP)" section has
+this URL with a Copy button.
+
+- **claude.ai:** add it as a custom connector (in Settings → Connectors at the time of writing; menus move). Step-by-step,
+  with a demo prompt: sections 1 to 3 above.
+- **Claude Code:** `claude mcp add --transport http suresend https://suresend-demo.vercel.app/api/mcp`
+- **Locally over stdio** (Claude Code or Claude Desktop, from a clone):
+  `claude mcp add suresend-local -- pnpm --dir /path/to/suresend exec tsx scripts/mcp-stdio.ts`
+
+| Tool | What it does |
+|---|---|
+| `check_reply` | Checks a reply against the docs: the decision, why, the next step, a verdict per claim and a checked suggested reply. |
+| `list_tickets` | Lists the 3 demo tickets. |
+| `get_doc` | Returns one doc the support agent can see. |
+| `propose_doc_fix` | For a Hold or Ask first, the doc to fix and a minimal fix to it. Applies nothing. |
+
+Try these prompts:
+
+1. "Reply to Léa's failed instant transfer. Check it with SureSend before you send."
+2. "Lukas doesn't know which type of transfer was used. Draft a reply about when the money comes back, and check it
+   with SureSend first."
+3. "Is 'Your refund will arrive within 4 business days' right for Sofia's standard transfer? Show me the doc SureSend relied on."
+
+How the MCP server works (inputs, limits, transport) is under [The system](architecture.md#the-system).

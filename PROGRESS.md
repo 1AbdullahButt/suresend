@@ -2532,7 +2532,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 No held-out miss reached Good to send. The one that's less strict than it should be is H23, read as vague on 2 of 3 runs: a Double-check, not a Hold. The same prompt scored 73/75 and 69/75 in an earlier session, so one session's score is one session's.
 
-**Gemini:** not a gate. Its rows are labelled as the previous prompt (`2026-11-02.6`), golden 69/75 and held-out clean 50/57 on the set of that day. Its rerun follows its 08:07 UTC reset, in its own commit. That job lives only in this session; if it doesn't fire, the commands are `pnpm eval --provider gemini --fresh`, then `pnpm eval --heldout --provider gemini --fresh`. The how-it-works page reads the README at build, so its Gemini rows stay as they are until someone redeploys.
+**Gemini:** not a gate. Its rows are labelled as the previous prompt (`2026-11-02.6`), golden 69/75 and held-out clean 50/57 on the set of that day. Its rerun follows its 08:07 UTC reset, in its own commit. That job lives only in this session; if it doesn't fire, the commands are `pnpm eval --provider gemini --fresh`, then `pnpm eval --heldout --provider gemini --fresh`. Since the README cut (D-062), its rows are in `docs/evals.md`, and the README carries no scores.
 
 **Abdullah's decisions in force:**
 - D-060: any claim dropped for a bad quote caps the reply at Double-check.
@@ -2541,20 +2541,40 @@ No held-out miss reached Good to send. The one that's less strict than it should
 - D-044: Groq is primary, though the eval's tie-break can pick Gemini.
 - D-051's clause: "on the same ticket at the same time, the same AI findings and the same docs always produce the same decision."
 
-**Left for Abdullah to keep or remove:** D-060's docs' side, a doc that loses a claim to quote validation can't support Good to send. I added it on my reading of "any claim". His copy spoke of the reply, and QA reads it as past that. It comes out cleanly if he meant replies only. The rename's unlock was also inferred from his instruction (D-061): it can't be done any other way, but he didn't state it.
+**D-060's docs' side stays.** A doc that loses a claim to quote validation can't support Good to send. I added it on my reading of "any claim", and Abdullah kept it on 2026-11-04: "Keep it: the cap also covers claims dropped from docs, as you built it." The rename's unlock was also inferred from his instruction (D-061): it can't be done any other way, but he didn't state it.
 
-**Known and left, all in README Limitations or D-059 unless noted:**
+**Known and left, all in `docs/limitations.md` or D-059 unless noted:**
 - The verdict on hedged wording varies from run to run, and the hedge runs ran on `2026-11-02.6`, not this prompt. H18's hedge got a Hold on all 6 runs on this prompt.
 - A right reply whose quote the AI miscopies gets a Double-check it didn't earn: 3 of 20 readings of one reply.
 - No real model has been given a dropped claim's placeholder in a rewrite, since no saved path drops a claim. The template is the fallback (D-060).
 - "Hi Léa" needed a prompt line, and a model upgrade could bring that back (D-053).
 - The slide-over check failed twice on one server instance and never again: see above, and start there if the tour's step 3 ever misses its button. Not in Limitations.
 - The tour's card covers the doc at 700–793 px wide. Esc after closing the reset dialog leaves focus on the page.
-- SPEC.md outside Appendix A and the brief keep the old names and "rail": D-053 and D-061 amend them. The mockups in `design/` are history. The README hasn't been cut, and Abdullah's brief for that hasn't come; it isn't a code change.
+- SPEC.md outside Appendix A and the brief keep the old names and "rail": D-053 and D-061 amend them. The mockups in `design/` are history.
 
 **The lock:** `.loop/locked` holds, and a real edit attempt is refused. `docs/VIDEO_SCRIPT.md` has the customers' new names, and stays uncommitted and undeployed.
 ```
 $ git worktree list
 D:/Project/slite 27370be [main]
+```
+
+### After the freeze: the README cut (docs only, D-062)
+
+Abdullah's brief: about 120 lines, plain words, no brag numbers, everything removed moved into `docs/` and linked. No code changed. `/how-it-works` reads the README at build, so the live page keeps the old text until a redeploy.
+
+```
+$ wc -l README.md   (after Abdullah's three edits to The idea and How it was built)
+126 README.md
+$ the split's check: every line of the old README against the new files
+old README 429 lines; not found word for word in docs/: 12   (top two lines, GIF, 7 headings, one rewritten link, the anchor tag)
+$ relative links in the README and docs/
+broken relative links: 0
+$ pnpm build, then /how-it-works at 1440, 390 and 360, and the README's three steps, in a browser on the local build
+Compiled successfully. No raw Markdown or HTML on the page, sections in the brief's order, the GIF loads, no sideways page scroll, every More link is a real link, no word splits in the verdict column.
+step 2: Hold | Don't send this yet | Instant transfers now reverse in 1 business day. Your reply says 4.
+step 3: Sent. Nothing in the docs contradicted it.
+all passed
+$ the README's curl, run as written against the live endpoint
+SureSend: Hold (HOLD, CONTRADICTS_GOVERNING)
 ```
 
