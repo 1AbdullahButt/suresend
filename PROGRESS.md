@@ -2510,7 +2510,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 ## Final state (frozen, 2026-11-04)
 
-**The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." The one thing still to land is Gemini's numbers, which are reports and docs, in their own commit, and aren't a gate.
+**The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." Gemini's numbers landed after it, as reports and docs in their own commit, and they aren't a gate.
 
 **What's live:** https://suresend-demo.vercel.app, from 27370be. The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
 
@@ -2532,7 +2532,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 No held-out miss reached Good to send. The one that's less strict than it should be is H23, read as vague on 2 of 3 runs: a Double-check, not a Hold. The same prompt scored 73/75 and 69/75 in an earlier session, so one session's score is one session's.
 
-**Gemini:** not a gate. Its rows are labelled as the previous prompt (`2026-11-02.6`), golden 69/75 and held-out clean 50/57 on the set of that day. Its rerun follows its 08:07 UTC reset, in its own commit. That job lives only in this session; if it doesn't fire, the commands are `pnpm eval --provider gemini --fresh`, then `pnpm eval --heldout --provider gemini --fresh`. Since the README cut (D-062), its rows are in `docs/evals.md`, and the README carries no scores.
+**Gemini:** not a gate. On this prompt, 3 runs each, 4 Nov, as they came: golden 66/75, quotes 111/111, fields 180/180, gate PASS; held-out clean 63/75, fee 21/21, vague 0/9, quotes 144/144; exposed 41/42, quotes 68/69; paraphrased wrong timelines Hold 18, Double-check 24, Good to send 0. No miss reached Good to send. Since the README cut (D-062), its rows are in `docs/evals.md`, and the README carries no scores.
 
 **Abdullah's decisions in force:**
 - D-060: any claim dropped for a bad quote caps the reply at Double-check.
@@ -2577,4 +2577,29 @@ all passed
 $ the README's curl, run as written against the live endpoint
 SureSend: Hold (HOLD, CONTRADICTS_GOVERNING)
 ```
+
+### After the freeze: Gemini's rerun (not a gate)
+
+On prompt `2026-11-03.2`, on 9100566, with no code or prompt changed since 27370be. Nothing was tuned. The job scheduled for 08:07 UTC never ran and was gone when I looked at 08:25 UTC, after the session restarted, so I started the rerun by hand once the README cut was pushed.
+
+```
+$ pnpm eval --provider gemini --fresh   (08:29–08:43 UTC; 15 provider errors retried, with no answer to score)
+- Decision accuracy: 88.0% (66/75)
+- Quote validity: 100.0% (111/111 extracted quotes/spans verbatim; 0 rejected)
+- Extraction field accuracy (vs hand-written fixtures): 100.0% (180/180)
+- Gate (canonical tickets + B1, B2, B3, B7 correct on every run): PASS
+$ pnpm eval --heldout --provider gemini --fresh   (08:43–08:59 UTC)
+Clean held-out cases (25)
+- Decision accuracy: 84.0% (63/75)
+- Fee cases only: 100.0% (21/21)
+- Vague replies only: 0.0% (0/9)
+- Paraphrased wrong timelines: Hold 12/18, Double-check 6, Ask first 0, Good to send 0; verdict and reason as expected 15/18
+- Quote validity: 100.0% (144/144 extracted quotes/spans verbatim; 0 rejected)
+Exposed cases (14)
+- Decision accuracy: 97.6% (41/42)
+- Paraphrased wrong timelines: Hold 6/24, Double-check 18, Ask first 0, Good to send 0; verdict and reason as expected 24/24
+- Quote validity: 98.6% (68/69 extracted quotes/spans verbatim; 1 rejected)
+```
+
+Every miss but one is a Double-check for a different reason than expected. The other is H14 on run 1: its one claim's quote didn't match, so every claim was dropped and the reply came back Couldn't check, which fails closed (D0a, not D-060's cap). The verdict is right on all 75 golden and all 75 clean readings. Gemini got the two clean fee misses Groq had, H18 and H23, right on 3 of 3. It found no claim on H20–H22 on 9 of 9, so for Gemini on vague wording, rule D0e is doing the work, not the prompt.
 

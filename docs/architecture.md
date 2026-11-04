@@ -117,8 +117,8 @@ flowchart TD
 - **AI providers:** two live providers behind one adapter ([`lib/ai/client.ts`](../lib/ai/client.ts)): Groq
   (`openai/gpt-oss-120b`, strict JSON-schema output) and Google Gemini (`gemini-3.5-flash-lite`, native JSON-schema
   response). Groq is primary and Gemini the fallback, which is tried once on a 429 or quota error before saved responses take
-  over. On the previous prompt (`2026-11-02.6`) both passed the gate with no rejected quotes, so the eval's tie-break went to field accuracy and picked Gemini, though Groq scored higher on verdict and reason together, and Gemini on
-  the verdict alone ([evals](evals.md)). Gemini hasn't run on the current prompt yet. Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
+  over. On the current prompt (`2026-11-03.2`) both passed the gate with no rejected quotes, so the eval's tie-break went to field accuracy and picked Gemini, though Groq scored higher on verdict and reason together, and the two tie on
+  the verdict alone ([evals](evals.md)). Groq stays primary by decision, not by the eval: availability and latency matter more for the live path, and
   the field-accuracy gap changed no decision. [evals/results.md](../evals/results.md) shows the pick and the override whenever both have run on the current prompt. An Anthropic adapter is kept, off by default. See [DECISIONS.md](../DECISIONS.md) D-001, D-017, D-019, D-044.
 - **Saved responses:** `data/ai-cache/` holds recorded model outputs keyed by the full cache identity (task, prompt version,
   schema version, provider, model, input text, plus source kind or the safe-reply inputs). A file is used only if its

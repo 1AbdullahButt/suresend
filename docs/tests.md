@@ -12,8 +12,8 @@
 | `pnpm lint` | ESLint, `next/core-web-vitals` and `next/typescript`, no warnings allowed | clean |
 | `pnpm mcp:e2e <url>` | The MCP client SDK against `/api/mcp` over HTTP: tools, tickets, docs (DOC-105 refused), Hold / Ask first / Good to send, a two-claim reply and a doc-fix proposal, all on saved responses | passed (local and live) |
 | `pnpm exec playwright test` | One e2e in saved mode: wrong draft → Send → held → Use this reply → Send → sent → Demo menu shows 1 stopped | passed |
-| `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs, per provider | see [evals](evals.md); Gemini hasn't run this prompt yet |
-| `pnpm eval --heldout` | 25 clean held-out cases, and 14 exposed ones reported apart, × 3 runs, per provider | see [evals](evals.md); Gemini has run the 19 and 6 of the previous set |
+| `pnpm eval` | 25 golden cases (3 canonical tickets, Appendix B variants B1–B7, a 1-day Allow, a no-claim draft, 7 fee cases, 6 vague replies) × 3 runs, per provider | see [evals](evals.md) |
+| `pnpm eval --heldout` | 25 clean held-out cases, and 14 exposed ones reported apart, × 3 runs, per provider | see [evals](evals.md) |
 | `scripts/hedge-runs.ts` | The 4 hedged held-out cases × 10 runs on Groq, on the previous prompt (`2026-11-02.6`) | 34/40 as expected; 6 strict misses; 0 Good to send |
 | `scripts/ui-audit.ts` | axe-core + screenshots, 10 states × 1440/1024/390 | 0 serious/critical, no horizontal scroll |
 

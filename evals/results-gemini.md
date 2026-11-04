@@ -1,7 +1,7 @@
 ## gemini · `gemini-3.5-flash-lite`
 
-- Runs per case: 3 · started: 2026-11-03T08:07:13.022Z · finished: 2026-11-03T08:15:46.413Z · throttled
-- Decision accuracy: **92.0%** (69/75)
+- Runs per case: 3 · started: 2026-11-04T08:29:57.655Z · finished: 2026-11-04T08:43:09.163Z · throttled · provider errors retried, with no answer to score: 15
+- Decision accuracy: **88.0%** (66/75)
 - Quote validity: **100.0%** (111/111 extracted quotes/spans verbatim; 0 rejected)
 - Extraction field accuracy (vs hand-written fixtures): **100.0%** (180/180)
 - Gate (canonical tickets + B1, B2, B3, B7 correct on every run): **PASS**
@@ -32,4 +32,4 @@
 | vague-very-soon |  | CAUTION / UNSUPPORTED | ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP | 0/3 |
 | vague-monday-less-charge |  | HOLD / CONTRADICTS_GOVERNING | ✓ · ✓ · ✓ | 3/3 |
 | vague-unknown-rail |  | CAUTION / UNSUPPORTED | ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP · ✗ CAUTION/TOPIC_GAP | 0/3 |
-| vague-next-week |  | CAUTION / UNSUPPORTED | ✓ · ✓ · ✓ | 3/3 |
+| vague-next-week |  | CAUTION / UNSUPPORTED | ✗ CAUTION/UNIT_MISMATCH · ✗ CAUTION/UNIT_MISMATCH · ✗ CAUTION/UNIT_MISMATCH | 0/3 |
