@@ -2512,7 +2512,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 **The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." Gemini's numbers landed after it, as reports and docs in their own commit, and they aren't a gate.
 
-**What's live:** https://suresend-demo.vercel.app, from 27370be. The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
+**What's live:** https://suresend-demo.vercel.app, from 5c71b28, which has the same code as 27370be, plus the cut README. The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
 
 **What it does.** SureSend checks a support reply against the team's docs at Send. The AI reads the reply and the docs and quotes them; fixed rules make every decision. Two topics: when a failed transfer's money comes back, and whether the fee is refunded. Four verdicts: Good to send, Double-check, Hold, Ask first. Plus Couldn't check when the reply can't be read. All data is synthetic: Léa (instant transfer), Lukas (transfer type unknown) and Sofia (standard transfer), in euros, with docs owned by Marie Dubois, Jonas Weber and Elena.
 
@@ -2560,7 +2560,7 @@ D:/Project/slite 27370be [main]
 
 ### After the freeze: the README cut (docs only, D-062)
 
-Abdullah's brief: about 120 lines, plain words, no brag numbers, everything removed moved into `docs/` and linked. No code changed. `/how-it-works` reads the README at build, so the live page keeps the old text until a redeploy.
+Abdullah's brief: about 120 lines, plain words, no brag numbers, everything removed moved into `docs/` and linked. No code changed.
 
 ```
 $ wc -l README.md   (after Abdullah's three edits to The idea and How it was built)
@@ -2602,4 +2602,23 @@ Exposed cases (14)
 ```
 
 Every miss but one is a Double-check for a different reason than expected. The other is H14 on run 1: its one claim's quote didn't match, so every claim was dropped and the reply came back Couldn't check, which fails closed (D0a, not D-060's cap). The verdict is right on all 75 golden and all 75 clean readings. Gemini got the two clean fee misses Groq had, H18 and H23, right on 3 of 3. It found no claim on H20–H22 on 9 of 9, so for Gemini on vague wording, rule D0e is doing the work, not the prompt.
+
+### After the freeze: the redeploy
+
+Abdullah said yes. `vercel deploy --prod` from 5c71b28, whose CI passed, with no code changed since 27370be. `/how-it-works` reads the README at build, so this is what put the cut on the live page. Live checks:
+
+```
+$ the live /how-it-works at 1440, 390 and 360, and the README's three steps: 43 checks
+step 2: Hold | Don't send this yet | Instant transfers now reverse in 1 business day. Your reply says 4.
+step 3: Sent. Nothing in the docs contradicted it.
+all passed
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+ALL PASS
+$ the README's curl, run as written
+SureSend: Hold (HOLD, CONTRADICTS_GOVERNING)
+$ curl status codes
+/og.png 200 · /demo.gif 200 · /no-such-page 404 · /docs/VIDEO_SCRIPT.md 404
+$ git worktree list
+D:/Project/slite 5c71b28 [main]
+```
 

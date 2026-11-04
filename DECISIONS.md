@@ -1134,6 +1134,6 @@ Abdullah: "Target: about 120 lines, plain words, no brag numbers. Move everythin
 - **The README's links are full GitHub URLs.** `/how-it-works` shows repo-relative links as plain text.
 - **The verdict table has two columns, and its text is short.** The page's `overflow-wrap: anywhere` lets a table's first column collapse, so on a phone three columns split "Good to send" mid-word. Short text in two columns keeps every word whole at 390 and 360 px without touching the CSS. At 320 px it wasn't measured. The eval tables, now in `docs/evals.md`, no longer reach that page.
 - **Two limits are new in words:** the gate only works where it controls the send path, and over MCP it's opt-in. Both were true already. They're in the README and `docs/limitations.md`.
-- **`/how-it-works` reads the README at build,** so the live page keeps the old text until a redeploy.
+- **`/how-it-works` reads the README at build,** so a README change needs a redeploy to show there. Abdullah said yes to this one, from 5c71b28.
 - **Abdullah's three edits after reading it (126 lines).** The idea now opens "Slite Agent already fact-checks docs claim by claim, weighs sources by freshness, authority and verification, and drafts doc fixes for approval", linked to Slite's own page, in place of "checks claims", which Slite's Agent page doesn't say in those words. The separate credit paragraph became one sentence. How it was built opens with who he is and why he picked the problem, then one sentence on the build and three bullets.
 
