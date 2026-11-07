@@ -1137,3 +1137,11 @@ Abdullah: "Target: about 120 lines, plain words, no brag numbers. Move everythin
 - **`/how-it-works` reads the README at build,** so a README change needs a redeploy to show there. Abdullah said yes to this one, from 5c71b28.
 - **Abdullah's three edits after reading it (126 lines).** The idea now opens "Slite Agent already fact-checks docs claim by claim, weighs sources by freshness, authority and verification, and drafts doc fixes for approval", linked to Slite's own page, in place of "checks claims", which Slite's Agent page doesn't say in those words. The separate credit paragraph became one sentence. How it was built opens with who he is and why he picked the problem, then one sentence on the build and three bullets.
 
+
+### D-063 · The code blocks on /how-it-works go in the tab order (Abdullah's approval, 2026-11-08)
+The audit on 2026-11-08 found the one serious accessibility issue left: the README's two code blocks on `/how-it-works` scroll sideways, and a keyboard user couldn't reach that scroll (axe `scrollable-region-focusable`, at 1440 and 390 px). Abdullah approved the fix under the freeze: "Yes, fix it."
+
+- **The fix is `tabIndex={0}` on the page's `<pre>`.** Every code block comes from that one render path. The global `:focus-visible` style already draws the focus ring, so no CSS changed. The raw trace JSON in the app already did the same.
+- **No `aria-label`.** A `<pre>` has no role that takes a name, and axe flags a name on a generic element. A screen reader reads the code itself on focus.
+- **The test reads the page with the TypeScript parser, not a render.** Vitest doesn't compile the app's JSX, since `tsconfig.json` keeps it for Next. `lib/client/howItWorksKeyboard.test.ts` checks every `<pre>` the page renders has `tabIndex={0}`. It failed before the fix and passes after.
+- **Not fixed:** one moderate advisory, `minimatch` 3.1.5, dev-only, through eslint. It never reaches the site. An override in `package.json` would be Abdullah's call.

@@ -2622,3 +2622,37 @@ $ git worktree list
 D:/Project/slite 5c71b28 [main]
 ```
 
+
+### After the freeze: the audit and the keyboard fix (D-063)
+
+The audit at eea42f4 was read-only. Typecheck, lint, 484 tests, the build, e2e, the 132 saved results, ui-audit, the slide-over check and mcp:e2e (local and live) all passed. The live headers, API errors, MCP limits, secrets scan, CI pinning and the docs' numbers and links all checked out. It found two things: the code blocks on `/how-it-works` couldn't be scrolled from the keyboard (serious), and one moderate dev-only advisory (`minimatch`, through eslint). Abdullah approved the first fix: "Yes, fix it." The second is left as his call.
+
+The fix is `tabIndex={0}` on the page's `<pre>`, test first, on a branch merged back into main. Evidence:
+
+```
+$ pnpm vitest run lib/client/howItWorksKeyboard.test.ts   (before the fix)
+AssertionError: expected undefined to be '0' // Object.is equality
+      Tests  1 failed | 1 passed (2)
+$ pnpm vitest run lib/client/howItWorksKeyboard.test.ts   (after)
+      Tests  2 passed (2)
+$ pnpm typecheck && pnpm lint
+(clean)
+$ pnpm test
+ Test Files  35 passed (35)
+      Tests  486 passed (486)
+$ pnpm build
+ ✓ Compiled successfully in 15.7s
+├ ○ /how-it-works                          294 B         106 kB
+$ axe + a keyboard pass on the local build (saved mode)
+axe /how-it-works @ 1440: 0 violations, 0 serious/critical
+axe /how-it-works @ 390: 0 violations, 0 serious/critical
+axe / @ 1440: 0 violations, 0 serious/critical
+axe / @ 390: 0 violations, 0 serious/critical
+keyboard: code block 1 focused, focus ring shown, scrollLeft 0 -> 120 (max 975) ok
+keyboard: code block 2 focused, focus ring shown, scrollLeft 0 -> 120 (max 693) ok
+ALL OK
+$ pnpm e2e
+  1 passed (32.9s)
+```
+
+The live site still runs 5c71b28 until Abdullah says yes to a redeploy.

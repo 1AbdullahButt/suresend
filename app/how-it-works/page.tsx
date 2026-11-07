@@ -64,8 +64,9 @@ function render(md: string): ReactNode[] {
       i++;
       while (i < lines.length && !(lines[i] ?? "").startsWith("```")) body.push(lines[i++] ?? "");
       i++;
+      // tabIndex: a long line scrolls sideways, and a keyboard user needs to reach that scroll (axe scrollable-region-focusable).
       blocks.push(
-        <pre key={key} className={s.pre}>
+        <pre key={key} className={s.pre} tabIndex={0}>
           <code>{body.join("\n")}</code>
         </pre>,
       );
