@@ -2512,7 +2512,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 **The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." Gemini's numbers landed after it, as reports and docs in their own commit, and they aren't a gate.
 
-**What's live:** https://suresend-demo.vercel.app, from 5c71b28, which has the same code as 27370be, plus the cut README. The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
+**What's live:** https://suresend-demo.vercel.app, from 5de8358: the code of 27370be, plus the cut README and the keyboard fix on `/how-it-works` (D-063). The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
 
 **What it does.** SureSend checks a support reply against the team's docs at Send. The AI reads the reply and the docs and quotes them; fixed rules make every decision. Two topics: when a failed transfer's money comes back, and whether the fee is refunded. Four verdicts: Good to send, Double-check, Hold, Ask first. Plus Couldn't check when the reply can't be read. All data is synthetic: Léa (instant transfer), Lukas (transfer type unknown) and Sofia (standard transfer), in euros, with docs owned by Marie Dubois, Jonas Weber and Elena.
 
@@ -2655,4 +2655,35 @@ $ pnpm e2e
   1 passed (32.9s)
 ```
 
-The live site still runs 5c71b28 until Abdullah says yes to a redeploy.
+CI passed on 5de8358. Abdullah said yes to the redeploy: `vercel deploy --prod` from 5de8358, aliased to suresend-demo.vercel.app. Live checks:
+
+```
+$ the live HTML
+<pre class="page_pre__foNyi" tabindex="0">
+<pre class="page_pre__foNyi" tabindex="0">
+$ axe + the keyboard pass on the live site
+axe /how-it-works @ 1440: 0 violations, 0 serious/critical
+axe /how-it-works @ 390: 0 violations, 0 serious/critical
+axe / @ 1440: 0 violations, 0 serious/critical
+axe / @ 390: 0 violations, 0 serious/critical
+keyboard: code block 1 focused, focus ring shown, scrollLeft 0 -> 120 (max 975) ok
+keyboard: code block 2 focused, focus ring shown, scrollLeft 0 -> 120 (max 693) ok
+ALL OK
+$ the live /how-it-works and the README's three steps
+step 2: Hold | Don't send this yet | Instant transfers now reverse in 1 business day. Your reply says 4.
+step 3: Sent. Nothing in the docs contradicted it.
+all passed
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+ALL PASS
+$ curl -sI https://suresend-demo.vercel.app/how-it-works
+Content-Security-Policy: frame-ancestors 'none'
+Permissions-Policy: camera=(), microphone=(), geolocation=()
+Referrer-Policy: strict-origin-when-cross-origin
+Strict-Transport-Security: max-age=63072000; includeSubDomains; preload
+X-Content-Type-Options: nosniff
+X-Frame-Options: DENY
+$ curl status codes
+/ 200 · /how-it-works 200 · /og.png 200 · /demo.gif 200 · /no-such-page 404 · /docs/VIDEO_SCRIPT.md 404 · answerguard 308
+$ git worktree list
+D:/Project/slite 5de8358 [main]
+```
