@@ -2512,7 +2512,7 @@ The 1 failure above was my check, not the site: its pattern looked for the word 
 
 **The product is frozen.** Abdullah: "After this deploy the product is frozen: no more code changes unless I report a real bug." Gemini's numbers landed after it, as reports and docs in their own commit, and they aren't a gate.
 
-**What's live:** https://suresend-demo.vercel.app, from 5de8358: the code of 27370be, plus the cut README and the keyboard fix on `/how-it-works` (D-063). The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
+**What's live:** https://suresend-demo.vercel.app, from 2db3dce: the code of 27370be, plus the cut README, the keyboard fix on `/how-it-works` (D-063) and the UI round of 2026-11-09 (D-065). The MCP server is at `/api/mcp`, the write-up at `/how-it-works`. Saved responses are on prompt `2026-11-03.2`, schema `2026-11-03.1`, fix prompt `2026-11-03.1`, reply prompt `2026-11-02.2`, and those versions are frozen in `evals/heldout.json`.
 
 **What it does.** SureSend checks a support reply against the team's docs at Send. The AI reads the reply and the docs and quotes them; fixed rules make every decision. Two topics: when a failed transfer's money comes back, and whether the fee is refunded. Four verdicts: Good to send, Double-check, Hold, Ask first. Plus Couldn't check when the reply can't be read. All data is synthetic: Léa (instant transfer), Lukas (transfer type unknown) and Sofia (standard transfer), in euros, with docs owned by Marie Dubois, Jonas Weber and Elena.
 
@@ -2791,3 +2791,23 @@ The one slide-over failure was the tour's timing at 1024: it passed in the first
 QA (`.loop/qa-findings.md`): VERDICT: APPROVED, with five minor findings. Four were fixed before the merge (the counter list's caption, the Reset wording, the customer in the focused thread title, a send in flight that can't write after Reset). The fifth, two reason lines that don't say why a reply is only a Double-check, is left; D-065 has it. QA's own probes: Reset during a check, a send and the tour; the counter's name and focus; Open conversation by keyboard; no DOC-105 text in any reason line.
 
 `design/audit/why-*` and `sent-*` are the audit's new screenshots, since those two screens changed.
+
+CI passed on 2db3dce. `vercel deploy --prod` from 2db3dce, aliased to suresend-demo.vercel.app (dpl_GWfqpgW857mWneQWhS1LJ7cPbV9Y). Live checks:
+
+```
+$ pnpm tsx scripts/ui-round-check.ts https://suresend-demo.vercel.app
+PASS 53 FAIL 0
+$ axe on the new states (live), at 1440 and 390
+no serious or critical issues
+$ axe on / and /how-it-works (live), at 1440 and 390, and the keyboard pass on the code blocks
+ALL OK
+$ pnpm mcp:e2e https://suresend-demo.vercel.app/api/mcp
+ALL PASS
+$ the live /how-it-works and the README's three steps
+all passed
+$ curl: the six security headers present; / 200 · /how-it-works 200 · /no-such-page 404
+$ git worktree list
+D:/Project/slite [main]
+```
+
+Before/after screenshots of items 2–5 at 1440, 1024 and 390 px are in `design/ui-round-2026-11-09/` (before: the old build; after: the live site). Re-frozen: no more changes unless Abdullah reports a real bug.
