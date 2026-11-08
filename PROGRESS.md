@@ -2711,3 +2711,29 @@ $ pnpm build
 $ pnpm e2e
   1 passed (5.6s)
 ```
+
+### After the freeze: the keyboard fix, confirmed live (2026-11-08)
+
+Abdullah asked for a check that the `/how-it-works` keyboard fix (D-063) is committed, tested and deployed, and for a fresh axe run on the live page. Nothing was changed or redeployed: production already serves it.
+
+```
+$ git log --oneline -1 -- app/how-it-works/page.tsx ; git branch -r --contains 5de8358
+5de8358 How it works: the code blocks go in the tab order (D-063)
+  origin/main
+$ git grep -n "tabIndex={0}" HEAD -- app/how-it-works/page.tsx
+HEAD:app/how-it-works/page.tsx:69:        <pre key={key} className={s.pre} tabIndex={0}>
+$ pnpm vitest run lib/client/howItWorksKeyboard.test.ts
+ Test Files  1 passed (1)
+      Tests  2 passed (2)
+$ vercel inspect https://suresend-demo.vercel.app
+    id		dpl_9ChNCESudsUk5urT7NGZmshRKEg5   (the deploy made from 5de8358)
+    target	production
+    status	● Ready
+$ curl -s https://suresend-demo.vercel.app/how-it-works | grep -o '<pre[^>]*>'
+<pre class="page_pre__foNyi" tabindex="0">
+<pre class="page_pre__foNyi" tabindex="0">
+$ axe 4.14.0 on https://suresend-demo.vercel.app/how-it-works
+@1440: scrollable-region-focusable violations 0, passes 2 [pre:nth-child(18), pre:nth-child(20)]; all rules: 0 violations
+@390: scrollable-region-focusable violations 0, passes 2 [pre:nth-child(18), pre:nth-child(20)]; all rules: 0 violations
+scrollable-region-focusable is gone at 1440 and 390
+```
