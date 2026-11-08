@@ -1145,3 +1145,11 @@ The audit on 2026-11-08 found the one serious accessibility issue left: the READ
 - **No `aria-label`.** A `<pre>` has no role that takes a name, and axe flags a name on a generic element. A screen reader reads the code itself on focus.
 - **The test reads the page with the TypeScript parser, not a render.** Vitest doesn't compile the app's JSX, since `tsconfig.json` keeps it for Next. `lib/client/howItWorksKeyboard.test.ts` checks every `<pre>` the page renders has `tabIndex={0}`. It failed before the fix and passes after.
 - **Not fixed:** one moderate advisory, `minimatch` 3.1.5, dev-only, through eslint. It never reaches the site. An override in `package.json` would be Abdullah's call.
+
+### D-064 · minimatch is overridden to 11 for the TypeScript eslint parser (Abdullah: "if you think fixing it better then do it", 2026-11-08)
+The audit's one open advisory, GHSA-g3hv-75wg-m249 (moderate, denial of service through globparts amplification), was in minimatch 10.2.6. It came in only through `@typescript-eslint/typescript-estree` 8.72.1, by way of `eslint-config-next`. D-063 had it as 3.1.5, which was wrong: 3.1.5 is a different copy, and it isn't affected. The fix is only in 11.0.1 and later, and the newest parser still asks for `^10.2.2`.
+
+- **The override is scoped: `"minimatch@^10": "^11.0.5"`.** It replaces only copies that ask for 10. The eslint plugins that use 3.1.5 keep it.
+- **Why 11 is safe here.** The parser calls only `minimatch(path, pattern, { dot: true })`, the named function 11 keeps. 11 removes `makeRe`, the `AST` class and some options, and the parser uses none of them. It calls minimatch only for `projectService.allowDefaultProject`, which this repo's eslint config never sets. 11 needs Node 20 or 22+, and CI, Vercel and `engines` are on 22.
+- **Dev-only.** Nothing shipped changes, so the live site needs no redeploy for it. The next deploy installs from the new lockfile.
+- **Evidence:** `pnpm audit` reports no known vulnerabilities; lint, typecheck, 486 tests, the build and e2e pass (PROGRESS.md).

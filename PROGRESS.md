@@ -2687,3 +2687,27 @@ $ curl status codes
 $ git worktree list
 D:/Project/slite 5de8358 [main]
 ```
+
+### After the freeze: the minimatch advisory (D-064)
+
+Abdullah: "if you think fixing it better then do it". A scoped pnpm override moves the TypeScript eslint parser's minimatch from 10.2.6 to 11.0.5. Dev-only, so no redeploy. Evidence:
+
+```
+$ pnpm audit   (before)
+minimatch moderate | vulnerable: >=7.0.0 <11.0.1 | patched: >=11.0.1 | GHSA-g3hv-75wg-m249
+   10.2.6 via eslint-config-next > @typescript-eslint/... > typescript-estree@8.72.1 > minimatch@10.2.6
+$ pnpm audit   (after)
+No known vulnerabilities found
+$ the installed copies
+minimatch@11.0.5
+minimatch@3.1.5
+$ pnpm lint && pnpm typecheck
+(clean)
+$ pnpm test
+ Test Files  35 passed (35)
+      Tests  486 passed (486)
+$ pnpm build
+ ✓ Compiled successfully in 24.7s
+$ pnpm e2e
+  1 passed (5.6s)
+```
