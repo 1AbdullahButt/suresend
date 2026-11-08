@@ -52,10 +52,11 @@ export function Mark({ small, check = true }: { small?: boolean; check?: boolean
 
 export type TagTone = "good" | "ask" | "amber" | "neutral" | "ink";
 
-export function Tag({ tone, children, title }: { tone: TagTone; children: React.ReactNode; title?: string }) {
+/** `wrap`: a long tag runs onto a second line instead of being cut off ("Replaces Outgoing Transfers: Reversal SOP for instant"). */
+export function Tag({ tone, children, title, wrap = false }: { tone: TagTone; children: React.ReactNode; title?: string; wrap?: boolean }) {
   const cls = { good: s.tagGood, ask: s.tagAsk, amber: s.tagAmber, neutral: s.tagNeutral, ink: s.tagInk }[tone];
   return (
-    <span className={cx(s.tag, cls)} title={title}>
+    <span className={cx(s.tag, cls, wrap && s.tagWrap)} title={title}>
       {children}
     </span>
   );

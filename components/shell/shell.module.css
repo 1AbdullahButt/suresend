@@ -208,12 +208,42 @@
   gap: 6px;
 }
 .flagHead {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
   font-size: 13px;
-  color: var(--muted);
   margin: 0;
 }
 .flagHead b {
   color: var(--ink);
+}
+.flagReason {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+.flagActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.openConv {
+  border: 0;
+  background: none;
+  padding: 4px 2px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+.openConv:hover {
+  text-decoration-thickness: 2px;
 }
 .reviewSeg {
   display: flex;

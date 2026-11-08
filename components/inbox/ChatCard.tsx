@@ -80,7 +80,10 @@ export function ChatCard({
             {ticket.customer}
             <RailSelect value={rail} onChange={onRail} />
           </span>
-          <h1>Failed transfer</h1>
+          {/* Focus lands here from "Open conversation" on a flagged reply. */}
+          <h1 tabIndex={-1} data-thread-title aria-label={`Failed transfer · ${ticket.customer}`}>
+            Failed transfer
+          </h1>
           <span className={s.chatSub}>Messenger · today {meta.time}</span>
         </div>
         {overlay ? (

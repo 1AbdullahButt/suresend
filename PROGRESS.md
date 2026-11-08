@@ -2737,3 +2737,57 @@ $ axe 4.14.0 on https://suresend-demo.vercel.app/how-it-works
 @390: scrollable-region-focusable violations 0, passes 2 [pre:nth-child(18), pre:nth-child(20)]; all rules: 0 violations
 scrollable-region-focusable is gone at 1440 and 390
 ```
+
+### After the freeze: a small UI round (D-065, 2026-11-09)
+
+Abdullah lifted the freeze for five items only: Reset with no refresh, the cut-off "Replaces …" tag, a named source on "Matches today, changing soon", a clickable "Wrong replies stopped today", and a more useful flagged-replies list. No prompts, rules, schemas or seed data changed, so no AI evals. Built on the branch `ui-round-5`, merged into main after QA. Re-frozen after the deploy.
+
+The new browser check, before and after (the old build first):
+
+```
+$ pnpm tsx scripts/ui-round-check.ts   (old build, main at 80ec2c0)
+FAIL 1: after Reset, conversations is as on a fresh load
+   reset: "Conversations\nLéa K.\nInstant transfer\nHold\n(earlier version)\n…"
+FAIL 1: after Reset, composer is as on a fresh load
+FAIL 2 @1440: "Replaces Outgoing Transfers: Reversal SOP for instant" whole, 1 line(s), inside the card
+FAIL 3 @1440: Double-check Matches today, changing soon Your reply matches the policy, but a change to 1 day is pending sign-off.
+locator.waitFor: Timeout … getByRole('button', { name: /Wrong replies stopped today/ })
+$ pnpm tsx scripts/ui-round-check.ts   (new build)
+PASS 53 FAIL 0
+all passed
+```
+
+The gate, on the final build (after QA's fixes):
+
+```
+$ pnpm typecheck && pnpm lint
+(clean)
+$ pnpm test
+ Test Files  36 passed (36)
+      Tests  498 passed (498)
+$ pnpm build
+ ✓ Compiled successfully in 20.5s
+$ pnpm tsx scripts/snapshot-results.ts … --compare evals/snapshots/phase12b-after.json
+Compared with evals/snapshots/phase12b-after.json: 132 identical, 0 different, 0 missing.
+$ pnpm e2e
+  1 passed (5.2s)
+$ pnpm tsx scripts/ui-round-check.ts
+PASS 53 FAIL 0
+$ pnpm tsx scripts/slide-over-check.ts
+PASS 50 FAIL 1   (1024: in the tour, "Use this reply" wasn't there yet: step 2 still showing)
+$ pnpm tsx scripts/slide-over-check.ts   (rerun twice, nothing changed in between)
+PASS 51 FAIL 0
+PASS 51 FAIL 0
+$ pnpm tsx scripts/ui-audit.ts
+Serious/critical axe violations: 0. Horizontal page scroll: none. States that failed to reach: none.
+$ axe on the new states, at 1440 and 390
+Why (wrapped tag) · sent card, flagged list open · Demo menu, flagged list open · right after Reset · changing soon: 0 violations each
+$ pnpm mcp:e2e
+ALL PASS
+```
+
+The one slide-over failure was the tour's timing at 1024: it passed in the first gate run, in QA's run and in both reruns, and this round changed nothing in the tour.
+
+QA (`.loop/qa-findings.md`): VERDICT: APPROVED, with five minor findings. Four were fixed before the merge (the counter list's caption, the Reset wording, the customer in the focused thread title, a send in flight that can't write after Reset). The fifth, two reason lines that don't say why a reply is only a Double-check, is left; D-065 has it. QA's own probes: Reset during a check, a send and the tour; the counter's name and focus; Open conversation by keyboard; no DOC-105 text in any reason line.
+
+`design/audit/why-*` and `sent-*` are the audit's new screenshots, since those two screens changed.

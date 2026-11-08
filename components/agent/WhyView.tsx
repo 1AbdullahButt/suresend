@@ -48,7 +48,7 @@ function WhyBody({ m, tone, anchor, nested = false }: { m: WhyModel; tone: Outco
             {m.governing.tags.length ? (
               <div className={s.tags}>
                 {m.governing.tags.map((t) => (
-                  <Tag key={t.text} tone={t.tone}>
+                  <Tag key={t.text} tone={t.tone} wrap>
                     {t.text}
                   </Tag>
                 ))}

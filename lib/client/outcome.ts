@@ -1,9 +1,9 @@
 // Design v2 copy, generated from the real CheckResult (REDESIGN_PROMPT item 7). Pure functions; no I/O.
 // Engine names and reason codes never appear in this copy; they live only in the Trace view and Raw JSON.
-import type { Cap, CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Unit, Value } from "@/lib/engine/types";
+import type { Cap, CheckResult, ClaimResult, Evidence, OverallDecision, PatternMatch, Rail, Unit, Value } from "@/lib/engine/types";
 import { governingScope } from "@/lib/engine/applicability";
 import { patternNoun, patternTopic } from "@/lib/engine/patterns";
-import { isDuration, sameValue, unitLabel } from "@/lib/engine/values";
+import { isDuration, sameValue, unitLabel, type AnyValue } from "@/lib/engine/values";
 import { isCovered, topicDef, wordsFor } from "@/lib/topics";
 import { mostSevereClaim, shortDate, WEAKENER_WORDS } from "./format";
 
@@ -185,6 +185,20 @@ function conflictPair(claim: ClaimResult | null): { a: string; av: string; b: st
   return { a: docName(a), av: wordsFor(a.claim.topic, a.claim.value!), b: docName(b), bv: wordsFor(b.claim.topic, b.claim.value!) };
 }
 
+/**
+ * Where a signalled change comes from, in the source's own title and date: "A Slack note in #ops-announcements (Oct 24)", or
+ * "Instant Transfers: Reversal Exception (Oct 30)" for a doc. A Slack source's channel is read from its title.
+ */
+function signalFrom(ev: Evidence): string {
+  const date = shortDate(ev.source.signals.updatedAt);
+  const when = date ? ` (${date})` : "";
+  if (ev.source.kind === "slack") {
+    const channel = /#[\w-]+/.exec(ev.source.title)?.[0];
+    return channel ? `A Slack note in ${channel}${when}` : `A Slack note (“${ev.source.title}”${date ? `, ${date}` : ""})`;
+  }
+  return `${ev.source.title}${when}`;
+}
+
 function cautionSentence(result: CheckResult, claim: ClaimResult | null): string {
   const gov = claim?.governing ?? null;
   const code = result.reasonCode === "SOURCE_UNREAD" || result.reasonCode === "EXTRACTION_GAP" ? result.reasonCode : (claim?.reasonCode ?? result.reasonCode);
@@ -192,8 +206,10 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     case "CHANGE_SIGNALLED": {
       const sig = claim?.evidence.find((e) => (e.standing === "PROPOSAL" || e.standing === "NOT_YET_EFFECTIVE") && e.relation === "contradicts");
       if (sig) {
-        const when = sig.standing === "PROPOSAL" ? "pending sign-off" : `due to start${sig.claim.effectiveFrom ? ` ${shortDate(sig.claim.effectiveFrom)}` : ""}`;
-        return `Your reply matches the policy, but a change to ${sig.claim.value ? wordsFor(sig.claim.topic, sig.claim.value) : sig.claim.valueText} is ${when}.`;
+        const to = sig.claim.value ? wordsFor(sig.claim.topic, sig.claim.value) : sig.claim.valueText;
+        if (sig.standing === "PROPOSAL") return `${signalFrom(sig)} proposes ${to}, pending sign-off.`;
+        const start = sig.claim.effectiveFrom ? ` from ${shortDate(sig.claim.effectiveFrom)}` : "";
+        return `${signalFrom(sig)} changes this to ${to}${start}. It isn't in force yet.`;
       }
       return "Your reply matches the policy, but a change is signalled.";
     }
@@ -242,6 +258,36 @@ function cautionSentence(result: CheckResult, claim: ClaimResult | null): string
     default:
       return firstUpper(result.headline.replace(/^Caution:\s*/i, ""));
   }
+}
+
+// ---- flagged replies ----------------------------------------------------------------------------------
+
+/** The reply's value beside the docs': just "4" when both use the same unit, so the line stays short. */
+function replyValueShort(topic: string, said: AnyValue, docs: AnyValue): string {
+  if (isDuration(said) && isDuration(docs) && said.unit === docs.unit) {
+    return said.amountMax !== undefined && said.amountMax !== said.amount ? `${said.amount}–${said.amountMax}` : String(said.amount);
+  }
+  return wordsFor(topic, said);
+}
+
+/**
+ * One line on why a reply was flagged, for the flagged-replies list: "Instant transfer: docs say 1 business day, reply said 4"
+ * when the reply's value differs from the docs', else the outcome's own headline ("Matches today, changing soon").
+ */
+export function flagReason(result: CheckResult, ticketRail: Rail): string {
+  const claim = mostSevereClaim(result);
+  const gov = claim?.governing ?? null;
+  const said = claim?.draftClaim.value ?? null;
+  if (claim && gov && said && !sameValue(said, gov.value)) {
+    const scope = governingScope(claim, ticketRail);
+    const topic = claim.draftClaim.topic;
+    // A duration speaks for itself; a value like "refunded" needs its topic: "Instant transfer fee", "Fee".
+    const noun = !isDuration(gov.value) && isCovered(topic) ? topicDef(topic).question.replace(/^the /, "") : "";
+    const lead = [scope === "any" ? "" : `${scope === "instant" ? "Instant" : "Standard"} transfer`, noun].filter(Boolean).join(" ");
+    const body = `docs say ${wordsFor(claim.draftClaim.topic, gov.value)}, reply said ${replyValueShort(claim.draftClaim.topic, said, gov.value)}`;
+    return lead ? `${firstUpper(lead)}: ${body}` : firstUpper(body);
+  }
+  return summarize(result, ticketRail).headline;
 }
 
 // ---- Why? --------------------------------------------------------------------------------------------

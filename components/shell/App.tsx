@@ -1,7 +1,7 @@
 "use client";
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { X } from "lucide-react";
-import { useSureSend } from "@/lib/client/useSureSend";
+import { RESET_TOAST, useSureSend } from "@/lib/client/useSureSend";
 import { canPersist, readJson, writeJson } from "@/lib/client/storage";
 import { mostSevereClaim } from "@/lib/client/format";
 import { cx, ui } from "@/components/ui/atoms";
@@ -69,7 +69,8 @@ function ResetDialog({ edited, onCancel, onConfirm }: { edited: number; onCancel
       >
         <h2 id="reset-title">Reset the demo?</h2>
         <p id="reset-desc">
-          Restores every seed doc ({edited} edited) and clears this browser&apos;s numbers. This can&apos;t be undone.
+          Starts the demo over: restores every seed doc ({edited} edited) and clears the conversations, any reply you&apos;re typing and
+          this browser&apos;s numbers. This can&apos;t be undone.
         </p>
         <div className={s.dialogActions}>
           <button ref={cancelRef} type="button" className={cx(ui.btn, ui.outline, ui.sm)} onClick={onCancel}>
@@ -84,8 +85,17 @@ function ResetDialog({ edited, onCancel, onConfirm }: { edited: number; onCancel
   );
 }
 
+/**
+ * The page. Reset clears this browser's storage and then remounts everything below, so the page starts over exactly as a
+ * fresh load would (conversations, drafts, results, docs, persona, counters, tour), with no refresh.
+ */
 export function App() {
-  const ag = useSureSend();
+  const [resets, setResets] = useState(0);
+  return <DemoApp key={resets} afterReset={resets > 0} onReset={() => setResets((n) => n + 1)} />;
+}
+
+function DemoApp({ afterReset, onReset }: { afterReset: boolean; onReset: () => void }) {
+  const ag = useSureSend({ initialToast: afterReset ? RESET_TOAST : null });
   const { actions } = ag;
   const overlay = useMediaQuery("(max-width: 1099px)");
   // The panel covers the pills on a phone or a short screen, so there it's modal (D-054).
@@ -189,6 +199,24 @@ export function App() {
     candidates.find(visible)?.focus();
   }, []);
 
+  // After a Reset the dialog and the menu are gone with the old tree: focus goes back to the Demo menu button.
+  useEffect(() => {
+    if (afterReset) document.querySelector<HTMLElement>("[data-demo-menu-trigger]")?.focus();
+  }, [afterReset]);
+
+  /** "Open conversation" on a flagged reply (Demo menu, or the sent card's list): that customer's thread, with focus on it. */
+  const openConversation = useCallback(
+    (ticketId: string) => {
+      setMenuOpen(false);
+      actions.selectTicket(ticketId);
+      // Under 1100 px the panel covers the thread, so it closes; focus goes to the thread rather than back to the panel.
+      agentReturnRef.current = null;
+      if (overlay) actions.setPanelOpen(false);
+      requestAnimationFrame(() => document.querySelector<HTMLElement>("[data-thread-title]")?.focus());
+    },
+    [actions, overlay],
+  );
+
   const closeMenu = useCallback(() => {
     setMenuOpen(false);
     document.querySelector<HTMLElement>("[data-demo-menu-trigger]")?.focus();
@@ -212,6 +240,7 @@ export function App() {
             onRole={(r) => void actions.switchRole(r)}
             metrics={ag.metrics}
             onReview={actions.review}
+            onOpenConversation={openConversation}
             onReviewFix={(docId) => {
               const last = ag.metrics.heldByDoc[docId]?.last;
               closeMenu();
@@ -290,6 +319,9 @@ export function App() {
                   onOpenDoc={actions.openDoc}
                   onFixDoc={() => actions.openFixReview()}
                   intercepts={ag.metrics.intercepts}
+                  flags={ag.metrics.flags}
+                  onReview={actions.review}
+                  onOpenConversation={openConversation}
                   pausedVisible={!ag.pausedDismissed}
                 />
               ) : (
@@ -343,6 +375,7 @@ export function App() {
             setConfirmReset(false);
             setMenuOpen(false);
             actions.resetWorkspace();
+            onReset();
           }}
         />
       ) : null}

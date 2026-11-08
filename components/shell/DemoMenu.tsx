@@ -3,8 +3,8 @@ import { Fragment, useEffect, useId, useRef, useState, type KeyboardEvent } from
 import type { AiRunInfo, Role } from "@/lib/engine/types";
 import { falseAlarmStats, type Metrics, type Review } from "@/lib/client/metrics";
 import { aiModeLabel } from "@/lib/client/format";
-import { OUTCOME } from "@/lib/client/outcome";
 import { cx, ui } from "@/components/ui/atoms";
+import { FlaggedReplies } from "./FlaggedReplies";
 import s from "./shell.module.css";
 
 export const PERSONA_NOTE = "Simulated personas. Anyone can switch. DOC-105 is synthetic. Never use this design with real restricted data.";
@@ -112,6 +112,7 @@ export function DemoMenu({
   onRole,
   metrics,
   onReview,
+  onOpenConversation,
   onReviewFix,
   ai,
   onTour,
@@ -123,6 +124,8 @@ export function DemoMenu({
   onRole: (r: Role) => void;
   metrics: Metrics;
   onReview: (checkHash: string, r: Review | null) => void;
+  /** "Open conversation" on a flagged reply: shows that customer's thread. */
+  onOpenConversation: (ticketId: string) => void;
   /** "Review fix" for a doc in "Docs causing held replies" (D-037). */
   onReviewFix: (docId: string) => void;
   ai: AiRunInfo | null;
@@ -226,27 +229,7 @@ export function DemoMenu({
         {flags.length ? (
           <details className={s.flags}>
             <summary>Review flagged replies ({flags.length})</summary>
-            <ul className={s.flagList}>
-              {flags.map((f) => (
-                <li key={f.checkHash} className={s.flag}>
-                  <p className={s.flagHead}>
-                    <b>{OUTCOME[f.decision].name}</b> · {f.customer}: “{f.draft}”
-                  </p>
-                  <div className={s.reviewSeg} role="group" aria-label={`Review the ${OUTCOME[f.decision].name} on ${f.customer}`}>
-                    {(
-                      [
-                        ["correct", "Correct catch"],
-                        ["false_alarm", "False alarm"],
-                      ] as const
-                    ).map(([key, label]) => (
-                      <button key={key} type="button" aria-pressed={f.review === key} onClick={() => onReview(f.checkHash, f.review === key ? null : key)}>
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </li>
-              ))}
-            </ul>
+            <FlaggedReplies flags={flags} onReview={onReview} onOpen={onOpenConversation} />
           </details>
         ) : null}
       </div>

@@ -14,6 +14,8 @@ export interface PastFlag {
   customer: string;
   decision: "CAUTION" | "HOLD" | "ESCALATE";
   headline: string;
+  /** One line for the flagged list: "Instant transfer: docs say 1 business day, reply said 4". Flags saved before it existed have none. */
+  reason?: string;
   draft: string;
   at: string;
   review: Review | null;
@@ -77,6 +79,7 @@ export function recordCheck(
   draft: string,
   result: CheckResult,
   at: string,
+  reason?: string,
 ): Metrics {
   if (result.decision === "AI_UNAVAILABLE") return m; // nothing was checked
   const pair = `${ticketId}:${fnv1a(draft)}`;
@@ -84,7 +87,7 @@ export function recordCheck(
   let flags = m.flags;
   const d = result.decision;
   if ((d === "CAUTION" || d === "HOLD" || d === "ESCALATE") && !m.flags.some((f) => f.checkHash === result.checkHash)) {
-    const flag: PastFlag = { checkHash: result.checkHash, ticketId, customer, decision: d, headline: result.headline, draft, at, review: null };
+    const flag: PastFlag = { checkHash: result.checkHash, ticketId, customer, decision: d, headline: result.headline, ...(reason ? { reason } : {}), draft, at, review: null };
     flags = [flag, ...m.flags].slice(0, 50);
   }
   return { ...m, checked, flags };

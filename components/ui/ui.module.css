@@ -89,6 +89,16 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Wraps instead of truncating; a pill with two lines reads as a rounded box. */
+.tagWrap {
+  display: inline-block;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
+  overflow-wrap: break-word;
+  line-height: 1.35;
+  border-radius: 10px;
+}
 .tag svg {
   width: 14px;
   height: 14px;

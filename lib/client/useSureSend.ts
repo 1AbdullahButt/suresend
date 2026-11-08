@@ -24,7 +24,7 @@ import {
 } from "./metrics";
 import type { AgentView, CheckKey, OverrideRecord, SeedResponse, StaleReason, StoredResult, Tab } from "./types";
 import { mostSevereClaim } from "./format";
-import { valueAdjective } from "./outcome";
+import { flagReason, valueAdjective } from "./outcome";
 import {
   clearOverrides,
   loadOverrides,
@@ -71,7 +71,10 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
-export function useSureSend() {
+/** The toast a remount after Reset opens with (App remounts the whole tree, so nothing from before survives). */
+export const RESET_TOAST = "Demo reset: everything is back to the start.";
+
+export function useSureSend(opts?: { initialToast?: string | null }) {
   const [role, setRole] = useState<Role>("support_agent");
   const [seed, setSeed] = useState<SeedResponse | null>(null);
   const [seedError, setSeedError] = useState<string | null>(null);
@@ -97,7 +100,7 @@ export function useSureSend() {
   /** Title of the doc whose fix was last approved this session (the tour acknowledges it). */
   const [fixApproved, setFixApproved] = useState<{ docId: string; title: string; text: string } | null>(null);
   const fixRequestId = useRef(0);
-  const [toast, setToast] = useState<Toast | null>(null);
+  const [toast, setToast] = useState<Toast | null>(() => (opts?.initialToast ? { id: Date.now(), message: opts.initialToast } : null));
   const [pausedDismissed, setPausedDismissed] = useState(false);
   const [lastAi, setLastAi] = useState<CheckResult["ai"] | null>(null);
 
@@ -117,7 +120,17 @@ export function useSureSend() {
     setMetrics(loadMetrics());
   }, []);
 
+  // False once Reset has unmounted this tree: a send still in flight then writes nothing, to state or to storage.
+  const mounted = useRef(true);
+  useEffect(() => {
+    mounted.current = true;
+    return () => {
+      mounted.current = false;
+    };
+  }, []);
+
   const updateMetrics = useCallback((fn: (m: Metrics) => Metrics) => {
+    if (!mounted.current) return;
     setMetrics((m) => {
       const next = fn(m);
       saveMetrics(next);
@@ -265,7 +278,7 @@ export function useSureSend() {
       setLastAi(result.ai);
       if (result.ai.paused) setPausedDismissed(false);
       const t = ref.current.seed?.tickets.find((x) => x.id === key.ticketId);
-      updateMetrics((m) => recordCheck(m, key.ticketId, t?.customer ?? key.ticketId, key.draft, result, nowIso()));
+      updateMetrics((m) => recordCheck(m, key.ticketId, t?.customer ?? key.ticketId, key.draft, result, nowIso(), flagReason(result, key.rail)));
     },
     [updateMetrics],
   );
@@ -305,7 +318,14 @@ export function useSureSend() {
     [buildRequest, storeResult, showToast, startProgress, stopProgress],
   );
 
-  useEffect(() => () => clearTimers(), []);
+  // On unmount (Reset remounts the app) a check still in flight is dropped, so it can't land in the fresh state.
+  useEffect(
+    () => () => {
+      clearTimers();
+      abortRef.current?.abort();
+    },
+    [],
+  );
 
   // ---- send ---------------------------------------------------------------------------------------
   /** Design v2: Send runs the check (POST /api/send reruns it on the server, SPEC §6.8). */
@@ -539,20 +559,15 @@ export function useSureSend() {
     void runCheck({ overrides: {}, because: "seed versions restored" });
   }, [forgetFix, runCheck]);
 
-  /** Reset workspace: clears overrides AND metrics (SPEC §9). */
+  /**
+   * Reset workspace: clears overrides AND metrics (SPEC §9) from this browser's storage. App then remounts, so the page
+   * starts over exactly as a fresh load would: conversations, drafts, results, docs, persona and counters.
+   */
   const resetWorkspace = useCallback(() => {
+    abortRef.current?.abort();
     clearOverrides();
     clearMetrics();
-    setOverrides({});
-    ref.current.overrides = {};
-    setMetrics(emptyMetrics());
-    setDocFocus(null);
-    setFixReview(null);
-    setFixApproved(null);
-    setHeld({});
-    setHeldReplies({});
-    showToast("Demo reset: seed docs restored and this browser's numbers cleared.");
-  }, [showToast]);
+  }, []);
 
   const review = useCallback(
     (checkHash: string, r: Review | null) => updateMetrics((m) => setReview(m, checkHash, r)),

@@ -1,11 +1,14 @@
 "use client";
-import { Check, CircleCheck, RefreshCw } from "lucide-react";
+import { useId, useState } from "react";
+import { Check, ChevronDown, CircleCheck, RefreshCw } from "lucide-react";
 import type { Suggestion } from "@/lib/engine/types";
+import type { PastFlag, Review } from "@/lib/client/metrics";
 import type { AgentView, StaleReason, StoredResult } from "@/lib/client/types";
 import type { CheckingState, SendState } from "@/lib/client/useSureSend";
 import { claimLines, sentCopy, summarize } from "@/lib/client/outcome";
 import { findFixSource } from "@/lib/fix/source";
 import { cx, OutcomeTag, Tag, ui } from "@/components/ui/atoms";
+import { FlaggedReplies } from "@/components/shell/FlaggedReplies";
 import { TraceView } from "./TraceView";
 import { WhyView } from "./WhyView";
 import s from "./agent.module.css";
@@ -23,6 +26,40 @@ const STALE_TEXT: Record<Exclude<StaleReason, null>, string> = {
 /** The server's plain reason for a Double-check recheck (D-034); results saved before it existed have none. */
 function recheckNoteOf(sug: Suggestion): string | null {
   return "recheckNote" in sug && typeof sug.recheckNote === "string" ? sug.recheckNote : null;
+}
+
+/** "Wrong replies stopped today": the number opens the flagged replies (the Demo menu's list) and closes them again. */
+function StoppedToday({
+  intercepts,
+  flags,
+  onReview,
+  onOpenConversation,
+}: {
+  intercepts: number;
+  flags: PastFlag[];
+  onReview: (checkHash: string, r: Review | null) => void;
+  onOpenConversation: (ticketId: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const listId = useId();
+  return (
+    <div className={s.stoppedWrap}>
+      <button type="button" className={s.stopped} aria-expanded={open} aria-controls={listId} onClick={() => setOpen((o) => !o)}>
+        <span>Wrong replies stopped today</span>
+        <span className={s.stoppedEnd}>
+          <span className={s.stoppedN}>{intercepts}</span>
+          <ChevronDown aria-hidden="true" className={cx(s.stoppedChevron, open && s.stoppedChevronOpen)} />
+        </span>
+      </button>
+      {open ? (
+        <div id={listId} className={s.stoppedList}>
+          {/* The count is held sends; the list is every flagged check, so a Double-check sent with an OK shows here too. */}
+          <p className={s.note}>Every reply SureSend flagged this session, held or not:</p>
+          <FlaggedReplies flags={flags} onReview={onReview} onOpen={onOpenConversation} />
+        </div>
+      ) : null}
+    </div>
+  );
 }
 
 /** Emphasise one value inside the generated sentence (e.g. "1 business day"). */
@@ -88,6 +125,9 @@ export function CheckView({
   onOpenDoc,
   onFixDoc,
   intercepts,
+  flags,
+  onReview,
+  onOpenConversation,
   pausedVisible,
 }: {
   stored: StoredResult | null;
@@ -105,6 +145,10 @@ export function CheckView({
   /** "Fix the doc that caused this" (D-037): opens the fix review in the Docs tab. */
   onFixDoc: () => void;
   intercepts: number;
+  /** The flagged replies, for the list under "Wrong replies stopped today". */
+  flags: PastFlag[];
+  onReview: (checkHash: string, r: Review | null) => void;
+  onOpenConversation: (ticketId: string) => void;
   pausedVisible: boolean;
 }) {
   if (checking) return <CheckingSteps checking={checking} />;
@@ -118,10 +162,7 @@ export function CheckView({
           <h3 className={s.headline}>{copy.headline}</h3>
           <p className={s.sentence}>{copy.sentence}</p>
         </section>
-        <div className={s.stopped}>
-          <span>Wrong replies stopped today</span>
-          <span className={s.stoppedN}>{intercepts}</span>
-        </div>
+        <StoppedToday intercepts={intercepts} flags={flags} onReview={onReview} onOpenConversation={onOpenConversation} />
         <p className={s.note}>Simulated count for this demo session</p>
       </div>
     );
