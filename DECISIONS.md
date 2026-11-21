@@ -1165,3 +1165,12 @@ Abdullah: "This lifts the freeze for these five items only. No changes to prompt
 - **Not built, as asked:** per-agent or admin views, and an MCP send tool.
 - **Tests:** `lib/client/uiRound.test.ts` (the copy for items 3 and 5 on the saved readings, including a changed channel and date to show nothing is hard-coded) and `scripts/ui-round-check.ts` (a browser, items 1–5). The browser check failed on the old build and passes on the new one.
 - **QA approved it with five minor findings.** Four are fixed above: the counter's caption, the Reset wording, the customer in the focused title, and the send that can't write after a Reset. One is left: two reason lines don't say why the reply is only a Double-check. B7 reads "Instant transfer: docs say 2 business days, reply said 4" under "The doc behind this changed", and a hedged fee reply reads "reply said not refunded". Both are right, and the card itself gives the rest.
+
+### D-066 · The README links the demo visuals near the top; the video is a release asset (Abdullah's request, 2026-11-21)
+Docs and media only; no code, prompts, rules, schemas or seed data changed. The product stays frozen.
+
+- **"See SureSend in action" is the README's first section,** straight after the demo GIF: the cover inline, then links to the 52-second walkthrough, a screenshot gallery, the product case study and the technical walkthrough. It uses full GitHub URLs, because `/how-it-works` renders repo-relative links as plain text and loads images only from `docs/`. That page shows the new section only after the next redeploy, which wasn't done.
+- **The MP4 is a GitHub Release asset, not a file in git.** No release existed, so `demo-walkthrough` was created to hold it (27.5 MB). A 27 MB video in history can't be taken back; a release can be deleted with `gh release delete demo-walkthrough --cleanup-tag`.
+- **Only the curated Upwork images are committed:** the cover, seven screenshots and the two sample PDFs, under `portfolio-media/upwork/`. The raw copies, the HyperFrames source zip and the MP4 stay local.
+- **The gallery is `docs/screenshots.md`,** with a caption for each of the seven screens.
+- **Upwork:** the connector here can't create or edit portfolio items, and its portfolio upload takes images and PDFs only, so the draft is left for Abdullah to make by hand. A published SureSend item already exists, with a link and no images.

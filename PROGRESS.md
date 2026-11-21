@@ -2811,3 +2811,26 @@ D:/Project/slite [main]
 ```
 
 Before/after screenshots of items 2–5 at 1440, 1024 and 390 px are in `design/ui-round-2026-11-09/` (before: the old build; after: the live site). Re-frozen: no more changes unless Abdullah reports a real bug.
+
+### After the freeze: the demo visuals on GitHub (docs and media only, D-066)
+
+Abdullah asked for the SureSend visuals to be easy to find on GitHub and added to his Upwork portfolio. The GitHub side is done; the Upwork draft isn't (D-066 says why). Verified after the push (2ec920e), in a real browser:
+
+```
+$ gh release view demo-walkthrough
+tag demo-walkthrough · SureSend-Demo-With-Sound.mp4 · 27500015 bytes · published
+$ ffprobe SureSend-Demo-With-Sound.mp4
+1920x1080 h264 + aac, duration 52.000000
+$ every new link, by HTTP
+200/206 on the release page, the MP4 download (27500015 bytes), the gallery, both PDFs (blob and raw), the cover and the seven screenshots, and the live demo
+$ github.com in a browser
+README: "See SureSend in action" is the first section, 674 px into the README under the demo GIF; the cover renders inline (1000 px); four links under it
+Gallery (docs/screenshots.md): 7 of 7 images render
+Release page: the title and the MP4 asset are listed
+$ the staged PDFs and the cover against the originals (sha256)
+identical
+$ pnpm vitest run lib/workspace/europeanDemo.test.ts lib/client/copyRules.test.ts   (they read the README)
+ Tests  39 passed (39)
+$ git worktree list
+D:/Project/slite [main]
+```
