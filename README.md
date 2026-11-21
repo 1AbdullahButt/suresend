@@ -6,6 +6,15 @@ SureSend — an independent concept for Slite Agent: check each customer reply a
 
 ![SureSend demo: a 4-day draft is held because the instant-transfer exception says 1 business day; the safe reply is used and sent; a ticket with an unknown transfer type escalates with a holding reply.](docs/demo.gif)
 
+## See SureSend in action
+
+![SureSend: catch wrong replies before they go out. A four-day reply is held because the instant-transfer policy says one business day.](https://raw.githubusercontent.com/1AbdullahButt/suresend/main/portfolio-media/upwork/00-suresend-cover.png)
+
+- [52-second walkthrough](https://github.com/1AbdullahButt/suresend/releases/tag/demo-walkthrough): Send, Hold, Why, Use this reply, Send again (MP4 with sound).
+- [Screenshot gallery](https://github.com/1AbdullahButt/suresend/blob/main/docs/screenshots.md): seven screens, from a held reply to the rule trace.
+- [Product case study](https://github.com/1AbdullahButt/suresend/blob/main/portfolio-media/upwork/sample-documents/SureSend-Product-Case-Study.pdf): the problem, the workflow, and one draft decided three ways (PDF).
+- [Technical walkthrough](https://github.com/1AbdullahButt/suresend/blob/main/portfolio-media/upwork/sample-documents/SureSend-Technical-Walkthrough.pdf): how the check works, and an n8n workflow calling the MCP tool (PDF).
+
 ## The problem
 
 Docs go stale, and between a policy change and the doc fix, someone can still send a customer the old answer. Slite asked
